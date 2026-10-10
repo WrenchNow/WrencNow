@@ -4,10 +4,11 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>WrenchNow — Mobile Mechanics At Your Door</title>
+<meta name="description" content="Book a mobile mechanic who comes to your driveway, parking lot or office. Rates posted upfront, estimate approved before any work starts."/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/tabler-icons.min.css"/>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -2172,77 +2173,114 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
 .nav-signout{font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer;font-family:var(--font-body);transition:color .15s}
 .nav-signout:hover{color:var(--red)}
 
+
+/* ══════════════════════════════════════════════════════════
+   OCT 2026 FIX PASS — phone layout, search states, honest UI
+   (kept in one block at the end so it wins the cascade)
+══════════════════════════════════════════════════════════ */
+#search-section, #mechs-section, #how-section { scroll-margin-top: 84px; }
+/* hero glows are 500–600px wide and were widening the page on phones */
+#panel-customer { overflow-x: hidden; overflow-x: clip; }
+.hero-stats-row:empty { display: none !important; }
+.rating-new { font-size: 12px; color: var(--muted); }
+.rating-new strong { color: var(--green); font-weight: 600; }
+.grid-empty { grid-column: 1 / -1; text-align: center; padding: 3rem 1.5rem; border: 0.5px dashed var(--border-med); border-radius: 16px; }
+.grid-empty-title { font-family: var(--font-display); font-size: 22px; font-weight: 700; color: var(--cream); margin-bottom: .5rem; }
+.grid-empty p { color: #8a867c; font-size: 14px; line-height: 1.7; max-width: 420px; margin: 0 auto; }
+.grid-empty-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 1.25rem; }
+.meta-clear { background: none; border: none; color: var(--ore); cursor: pointer; font-size: inherit; font-family: var(--font-body); text-decoration: underline; text-underline-offset: 3px; padding: 0; margin-left: 6px; }
+.slot.taken .slot-time { text-decoration: line-through; }
+.slot-avail:empty { display: none; }
+.footer-links button { background: none; border: none; padding: 0; text-align: left; cursor: pointer; font: inherit; color: inherit; }
+
+@media (max-width: 900px) {
+  /* Log in / Sign up / account were hidden entirely below 900px */
+  .nav-right { display: flex !important; gap: 8px; }
+  .nav-right > .nav-link { display: none; }
+  .dash-body { grid-template-columns: minmax(0, 1fr) !important; }
+  .dash-body > div, .panel-card { min-width: 0; }
+}
+
+@media (max-width: 700px) {
+  /* Nav: two rows so the tabs stop running off the screen */
+  .nav { height: auto !important; flex-wrap: wrap; row-gap: 8px; padding: 8px 1rem !important; }
+  .logo { font-size: 21px; letter-spacing: 2px; }
+  .logo-icon { width: 32px; height: 32px; border-radius: 9px; }
+  .nav-pills { order: 3; width: 100%; }
+  .nav-pills .npill { flex: 1; text-align: center; white-space: nowrap; padding: 8px 4px !important; font-size: 12.5px !important; }
+  .nav-user-name { display: none; }
+  .nav .cta-btn { padding: 8px 14px; font-size: 13px; }
+  .panel { padding-top: 100px; }
+  #search-section, #mechs-section, #how-section { scroll-margin-top: 112px; }
+
+  /* Mechanic cards: the old phone grid crushed name, rating and badges on top of each other */
+  .mcard { display: block !important; }
+  .mcard-head { display: flex !important; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-bottom: .6rem; }
+  .mcard .avatar { margin-right: 0 !important; align-self: flex-start; flex-shrink: 0; }
+  .mcard-meta { flex: 1 1 150px; min-width: 0; padding-top: 0; }
+  .mcard-head .mbadge { margin-left: 0; flex-shrink: 0; }
+  .mcard-head .avail-pill { margin-left: 58px; margin-top: -2px; }
+  .mcard-loc { flex-wrap: wrap; }
+  .mcard-rating { flex-wrap: wrap; margin-bottom: .6rem; }
+  .mcard-tags { display: flex !important; margin-bottom: .75rem; }
+  .mcard-foot { margin-top: 0 !important; gap: 8px; }
+  .view-profile-btn { display: inline-flex !important; }
+  .mcard-actions { flex-shrink: 0; }
+
+  /* Dashboard */
+  .dash-topbar { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .dash-actions { flex-wrap: wrap; }
+  .dash-greeting h2 span { display: inline-block; margin: 6px 0 0 0 !important; }
+  .booking { flex-wrap: wrap; row-gap: 6px; }
+  .b-info { min-width: 0; flex: 1 1 150px; }
+}
+
+
+/* ── Admin panel + verification / payback UI ── */
+.admin-wrap { max-width: 1100px; margin: 0 auto; padding: 2rem 2.5rem 4rem; }
+.admin-h { font-family: var(--font-display); font-size: 34px; font-weight: 900; color: var(--cream); line-height: 1; }
+.admin-sub { color: var(--muted); font-size: 13px; margin: .4rem 0 1.5rem; }
+.admin-sec { margin-top: 2rem; }
+.admin-sec-title { font-family: var(--font-display); font-size: 20px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--cream); display: flex; align-items: center; gap: 10px; margin-bottom: .75rem; }
+.admin-count { font-family: var(--font-body); font-size: 11px; font-weight: 600; letter-spacing: 0; text-transform: none; background: var(--ore-dim); color: var(--ore); border-radius: 20px; padding: 2px 9px; }
+.admin-card { background: var(--raised); border: 0.5px solid var(--border); border-radius: 14px; padding: 1rem 1.15rem; margin-bottom: 10px; }
+.admin-row { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: flex-start; }
+.admin-name { font-size: 15px; font-weight: 600; color: var(--cream); }
+.admin-meta { font-size: 12px; color: #8a867c; line-height: 1.6; margin-top: 2px; overflow-wrap: anywhere; }
+.admin-meta a { color: var(--ore); text-decoration: none; }
+.admin-bio { font-size: 13px; color: var(--ink); line-height: 1.6; margin: .6rem 0; overflow-wrap: anywhere; }
+.admin-checks { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: .6rem 0 .75rem; }
+.admin-checks label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink); cursor: pointer; }
+.admin-checks input { accent-color: var(--ore); width: 16px; height: 16px; }
+.admin-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.admin-btn { font-family: var(--font-body); font-size: 12.5px; font-weight: 600; border-radius: 9px; padding: 8px 14px; cursor: pointer; border: 0.5px solid var(--border-med); background: transparent; color: var(--ink); }
+.admin-btn:hover { border-color: var(--ore); color: var(--cream); }
+.admin-btn.primary { background: var(--ore); border-color: var(--ore); color: #fff; }
+.admin-btn.good { background: var(--green-dim); border-color: rgba(46,199,122,.3); color: var(--green); }
+.admin-btn:disabled { opacity: .35; cursor: not-allowed; }
+.admin-pill { font-size: 10.5px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; border-radius: 20px; padding: 3px 9px; white-space: nowrap; background: var(--surface); color: var(--muted); border: 0.5px solid var(--border); }
+.admin-pill.ok { background: var(--green-dim); color: var(--green); border-color: rgba(46,199,122,.25); }
+.admin-pill.warn { background: rgba(245,184,0,.1); color: var(--amber); border-color: rgba(245,184,0,.25); }
+.admin-pill.due { background: var(--ore-dim); color: var(--ore-bright); border-color: rgba(242,90,0,.35); }
+.admin-empty { color: var(--muted); font-size: 13px; padding: .75rem 0; }
+.payback-bar { height: 6px; border-radius: 4px; background: var(--surface); overflow: hidden; margin-top: 6px; width: 140px; }
+.payback-bar > div { height: 100%; background: var(--green); }
+.mbadge-unverified { background: var(--raised); color: var(--muted); border: 0.5px solid var(--border); }
+.mbi-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: .75rem; }
+.apply-steps { text-align: left; margin: 1.1rem auto 1.25rem; max-width: 400px; display: flex; flex-direction: column; gap: 10px; }
+.apply-step { display: flex; gap: 10px; font-size: 13px; color: var(--ink); line-height: 1.55; }
+.apply-step b { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; background: var(--ore-dim); color: var(--ore); font-size: 12px; display: flex; align-items: center; justify-content: center; }
+.payback-note { background: var(--green-dim); border: 0.5px solid rgba(46,199,122,.25); color: var(--ink); border-radius: 12px; padding: 10px 14px; font-size: 13px; line-height: 1.55; }
+.payback-note strong { color: var(--green); }
+@media (max-width: 700px) {
+  .admin-wrap { padding: 1.5rem 1rem 3rem; }
+  .nav-pills .npill { font-size: 12px !important; }
+}
+
 </style>
 
-<!--
-════════════════════════════════════════════════════════
-SPECIALIST 3 — BACKEND ARCHITECT
-Supabase schema additions (run in SQL Editor)
-════════════════════════════════════════════════════════
 
--- Add featured column to mechanics table
--- ALTER TABLE mechanics ADD COLUMN IF NOT EXISTS is_featured BOOLEAN DEFAULT false;
--- ALTER TABLE mechanics ADD COLUMN IF NOT EXISTS featured_until TIMESTAMPTZ;
--- UPDATE mechanics SET is_featured = false WHERE is_featured IS NULL;
 
--- Job receipts table (verified price data)
-CREATE TABLE IF NOT EXISTS job_receipts (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  booking_id UUID REFERENCES bookings(id),
-  mechanic_slug TEXT NOT NULL,
-  customer_id UUID REFERENCES auth.users(id),
-  service TEXT NOT NULL,
-  vehicle TEXT,
-  amount_cents INTEGER NOT NULL,
-  parts_cost_cents INTEGER DEFAULT 0,
-  labor_cost_cents INTEGER DEFAULT 0,
-  notes TEXT,
-  is_public BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-ALTER TABLE job_receipts ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Anyone can view public receipts"
-  ON job_receipts FOR SELECT USING (is_public = true);
-CREATE POLICY "Mechanics insert own receipts"
-  ON job_receipts FOR INSERT WITH CHECK (true);
-
--- Add urgency field to bookings
-ALTER TABLE bookings ADD COLUMN IF NOT EXISTS urgency TEXT
-  DEFAULT 'flexible'
-  CHECK (urgency IN ('flexible','soon','today','stranded'));
-
--- Referral tracking
-CREATE TABLE IF NOT EXISTS referrals (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  referrer_id UUID REFERENCES auth.users(id),
-  referred_email TEXT NOT NULL,
-  reward_type TEXT CHECK (reward_type IN ('customer','mechanic')),
-  status TEXT DEFAULT 'pending' CHECK (status IN ('pending','completed','paid')),
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-ALTER TABLE referrals ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users see own referrals"
-  ON referrals FOR SELECT USING (auth.uid() = referrer_id);
-CREATE POLICY "Anyone can create referral"
-  ON referrals FOR INSERT WITH CHECK (true);
-
--- Price transparency view (aggregates receipts by mechanic + service)
-CREATE OR REPLACE VIEW mechanic_price_guide AS
-  SELECT
-    mechanic_slug,
-    service,
-    COUNT(*) as job_count,
-    MIN(amount_cents) as min_cents,
-    MAX(amount_cents) as max_cents,
-    ROUND(AVG(amount_cents)) as avg_cents
-  FROM job_receipts
-  WHERE is_public = true
-  GROUP BY mechanic_slug, service;
-
-════════════════════════════════════════════════════════
--->
 
 </head>
 <body>
@@ -2276,10 +2314,10 @@ CREATE OR REPLACE VIEW mechanic_price_guide AS
     <button class="npill on" onclick="showPanel('customer')">Find a Mechanic</button>
     <button class="npill" onclick="showPanel('mechanic')">For Mechanics</button>
     <button class="npill" onclick="showPanel('dashboard')">Dashboard</button>
+    <button class="npill" id="adminPill" style="display:none" onclick="showPanel('admin')">Admin</button>
   </div>
   <div class="nav-right" id="navRight">
     <a href="#" class="nav-link" onclick="showPanel('customer');setTimeout(()=>document.getElementById('how-section').scrollIntoView({behavior:'smooth'}),100);return false">How it works</a>
-    <a href="#" class="nav-link" onclick="showPanel('mechanic');return false">Pricing</a>
     <!-- logged out -->
     <div id="navLoggedOut" style="display:flex;align-items:center;gap:8px">
       <button class="nav-link" style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--muted);font-family:var(--font-body)" onclick="openAuth('login')">Log in</button>
@@ -2316,12 +2354,7 @@ CREATE OR REPLACE VIEW mechanic_price_guide AS
             See how it works →
           </button>
         </div>
-        <div class="hero-stats-row" id="heroStats">
-          <div><div class="hstat-num" id="statMechanics">—</div><div class="hstat-label">Verified mechanics</div></div>
-          <div><div class="hstat-num" id="statJobs">—</div><div class="hstat-label">Jobs completed</div></div>
-          <div><div class="hstat-num" id="statSaved">—</div><div class="hstat-label">Avg. saved vs dealer</div></div>
-          <div><div class="hstat-num" id="statArrival">—</div><div class="hstat-label">Avg. arrival time</div></div>
-        </div>
+        <div class="hero-stats-row" id="heroStats"></div>
       </div>
       <div>
         <div class="search-card" id="search-section">
@@ -2343,7 +2376,7 @@ CREATE OR REPLACE VIEW mechanic_price_guide AS
           </div>
           <div class="field">
             <label class="field-label" for="searchService">What's going on? (your words are fine)</label>
-            <input class="field-input" id="searchService" type="text" placeholder="e.g. "makes a grinding noise when I brake""/>
+            <input class="field-input" id="searchService" type="text" placeholder="e.g. grinding noise when I brake"/>
           </div>
           <div class="field">
             <label class="field-label" for="searchVehicle">Your vehicle</label>
@@ -2351,17 +2384,17 @@ CREATE OR REPLACE VIEW mechanic_price_guide AS
           </div>
           <label class="field-label" style="margin-bottom:9px;display:block">Common services</label>
           <div class="chips" id="chips">
-            <button class="chip on" onclick="toggleChip(this)">🛢 Oil Change</button>
-            <button class="chip" onclick="toggleChip(this)">🛑 Brakes</button>
-            <button class="chip" onclick="toggleChip(this)">🔋 Battery</button>
-            <button class="chip" onclick="toggleChip(this)">🔄 Tires</button>
-            <button class="chip" onclick="toggleChip(this)">❄️ AC / Heat</button>
-            <button class="chip" onclick="toggleChip(this)">🔍 Check Engine</button>
-            <button class="chip" onclick="toggleChip(this)">⚙️ Transmission</button>
-            <button class="chip" onclick="toggleChip(this)">⚡ Electrical</button>
+            <button class="chip" data-key="oil" data-label="Oil change" onclick="toggleChip(this)">🛢 Oil Change</button>
+            <button class="chip" data-key="brakes" data-label="Brakes" onclick="toggleChip(this)">🛑 Brakes</button>
+            <button class="chip" data-key="battery" data-label="Battery" onclick="toggleChip(this)">🔋 Battery</button>
+            <button class="chip" data-key="tires" data-label="Tires" onclick="toggleChip(this)">🔄 Tires</button>
+            <button class="chip" data-key="ac" data-label="AC / heat" onclick="toggleChip(this)">❄️ AC / Heat</button>
+            <button class="chip" data-key="diagnostic" data-label="Check engine light" onclick="toggleChip(this)">🔍 Check Engine</button>
+            <button class="chip" data-key="transmission" data-label="Transmission" onclick="toggleChip(this)">⚙️ Transmission</button>
+            <button class="chip" data-key="electrical" data-label="Electrical" onclick="toggleChip(this)">⚡ Electrical</button>
           </div>
-          <button class="btn-ore" style="width:100%;justify-content:center;padding:15px;margin-top:.25rem" onclick="document.getElementById('mechs-section').scrollIntoView({behavior:'smooth'})">
-            <i class="ti ti-search" aria-hidden="true"></i> Show Me Mechanics Near Me
+          <button class="btn-ore" style="width:100%;justify-content:center;padding:15px;margin-top:.25rem" onclick="runSearch()">
+            <i class="ti ti-search" aria-hidden="true"></i> Show Me Mechanics
           </button>
           <p style="text-align:center;font-size:11px;color:#4a4844;margin-top:.85rem">Free to browse · No account needed · Pay only when done</p>
         </div>
@@ -2383,8 +2416,8 @@ CREATE OR REPLACE VIEW mechanic_price_guide AS
     <!-- Results bar: title + live count -->
     <div class="results-bar">
       <div>
-        <div class="section-title">MECHANICS NEAR YOU</div>
-        <div class="section-meta" id="mechsMeta" style="margin-top:4px">Finding mechanics near you…</div>
+        <div class="section-title">AVAILABLE MECHANICS</div>
+        <div class="section-meta" id="mechsMeta" style="margin-top:4px">Loading mechanics…</div>
       </div>
     </div>
 
@@ -2415,10 +2448,10 @@ CREATE OR REPLACE VIEW mechanic_price_guide AS
 
     <!-- Sort row -->
     <div class="sort-row" style="margin-bottom:1.25rem">
-      <button class="sort-pill on" onclick="sortToggle(this)">Top rated</button>
-      <button class="sort-pill" onclick="sortToggle(this)">Nearest</button>
-      <button class="sort-pill" onclick="sortToggle(this)">Lowest price</button>
-      <button class="sort-pill" onclick="sortToggle(this)">Fastest arrival</button>
+      <button class="sort-pill on" onclick="sortToggle(this,'rating')">Top rated</button>
+      <button class="sort-pill" onclick="sortToggle(this,'price')">Lowest price</button>
+      <button class="sort-pill" onclick="sortToggle(this,'jobs')">Most jobs done</button>
+      <button class="sort-pill" onclick="sortToggle(this,'available')">Available first</button>
     </div>
 
     <!-- Mechanic grid -->
@@ -2426,7 +2459,7 @@ CREATE OR REPLACE VIEW mechanic_price_guide AS
       <!-- loading state -->
       <div id="mechsLoading" style="grid-column:1/-1;text-align:center;padding:3rem 0">
         <div style="display:inline-block;width:28px;height:28px;border:2px solid rgba(255,255,255,0.08);border-top-color:var(--ore);border-radius:50%;animation:spin .7s linear infinite"></div>
-        <p style="color:#4a4844;font-size:13px;margin-top:1rem">Finding mechanics near you…</p>
+        <p style="color:#4a4844;font-size:13px;margin-top:1rem">Loading mechanics…</p>
       </div>
     </div>
 
@@ -2470,11 +2503,11 @@ CREATE OR REPLACE VIEW mechanic_price_guide AS
   <div class="trust-bar">
     <div class="trust-item">
       <div class="trust-icon"><i class="ti ti-shield-check" aria-hidden="true"></i></div>
-      <div><div class="trust-title">Vetted before they arrive</div><div class="trust-desc">Background check, license verification, and skills review — every mechanic clears all three before their first job.</div></div>
+      <div><div class="trust-title">Verified means checked</div><div class="trust-desc">Mechanics with the Verified badge have passed a background check, a driving-record check, and an ASE or reference check, and have insurance on file.</div></div>
     </div>
     <div class="trust-item">
       <div class="trust-icon"><i class="ti ti-star" aria-hidden="true"></i></div>
-      <div><div class="trust-title">Reviews you can trust</div><div class="trust-desc">Every rating comes from a verified booking. Not a single review is faked, incentivized, or anonymous.</div></div>
+      <div><div class="trust-title">Reviews you can trust</div><div class="trust-desc">Ratings only come from completed bookings made here. Nothing is bought, incentivized, or anonymous.</div></div>
     </div>
     <div class="trust-item">
       <div class="trust-icon"><i class="ti ti-lock" aria-hidden="true"></i></div>
@@ -2496,14 +2529,14 @@ CREATE OR REPLACE VIEW mechanic_price_guide AS
         <div class="fear-icon"><i class="ti ti-currency-dollar" aria-hidden="true"></i></div>
         <div>
           <div class="fear-q">"How do I know the price is fair?"</div>
-          <div class="fear-a">Every mechanic's rate is posted upfront. Before work starts, you get a written estimate. You approve it or cancel — no charge. We also show real prices from completed jobs so you know what others actually paid.</div>
+          <div class="fear-a">Every mechanic's rate is posted upfront. Before work starts, you get a written estimate. You approve it or cancel — no charge.</div>
         </div>
       </div>
       <div class="fear-card">
         <div class="fear-icon"><i class="ti ti-shield-check" aria-hidden="true"></i></div>
         <div>
           <div class="fear-q">"Are these mechanics actually any good?"</div>
-          <div class="fear-a">Every mechanic passes a background check, license verification, and skills review before joining. Reviews come only from verified completed jobs — no way to fake them. Average rating across the platform: 4.9 stars.</div>
+          <div class="fear-a">Look for the Verified badge. It means we ran a background and driving-record check, confirmed their ASE certification or called their references, and have their liability insurance on file. Star ratings only appear once a mechanic has completed jobs here.</div>
         </div>
       </div>
       <div class="fear-card">
@@ -2517,7 +2550,7 @@ CREATE OR REPLACE VIEW mechanic_price_guide AS
         <div class="fear-icon"><i class="ti ti-rotate" aria-hidden="true"></i></div>
         <div>
           <div class="fear-q">"What if the problem comes back?"</div>
-          <div class="fear-a">If the same issue returns after your service, contact the mechanic directly — they're a vetted professional who stands behind their work. WrenchNow also has a dispute process to help mediate if needed. We vet every mechanic carefully so you're in good hands.</div>
+          <div class="fear-a">If the same issue returns after your service, contact the mechanic directly first — most will come back and make it right. If that doesn't settle it, tell us and we'll help mediate between you.</div>
         </div>
       </div>
     </div>
@@ -2532,14 +2565,14 @@ CREATE OR REPLACE VIEW mechanic_price_guide AS
       <div style="font-size:40px;margin-bottom:1rem">⭐</div>
       <div style="font-family:var(--font-display);font-size:22px;font-weight:700;color:var(--cream);margin-bottom:.6rem">Reviews coming soon</div>
       <p style="color:var(--muted);font-size:14px;line-height:1.7;max-width:380px;margin:0 auto">We only show reviews from verified customers after a completed job — no fake stars, no filler. Be one of the first to leave one.</p>
-      <button class="btn-ore" style="margin-top:1.75rem;border-radius:12px;background:#3b9eff" onclick="openBooking(null)">Book your first job →</button>
+      <button class="btn-ore" style="margin-top:1.75rem;border-radius:12px" onclick="openBooking(null)">Book your first job →</button>
     </div>
   </div>
 
   <!-- CTA BAND -->
   <div class="cta-band">
     <h2>YOUR CAR FIXED.<br>YOUR DAY <span class="ore">SAVED.</span></h2>
-    <p>The average shop visit takes 3 hours. The average WrenchNow job takes 45 minutes — at your location, on your schedule, with the price agreed upfront.</p>
+    <p>No drop-off, no waiting room, no ride home. Your mechanic works at your location, on your schedule, with the price agreed before a single bolt is turned.</p>
     <div class="cta-band-actions">
       <button class="btn-ore" onclick="openBooking(null)"><i class="ti ti-search" aria-hidden="true"></i> Find a Mechanic Now</button>
       <button class="btn-ghost" onclick="showPanel('mechanic')">Are you a mechanic? →</button>
@@ -2555,17 +2588,17 @@ CREATE OR REPLACE VIEW mechanic_price_guide AS
 
   <div class="mhero-wrap">
     <div>
-      <div class="launch-tag">🎉 Founding Mechanic — Free Launch Period Active</div>
+      <div class="launch-tag">🎉 Founding Mechanic — 0% Platform Fee During Launch</div>
       <div class="mhero-title">STOP<br>SPLITTING WITH<br><span class="ore">THE SHOP.</span></div>
-      <p class="hero-sub"><strong style="color:var(--green)">Completely free to join right now.</strong> No subscription, no platform fee during our launch period. Set your own rate, keep everything you earn. Be one of the first mechanics on WrenchNow.</p>
+      <p class="hero-sub"><strong style="color:var(--green)">No platform fee during launch.</strong> Set your own rate and keep everything you earn. One <span data-fee>$49</span> verification fee covers your background check — and we pay it back after your <span data-payback-jobs>5</span>th completed job.</p>
       <div class="hero-actions" style="margin-bottom:2rem">
-        <button class="btn-ore" onclick="openApply()" style="box-shadow:0 4px 20px rgba(46,199,122,0.25)"><i class="ti ti-clipboard-check" aria-hidden="true"></i> Join Free — Founding Mechanic Spot</button>
+        <button class="btn-ore" onclick="openApply()" style="box-shadow:0 4px 20px rgba(46,199,122,0.25)"><i class="ti ti-clipboard-check" aria-hidden="true"></i> Apply — Founding Mechanic Spot</button>
         <button class="btn-ghost" onclick="showPanel('dashboard')">View mechanic dashboard →</button>
       </div>
       <div class="hero-stats-row">
         <div><div class="hstat-num" style="color:var(--green)">0%</div><div class="hstat-label">Fee during launch <span style="font-size:9px;color:var(--muted)">(15% later)</span></div></div>
-        <div><div class="hstat-num">24 hrs</div><div class="hstat-label">Payout speed</div></div>
-        <div><div class="hstat-num" style="color:var(--green)">Free</div><div class="hstat-label">Forever to apply</div></div>
+        <div><div class="hstat-num" data-fee>$49</div><div class="hstat-label">Verification fee, one time</div></div>
+        <div><div class="hstat-num" style="color:var(--green)"><span data-payback-jobs>5</span> jobs</div><div class="hstat-label">and the fee is paid back</div></div>
       </div>
     </div>
     <div>
@@ -2585,7 +2618,7 @@ CREATE OR REPLACE VIEW mechanic_price_guide AS
           <div class="ec-stat"><div class="ec-stat-label">Jobs per week</div><div class="ec-stat-val">10–20</div></div>
           <div class="ec-stat"><div class="ec-stat-label">Avg job value</div><div class="ec-stat-val">$95</div></div>
           <div class="ec-stat"><div class="ec-stat-label">Platform fee</div><div class="ec-stat-val" style="color:var(--green)">0% now<span class="strikethrough" style="margin-left:4px">15%</span></div></div>
-          <div class="ec-stat"><div class="ec-stat-label">Payout</div><div class="ec-stat-val">24 hrs</div></div>
+          <div class="ec-stat"><div class="ec-stat-label">You get paid</div><div class="ec-stat-val">On completion</div></div>
         </div>
       </div>
     </div>
@@ -2596,8 +2629,8 @@ CREATE OR REPLACE VIEW mechanic_price_guide AS
     <div class="launch-banner">
       <div class="launch-banner-icon">🚀</div>
       <div>
-        <div class="launch-banner-title">Founding Mechanic Programme — Limited Time</div>
-        <div class="launch-banner-sub">Join now and pay <strong style="color:var(--green)">zero platform fees</strong> during our entire launch period. When fees are introduced, founding mechanics get a reduced rate locked in permanently. The earlier you join, the better your deal.</div>
+        <div class="launch-banner-title">Founding Mechanic Programme — fee back after <span data-payback-jobs>5</span> jobs</div>
+        <div class="launch-banner-sub">Pay <strong style="color:var(--green)">zero platform fees</strong> during our entire launch period. The only cost is a one-time <span data-fee>$49</span> verification fee for your background check. Complete <span data-payback-jobs>5</span> jobs that customers confirm, and we send that <span data-fee>$49</span> back to you.</div>
       </div>
     </div>
   </div>
@@ -2607,13 +2640,12 @@ CREATE OR REPLACE VIEW mechanic_price_guide AS
     <div class="tag">Why mechanics choose us</div>
     <div style="font-family:var(--font-display);font-size:44px;font-weight:900;margin-bottom:1.5rem">BUILT FOR<br>WORKING MECHANICS</div>
     <div class="perks">
-      <div class="perk" style="border-color:rgba(46,199,122,0.3);background:linear-gradient(160deg,rgba(46,199,122,0.05),transparent)"><div class="perk-icon" style="color:var(--green)"><i class="ti ti-gift" aria-hidden="true"></i></div><div class="perk-title">Free during launch <span class="free-badge">now</span></div><div class="perk-desc">Zero platform fees while we build the network. Keep 100% of what you earn. Founding mechanics get a reduced rate locked in permanently when fees go live.</div></div>
-      <div class="perk"><div class="perk-icon"><i class="ti ti-calendar-stats" aria-hidden="true"></i></div><div class="perk-title">You set the schedule</div><div class="perk-desc">Toggle your availability on or off at any time. Accept or decline jobs at will, no penalties.</div></div>
-      <div class="perk"><div class="perk-icon"><i class="ti ti-shield-check" aria-hidden="true"></i></div><div class="perk-title">Verified & protected</div><div class="perk-desc">Background check builds customer trust. Job protection and dispute resolution included on every booking.</div></div>
-      <div class="perk"><div class="perk-icon"><i class="ti ti-star" aria-hidden="true"></i></div><div class="perk-title">Build your reputation</div><div class="perk-desc">Every 5-star review lifts your ranking. Top Pros get featured placement and first access to high-value jobs.</div></div>
-      <div class="perk"><div class="perk-icon"><i class="ti ti-tool" aria-hidden="true"></i></div><div class="perk-title">Parts at trade pricing</div><div class="perk-desc">Access wholesale parts pricing through our supplier network. Order ahead to any job address.</div></div>
-      <div class="perk"><div class="perk-icon"><i class="ti ti-cash" aria-hidden="true"></i></div><div class="perk-title">Fast, reliable payouts</div><div class="perk-desc">Paid within 24 hours of job completion. No invoicing, no chasing customers. Automatic bank transfer.</div></div>
-      <div class="perk"><div class="perk-icon"><i class="ti ti-device-mobile" aria-hidden="true"></i></div><div class="perk-title">Pro mechanic app</div><div class="perk-desc">Job management, customer chat, service logging, parts ordering — all in one mechanic-first app.</div></div>
+      <div class="perk" style="border-color:rgba(46,199,122,0.3);background:linear-gradient(160deg,rgba(46,199,122,0.05),transparent)"><div class="perk-icon" style="color:var(--green)"><i class="ti ti-gift" aria-hidden="true"></i></div><div class="perk-title">0% platform fee <span class="free-badge">now</span></div><div class="perk-desc">No platform cut while we build the network. Keep 100% of what you charge during the launch period.</div></div>
+      <div class="perk"><div class="perk-icon"><i class="ti ti-rotate" aria-hidden="true"></i></div><div class="perk-title">Verification fee, paid back</div><div class="perk-desc"><span data-fee>$49</span> covers your background and driving-record check. After your <span data-payback-jobs>5</span>th customer-confirmed job we pay it back in full.</div></div>
+      <div class="perk"><div class="perk-icon"><i class="ti ti-shield-check" aria-hidden="true"></i></div><div class="perk-title">A badge customers trust</div><div class="perk-desc">Pass verification and your profile carries the Verified badge — the first thing customers look for before letting someone work on their car.</div></div>
+      <div class="perk"><div class="perk-icon"><i class="ti ti-calendar-stats" aria-hidden="true"></i></div><div class="perk-title">You set the schedule</div><div class="perk-desc">Take the requests that suit you and pass on the ones that don't. No quotas, no penalties.</div></div>
+      <div class="perk"><div class="perk-icon"><i class="ti ti-cash" aria-hidden="true"></i></div><div class="perk-title">Your rate, paid on completion</div><div class="perk-desc">You set your hourly rate. During launch the customer pays you directly once they've approved your estimate and the job is done.</div></div>
+      <div class="perk"><div class="perk-icon"><i class="ti ti-star" aria-hidden="true"></i></div><div class="perk-title">Build your reputation</div><div class="perk-desc">Every completed job adds to your profile. Ratings appear as soon as you have real jobs behind them.</div></div>
     </div>
   </div>
 
@@ -2623,18 +2655,18 @@ CREATE OR REPLACE VIEW mechanic_price_guide AS
       <div>
         <div class="tag">Who can join</div>
         <div style="font-family:var(--font-display);font-size:44px;font-weight:900;line-height:.95;margin-bottom:1rem">WHAT YOU<br><span class="ore">NEED TO</span><br>GET STARTED</div>
-        <p style="color:var(--muted);font-size:14px;max-width:340px;line-height:1.7">We verify every mechanic to maintain the trust of our customers. The process takes 3–5 business days. <strong style="color:var(--green)">Joining is completely free during our launch period.</strong></p>
-        <button class="btn-ore" style="margin-top:1.5rem;box-shadow:0 4px 20px rgba(46,199,122,0.2)" onclick="openApply()"><i class="ti ti-clipboard-check" aria-hidden="true"></i> Claim Your Free Spot</button>
+        <p style="color:var(--muted);font-size:14px;max-width:340px;line-height:1.7">We verify every mechanic before their profile goes live — usually 3–5 business days. <strong style="color:var(--green)">One <span data-fee>$49</span> verification fee, paid back after <span data-payback-jobs>5</span> completed jobs.</strong></p>
+        <button class="btn-ore" style="margin-top:1.5rem;box-shadow:0 4px 20px rgba(46,199,122,0.2)" onclick="openApply()"><i class="ti ti-clipboard-check" aria-hidden="true"></i> Start My Application</button>
       </div>
       <div>
         <ul class="req-list">
           <li class="req-item"><i class="ti ti-circle-check" aria-hidden="true"></i> Valid driver's license + clean driving record</li>
           <li class="req-item"><i class="ti ti-circle-check" aria-hidden="true"></i> ASE certification or 3+ years professional experience</li>
           <li class="req-item"><i class="ti ti-circle-check" aria-hidden="true"></i> Your own tools and transport vehicle</li>
-          <li class="req-item"><i class="ti ti-circle-check" aria-hidden="true"></i> Proof of liability insurance (we can help you get covered)</li>
-          <li class="req-item"><i class="ti ti-circle-check" aria-hidden="true"></i> Smartphone (iOS or Android) for the WrenchNow Pro app</li>
-          <li class="req-item"><i class="ti ti-circle-check" aria-hidden="true"></i> Pass our background and identity check</li>
-          <li class="req-item"><i class="ti ti-circle-check" aria-hidden="true"></i> Complete a 30-minute onboarding orientation (online)</li>
+          <li class="req-item"><i class="ti ti-circle-check" aria-hidden="true"></i> Proof of general liability insurance</li>
+          <li class="req-item"><i class="ti ti-circle-check" aria-hidden="true"></i> A phone and email you check — booking requests come to you there</li>
+          <li class="req-item"><i class="ti ti-circle-check" aria-hidden="true"></i> Pass a background and driving-record check (<span data-fee>$49</span> fee, paid back after <span data-payback-jobs>5</span> jobs)</li>
+          <li class="req-item"><i class="ti ti-circle-check" aria-hidden="true"></i> Two work references we can call, if you are not ASE certified</li>
         </ul>
       </div>
     </div>
@@ -2664,11 +2696,12 @@ CREATE OR REPLACE VIEW mechanic_price_guide AS
       </div>
       <div class="dash-actions">
         <button class="status-dot" onclick="toggleStatus(this)">Online — accepting jobs</button>
-        <button class="btn-ore" style="font-size:13px;padding:10px 18px" onclick="alert('Availability management coming soon!')"><i class="ti ti-plus" aria-hidden="true"></i> Add availability</button>
+        
       </div>
     </div>
 
     <!-- METRICS -->
+    <div class="payback-note" style="margin-bottom:1.25rem"><strong>Preview with sample data.</strong> This shows what your day looks like once you're verified. For now, real booking requests reach you by email.</div>
     <div class="dash-metrics">
       <div class="metric">
         <div class="metric-icon"><i class="ti ti-calendar-check" aria-hidden="true"></i></div>
@@ -2712,7 +2745,7 @@ CREATE OR REPLACE VIEW mechanic_price_guide AS
             <li>Featured in WrenchNow marketing emails</li>
             <li>Highlighted profile card — stands out instantly</li>
           </ul>
-          <button class="pro-upgrade-btn" onclick="openProUpgrade()">
+          <button class="pro-upgrade-btn" onclick="openProUpgrade(this)">
             <i class="ti ti-star" aria-hidden="true"></i> Upgrade to Featured — $29/mo
           </button>
         </div>
@@ -2816,6 +2849,15 @@ CREATE OR REPLACE VIEW mechanic_price_guide AS
   </div>
 </div><!-- /dashboard panel -->
 
+<!-- ADMIN PANEL (only reachable by accounts listed in admins/{uid}) -->
+<div class="panel" id="panel-admin">
+  <div class="admin-wrap">
+    <div class="admin-h">ADMIN</div>
+    <div class="admin-sub">Verify applicants, keep bookings moving, and pay the verification fee back after <span data-payback-jobs>5</span> completed jobs.</div>
+    <div id="adminBody"></div>
+  </div>
+</div>
+
 <!-- MULTI-STEP BOOKING MODAL -->
 <div class="modal-overlay" id="bookingModal" onclick="closeModalOutside(event)">
   <div class="modal" role="dialog" aria-modal="true" aria-label="Book a mechanic">
@@ -2909,21 +2951,21 @@ CREATE OR REPLACE VIEW mechanic_price_guide AS
         <div class="date-row" id="dateRow">
           <!-- dates built dynamically by buildDateTabs() -->
         </div>
-        <label class="field-label" style="margin-bottom:8px;display:block">Available times</label>
+        <label class="field-label" style="margin-bottom:8px;display:block">Preferred time</label>
         <div class="time-slots" id="timeSlots">
-          <div class="slot taken"><div class="slot-time">9:00 AM</div><div class="slot-avail" style="color:var(--muted)">Booked</div></div>
-          <div class="slot taken"><div class="slot-time">10:00 AM</div><div class="slot-avail" style="color:var(--muted)">Booked</div></div>
-          <div class="slot taken"><div class="slot-time">11:00 AM</div><div class="slot-avail" style="color:var(--muted)">Booked</div></div>
-          <div class="slot" onclick="selectSlot(this)"><div class="slot-time">1:00 PM</div><div class="slot-avail">Open</div></div>
-          <div class="slot on" onclick="selectSlot(this)"><div class="slot-time">2:00 PM</div><div class="slot-avail">Open</div></div>
-          <div class="slot" onclick="selectSlot(this)"><div class="slot-time">3:00 PM</div><div class="slot-avail">Open</div></div>
-          <div class="slot" onclick="selectSlot(this)"><div class="slot-time">4:30 PM</div><div class="slot-avail">Open</div></div>
-          <div class="slot" onclick="selectSlot(this)"><div class="slot-time">5:30 PM</div><div class="slot-avail">Open</div></div>
-          <div class="slot" onclick="selectSlot(this)"><div class="slot-time">7:00 PM</div><div class="slot-avail">Open</div></div>
+          <div class="slot" onclick="selectSlot(this)"><div class="slot-time">9:00 AM</div><div class="slot-avail"></div></div>
+          <div class="slot" onclick="selectSlot(this)"><div class="slot-time">10:00 AM</div><div class="slot-avail"></div></div>
+          <div class="slot" onclick="selectSlot(this)"><div class="slot-time">11:00 AM</div><div class="slot-avail"></div></div>
+          <div class="slot" onclick="selectSlot(this)"><div class="slot-time">1:00 PM</div><div class="slot-avail"></div></div>
+          <div class="slot on" onclick="selectSlot(this)"><div class="slot-time">2:00 PM</div><div class="slot-avail"></div></div>
+          <div class="slot" onclick="selectSlot(this)"><div class="slot-time">3:00 PM</div><div class="slot-avail"></div></div>
+          <div class="slot" onclick="selectSlot(this)"><div class="slot-time">4:30 PM</div><div class="slot-avail"></div></div>
+          <div class="slot" onclick="selectSlot(this)"><div class="slot-time">5:30 PM</div><div class="slot-avail"></div></div>
+          <div class="slot" onclick="selectSlot(this)"><div class="slot-time">7:00 PM</div><div class="slot-avail"></div></div>
         </div>
         <div style="background:var(--raised);border-radius:10px;padding:10px 14px;font-size:12px;color:var(--muted);border:0.5px solid var(--border);display:flex;align-items:center;gap:8px;margin-bottom:.25rem">
           <i class="ti ti-info-circle" style="color:var(--ore);font-size:15px;flex-shrink:0" aria-hidden="true"></i>
-          Estimated job duration: 1–2 hours. Mechanic arrives within 15 min of selected time.
+          This is the time you're requesting. Your mechanic confirms it, or suggests the closest time they can do.
         </div>
         <div class="modal-nav">
           <button class="btn-back" onclick="goStep(1)"><i class="ti ti-arrow-left" aria-hidden="true"></i></button>
@@ -2948,11 +2990,11 @@ CREATE OR REPLACE VIEW mechanic_price_guide AS
         </div>
         <div style="background:var(--raised);border-radius:10px;padding:10px 14px;font-size:12px;color:var(--muted);border:0.5px solid var(--border);display:flex;gap:8px">
           <i class="ti ti-shield-check" style="color:var(--green);font-size:15px;flex-shrink:0;margin-top:1px" aria-hidden="true"></i>
-          🎉 During our launch period, WrenchNow is completely free. No payment needed — just confirm and your mechanic will be on their way.
+          No booking fee during our launch period. You pay your mechanic only after you've approved their estimate and the work is done.
         </div>
         <div class="modal-nav">
           <button class="btn-back" onclick="goStep(2)"><i class="ti ti-arrow-left" aria-hidden="true"></i></button>
-          <button class="btn-next" onclick="confirmBooking()" style="background:var(--green)"><i class="ti ti-circle-check" aria-hidden="true"></i> Confirm Booking — It's Free</button>
+          <button class="btn-next" onclick="confirmBooking()" style="background:var(--green)"><i class="ti ti-circle-check" aria-hidden="true"></i> Send Booking Request — No Fee</button>
         </div>
       </div>
 
@@ -2962,16 +3004,16 @@ CREATE OR REPLACE VIEW mechanic_price_guide AS
     <!-- SUCCESS STATE (outside scrollable body, fills modal) -->
     <div class="success-state" id="successState">
       <div class="success-icon"><i class="ti ti-circle-check" aria-hidden="true"></i></div>
-      <div class="success-title">You're booked!</div>
-      <p class="success-sub" id="successSub">Marcus Rivera will arrive at <strong>2:00 PM today</strong>.<br>You'll get a text when they're on their way.</p>
+      <div class="success-title">Request sent!</div>
+      <p class="success-sub" id="successSub"></p>
       <div class="tracking-box">
         <div class="tracking-label">Booking status</div>
         <div class="tracking-steps">
-          <div class="ts-item"><div class="ts-dot done"></div><span>Booking confirmed</span></div>
-          <div class="ts-item"><div class="ts-dot done"></div><span>Mechanic accepted</span></div>
-          <div class="ts-item"><div class="ts-dot active"></div><span style="color:var(--ore);font-weight:600">En route — 22 min away</span></div>
-          <div class="ts-item"><div class="ts-dot"></div><span style="color:var(--muted)">Service begins</span></div>
-          <div class="ts-item"><div class="ts-dot"></div><span style="color:var(--muted)">Job complete — leave a review</span></div>
+          <div class="ts-item"><div class="ts-dot done"></div><span>Request sent</span></div>
+          <div class="ts-item"><div class="ts-dot active"></div><span style="color:var(--ore);font-weight:600">Waiting for your mechanic to confirm</span></div>
+          <div class="ts-item"><div class="ts-dot"></div><span style="color:var(--muted)">Mechanic on the way</span></div>
+          <div class="ts-item"><div class="ts-dot"></div><span style="color:var(--muted)">Estimate approved, work begins</span></div>
+          <div class="ts-item"><div class="ts-dot"></div><span style="color:var(--muted)">Job complete — pay and leave a review</span></div>
         </div>
       </div>
       <button class="btn-next" style="width:100%;justify-content:center" onclick="closeModal()">Back to search</button>
@@ -2990,11 +3032,7 @@ CREATE OR REPLACE VIEW mechanic_price_guide AS
         <div>
           <div class="profile-name" id="profileName">Marcus Rivera</div>
           <div class="profile-tagline" id="profileTagline"></div>
-          <div class="profile-badges">
-            <div class="pbadge pbadge-top"><i class="ti ti-award" aria-hidden="true"></i> Top Pro</div>
-            <div class="pbadge pbadge-verified"><i class="ti ti-shield-check" aria-hidden="true"></i> Background Verified</div>
-            <div class="pbadge pbadge-insured"><i class="ti ti-shield" aria-hidden="true"></i> $1M Insured</div>
-          </div>
+          <div class="profile-badges" id="profileBadges"></div>
           <div class="profile-receipt-strip" id="profileReceiptStrip" style="display:none;margin-top:1.25rem;padding:10px 14px;background:rgba(46,199,122,0.06);border:0.5px solid rgba(46,199,122,0.15);border-radius:12px">
   <div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);font-weight:600;margin-bottom:8px">Verified job prices</div>
   <div id="profileReceiptList" style="display:flex;flex-direction:column;gap:6px"></div>
@@ -3026,22 +3064,12 @@ CREATE OR REPLACE VIEW mechanic_price_guide AS
         </div>
 
         <div class="profile-section">
-          <div class="profile-section-title">Certifications</div>
-          <div class="cert-list">
-            <div class="cert-item"><div class="cert-icon"><i class="ti ti-certificate" aria-hidden="true"></i></div><div><div class="cert-name">ASE Master Technician</div><div class="cert-sub">All 8 areas · Renewed 2025</div></div></div>
-            <div class="cert-item"><div class="cert-icon"><i class="ti ti-shield-check" aria-hidden="true"></i></div><div><div class="cert-name">WrenchNow Background Check</div><div class="cert-sub">Verified June 2026</div></div></div>
-            <div class="cert-item"><div class="cert-icon"><i class="ti ti-tool" aria-hidden="true"></i></div><div><div class="cert-name">Dealership Factory Trained</div><div class="cert-sub">Domestic & Japanese vehicles</div></div></div>
-          </div>
-        </div>
-
-        <div class="profile-section">
           <div class="profile-section-title">Customer Reviews</div>
           <div id="profileReviews">
             <div style="padding:2.5rem 1.5rem;text-align:center">
               <div style="font-size:32px;margin-bottom:.75rem">⭐</div>
               <div style="font-size:15px;font-weight:600;color:var(--cream);margin-bottom:.5rem">No reviews yet</div>
-              <p style="font-size:13px;color:var(--muted);line-height:1.7;max-width:320px;margin:0 auto">Reviews will show here once customers submit them after a completed job. All reviews are verified.</p>
-            </div>
+              <p style="font-size:13px;color:var(--muted);line-height:1.7;max-width:320px;margin:0 auto">Reviews will show here once customers submit them after a completed job.</p>
             </div>
           </div>
         </div>
@@ -3053,41 +3081,14 @@ CREATE OR REPLACE VIEW mechanic_price_guide AS
           <div class="pbc-avail" id="profileAvailStatus">Available now</div>
           <button class="profile-book-btn" id="profileBookBtn" onclick="bookFromProfile()"><i class="ti ti-calendar-plus" aria-hidden="true"></i> <span id="profileBookBtnLabel">Book Marcus Now</span></button>
 <div class="profile-actions-row">
-  <button class="profile-action-btn" onclick="navigator.share ? navigator.share({title:'WrenchNow',url:window.location.href}) : alert('Copy the URL to share')"><i class="ti ti-share" aria-hidden="true"></i> Share</button>
-  <button class="profile-action-btn" onclick="alert('Save feature coming soon')"><i class="ti ti-bookmark" aria-hidden="true"></i> Save</button>
+  <button class="profile-action-btn" onclick="shareProfile(this)"><i class="ti ti-share" aria-hidden="true"></i> Share</button>
 </div>
-          <div style="font-size:11px;color:var(--muted);text-align:center">Free cancellation up to 2 hrs before</div>
+          <div style="font-size:11px;color:var(--muted);text-align:center">Free cancellation any time before your mechanic arrives</div>
         </div>
 
-        <div style="background:var(--raised);border:0.5px solid var(--border);border-radius:14px;padding:1rem 1.25rem;margin-bottom:1rem">
-          <div class="profile-section-title" style="margin-bottom:.75rem">This week</div>
-          <div class="avail-grid">
-            <div class="avail-day"><div class="avail-day-label">Mo</div><div class="avail-slot-mini booked"></div><div class="avail-slot-mini booked" style="margin-top:3px"></div><div class="avail-slot-mini open" style="margin-top:3px"></div></div>
-            <div class="avail-day"><div class="avail-day-label">Tu</div><div class="avail-slot-mini booked"></div><div class="avail-slot-mini partial" style="margin-top:3px"></div><div class="avail-slot-mini open" style="margin-top:3px"></div></div>
-            <div class="avail-day"><div class="avail-day-label">W</div><div class="avail-slot-mini open"></div><div class="avail-slot-mini open" style="margin-top:3px"></div><div class="avail-slot-mini open" style="margin-top:3px"></div></div>
-            <div class="avail-day"><div class="avail-day-label">T</div><div class="avail-slot-mini open"></div><div class="avail-slot-mini partial" style="margin-top:3px"></div><div class="avail-slot-mini booked" style="margin-top:3px"></div></div>
-            <div class="avail-day"><div class="avail-day-label">F</div><div class="avail-slot-mini booked"></div><div class="avail-slot-mini booked" style="margin-top:3px"></div><div class="avail-slot-mini partial" style="margin-top:3px"></div></div>
-            <div class="avail-day"><div class="avail-day-label">S</div><div class="avail-slot-mini open"></div><div class="avail-slot-mini open" style="margin-top:3px"></div><div class="avail-slot-mini open" style="margin-top:3px"></div></div>
-            <div class="avail-day"><div class="avail-day-label">S</div><div class="avail-slot-mini open"></div><div class="avail-slot-mini open" style="margin-top:3px"></div><div class="avail-slot-mini open" style="margin-top:3px"></div></div>
-          </div>
-          <div style="display:flex;gap:10px;margin-top:.75rem">
-            <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted)"><div style="width:8px;height:8px;border-radius:2px;background:var(--green)"></div>Open</div>
-            <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted)"><div style="width:8px;height:8px;border-radius:2px;background:var(--amber)"></div>Partial</div>
-            <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted)"><div style="width:8px;height:8px;border-radius:2px;background:var(--red)"></div>Full</div>
-          </div>
-        </div>
-
-        <div style="background:var(--raised);border:0.5px solid var(--border);border-radius:14px;padding:1rem 1.25rem;margin-bottom:1rem">
-          <div class="profile-section-title" style="margin-bottom:.75rem">Response rate</div>
-          <div style="font-family:var(--font-display);font-size:28px;font-weight:800;color:var(--cream)">97%</div>
-          <div style="font-size:11px;color:var(--muted);margin-bottom:.5rem">Avg. response in 8 min</div>
-          <div class="resp-bar-wrap"><div class="resp-bar-fill"></div></div>
-        </div>
-
-        <div style="background:var(--raised);border:0.5px solid var(--border);border-radius:14px;padding:1rem 1.25rem">
+        <div id="profileAreaCard" style="display:none;background:var(--raised);border:0.5px solid var(--border);border-radius:14px;padding:1rem 1.25rem">
           <div class="profile-section-title" style="margin-bottom:.75rem">Service area</div>
-          <div style="font-size:13px;color:var(--ink);margin-bottom:6px"><i class="ti ti-map-pin" style="color:var(--ore)" aria-hidden="true"></i> Denver metro · up to 25 mi</div>
-          <div style="font-size:12px;color:var(--muted);line-height:1.5">Denver, Aurora, Lakewood, Englewood, Littleton, Westminster, Thornton</div>
+          <div style="font-size:13px;color:var(--ink)"><i class="ti ti-map-pin" style="color:var(--ore)" aria-hidden="true"></i> <span id="profileArea"></span></div>
         </div>
       </div>
     </div>
@@ -3101,33 +3102,12 @@ CREATE OR REPLACE VIEW mechanic_price_guide AS
       <div>
         <div class="footer-logo">WRENCH<span>NOW</span></div>
         <div class="footer-tagline">Mobile mechanics, on demand. We bring the garage to you — driveway, parking lot, anywhere your car is.</div>
-        <div class="footer-badges">
-          <div class="app-badge">
-      <svg width="14" height="11" viewBox="0 0 14 11" fill="none" aria-hidden="true">
-        <rect x="0.5" y="5" width="13" height="4.5" rx="1.5" fill="currentColor" opacity="0.7"/>
-        <path d="M2.5 5 L3.5 2 Q4 1.5 5 1.5 L9 1.5 Q10 1.5 10.5 2 L11.5 5Z" fill="currentColor" opacity="0.7"/>
-        <circle cx="3" cy="9.5" r="1.5" fill="currentColor"/>
-        <circle cx="11" cy="9.5" r="1.5" fill="currentColor"/>
-      </svg>
-      iOS App
-    </div>
-          <div class="app-badge">
-      <svg width="14" height="11" viewBox="0 0 14 11" fill="none" aria-hidden="true">
-        <rect x="0.5" y="5" width="13" height="4.5" rx="1.5" fill="currentColor" opacity="0.7"/>
-        <path d="M2.5 5 L3.5 2 Q4 1.5 5 1.5 L9 1.5 Q10 1.5 10.5 2 L11.5 5Z" fill="currentColor" opacity="0.7"/>
-        <circle cx="3" cy="9.5" r="1.5" fill="currentColor"/>
-        <circle cx="11" cy="9.5" r="1.5" fill="currentColor"/>
-      </svg>
-      Android App
-    </div>
         </div>
-      </div>
       <div>
         <div class="footer-col-title">For Customers</div>
         <div class="footer-links">
           <a href="#" onclick="showPanel('customer');return false">Find a Mechanic</a>
           <a href="#" onclick="showPanel('customer');setTimeout(()=>document.getElementById('how-section').scrollIntoView({behavior:'smooth'}),100);return false">How It Works</a>
-          <a href="#" onclick="showPanel('mechanic');return false">Pricing Guide</a>
           <a href="#" onclick="showPanel('customer');setTimeout(()=>document.getElementById('mechs-section').scrollIntoView({behavior:'smooth'}),100);return false">Supported Services</a>
           <a href="#" onclick="showPanel('customer');setTimeout(()=>document.querySelector('.testi-section').scrollIntoView({behavior:'smooth'}),100);return false">Customer Reviews</a>
         </div>
@@ -3136,20 +3116,17 @@ CREATE OR REPLACE VIEW mechanic_price_guide AS
         <div class="footer-col-title">For Mechanics</div>
         <div class="footer-links">
           <a href="#" onclick="showPanel('mechanic');openApply();return false">Apply Now</a>
-          <a href="#" onclick="showPanel('mechanic');return false">Earnings Calculator</a>
-          <a href="#" onclick="showPanel('mechanic');return false">Top Pro Program</a>
-          <a href="#" onclick="showPanel('mechanic');return false">Parts Network</a>
-          <a href="#" onclick="showPanel('mechanic');return false">Pro App Download</a>
+          <a href="#" onclick="showPanel('mechanic');return false">Why Join</a>
+          <a href="#" onclick="showPanel('dashboard');return false">Dashboard Preview</a>
         </div>
       </div>
       <div>
-        <div class="footer-col-title">Company</div>
+        <div class="footer-col-title">Legal</div>
         <div class="footer-links">
-          <a href="#" onclick="showPanel('customer');return false">About WrenchNow</a>
-          <a href="#" onclick="showPanel('customer');return false">Blog</a>
-          <a href="#" onclick="showPanel('customer');return false">Careers</a>
-          <a href="#" onclick="showPanel('customer');return false">Press</a>
-          <a href="#" onclick="openBooking(null);return false">Contact</a>
+          <a href="#" onclick="openLegal('privacyOverlay');return false">Privacy Policy</a>
+          <a href="#" onclick="openLegal('tosOverlay');return false">Terms of Service</a>
+          <a href="#" onclick="openLegal('mechAgreementOverlay');return false">Mechanic Agreement</a>
+          <a href="#" onclick="openContact();return false">Contact Us</a>
         </div>
       </div>
     </div>
@@ -3160,39 +3137,49 @@ CREATE OR REPLACE VIEW mechanic_price_guide AS
   </div>
 </footer>
 
-<script type="module">
+<!-- Firebase SDKs — loaded immediately before main script -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
+<script>
 
 // ─── FIREBASE CONFIG ────────────────────────────────────
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-import { getFirestore, collection, getDocs, addDoc, doc, getDoc, setDoc, query, where, orderBy, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged, updateProfile } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+// Declared as let so they're accessible throughout the script
+// without any temporal dead zone issues
+let db, auth;
 
-const firebaseConfig = {
-  apiKey: "AIzaSyD9JlmwyEH8xz_qOy_QWZlIdTjLraoe1kw",
-  authDomain: "wrench-now.firebaseapp.com",
-  projectId: "wrench-now",
-  storageBucket: "wrench-now.firebasestorage.app",
-  messagingSenderId: "247147532669",
-  appId: "1:247147532669:web:152965681aa48b8cc5bc14"
-};
-
-const fbApp  = initializeApp(firebaseConfig);
-const db     = getFirestore(fbApp);
-const auth   = getAuth(fbApp);
+(function initFirebase() {
+  const firebaseConfig = {
+    apiKey: "AIzaSyD9JlmwyEH8xz_qOy_QWZlIdTjLraoe1kw",
+    authDomain: "wrench-now.firebaseapp.com",
+    projectId: "wrench-now",
+    storageBucket: "wrench-now.firebasestorage.app",
+    messagingSenderId: "247147532669",
+    appId: "1:247147532669:web:152965681aa48b8cc5bc14"
+  };
+  firebase.initializeApp(firebaseConfig);
+  db   = firebase.firestore();
+  auth = firebase.auth();
+})();
 
 // ─── STRIPE CONFIG ──────────────────────────────────────
 const STRIPE_PK = 'pk_test_51ToxKfGpl1ZslgzEmfZvbCJS3X8C6u8EVCS1O2Qda6tCAhRWdBvhruXh3Vb5IuhviODfKj0g0UcK46BP28YwzIHZ001qbhZoIa';
 const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/test_eVq8wQ7Yqa9NeQq9zn7Re00';
+
+// ─── VERIFICATION FEE + PAYBACK ─────────────────────────
+// Mechanics pay a one-time verification fee; it is paid back after PAYBACK_JOBS
+// customer-confirmed jobs. Change the numbers here and the page copy follows.
+const VERIFY_FEE = 49;
+const PAYBACK_JOBS = 5;
+const VERIFY_PAYMENT_LINK = '';    // ← paste your LIVE Stripe Payment Link for the verification fee
+const FEATURED_PAYMENT_LINK = '';  // ← LIVE Stripe subscription link for "Go Featured" ($29/mo)
 
 // ─── RESEND CONFIG ──────────────────────────────────────
 // Emails fire via Firebase Cloud Functions (free tier)
 // Deploy: firebase deploy --only functions
 const RESEND_FROM = 'WrenchNow <noreply@wrenchnow.com>';
 
-// ─── MECHANIC DATA (live from DB) ──────────────────────
-// Populated on page load from Supabase. Also kept as a
-// local lookup so booking/profile modals work instantly.
 let MECHANICS = {};
 
 function mechToLookup(m) {
@@ -3202,7 +3189,11 @@ function mechToLookup(m) {
     color: m.avatar_color,
     name: m.name,
     tagline: m.tagline,
-    rating: String(m.rating),
+    rating: hasRating(m) ? String(m.rating) : '',
+    verified: m.verified === true,
+    badge: m.badge_type || '',
+    featured: !!m.is_featured,
+    city: mechCity(m),
     rateNum: m.rate_num,
     reviews: m.jobs_completed + ' jobs',
     jobs: String(m.jobs_completed),
@@ -3227,7 +3218,7 @@ function starsHTML(rating) {
 function badgeHTML(type) {
   if(type==='top') return '<div class="mbadge mbadge-top">Top Pro</div>';
   if(type==='verified') return '<div class="mbadge mbadge-pro">Verified</div>';
-  if(type==='new') return '<div class="mbadge mbadge-new">Rising Star</div>';
+  if(type==='new') return '<div class="mbadge mbadge-new">New</div>';
   return '';
 }
 
@@ -3256,14 +3247,16 @@ function renderMechCard(m) {
   const locEl = document.createElement('div');
   locEl.className = 'mcard-loc';
   locEl.innerHTML = '<i class="ti ti-map-pin" style="font-size:11px" aria-hidden="true"></i> ';
-  locEl.appendChild(document.createTextNode(m.distance_mi + ' mi · arrives ~' + m.arrives_min + ' min'));
+  locEl.appendChild(document.createTextNode(mechCity(m) ? 'Serves ' + mechCity(m) + ' area' : 'Mobile — comes to you'));
   meta.appendChild(nameEl);
   meta.appendChild(locEl);
 
   // Badge
   const badge = document.createElement('div');
-  const badgeMap = { top: ['mbadge mbadge-top','Top Pro'], verified: ['mbadge mbadge-pro','Verified'], new: ['mbadge mbadge-new','Rising Star'] };
-  if(badgeMap[m.badge_type]){ badge.className = badgeMap[m.badge_type][0]; badge.textContent = badgeMap[m.badge_type][1]; }
+  const badgeMap = { top: ['mbadge mbadge-top','Top Pro'], verified: ['mbadge mbadge-pro','Verified'], new: ['mbadge mbadge-new','New'] };
+  if(m.verified === true){ badge.className = 'mbadge mbadge-pro'; badge.textContent = '✓ Verified'; }
+  else if(m.badge_type === 'top'){ badge.className = badgeMap.top[0]; badge.textContent = badgeMap.top[1]; }
+  else { badge.className = 'mbadge mbadge-unverified'; badge.textContent = 'Not yet verified'; }
 
   // Featured card styling
   if(m.is_featured) {
@@ -3335,19 +3328,26 @@ function renderMechCard(m) {
   // Rating row with score
   const ratingRow = document.createElement('div');
   ratingRow.className = 'mcard-rating';
-  const ratingStars = document.createElement('span');
-  ratingStars.className = 'rating-stars';
-  ratingStars.innerHTML = starsHTML(m.rating);
-  const ratingScore = document.createElement('span');
-  ratingScore.className = 'rating-score';
-  ratingScore.textContent = m.rating;
-  const ratingCount = document.createElement('span');
-  ratingCount.className = 'rating-count';
-  ratingCount.textContent = m.jobs_completed + ' jobs';
-  ratingRow.appendChild(ratingStars);
-  ratingRow.appendChild(ratingScore);
-  ratingRow.appendChild(document.createTextNode(' · '));
-  ratingRow.appendChild(ratingCount);
+  if(hasRating(m)){
+    const ratingStars = document.createElement('span');
+    ratingStars.className = 'rating-stars';
+    ratingStars.innerHTML = starsHTML(m.rating);
+    const ratingScore = document.createElement('span');
+    ratingScore.className = 'rating-score';
+    ratingScore.textContent = Number(m.rating).toFixed(1);
+    const ratingCount = document.createElement('span');
+    ratingCount.className = 'rating-count';
+    ratingCount.textContent = m.jobs_completed + ' job' + (m.jobs_completed !== 1 ? 's' : '');
+    ratingRow.appendChild(ratingStars);
+    ratingRow.appendChild(ratingScore);
+    ratingRow.appendChild(document.createTextNode(' · '));
+    ratingRow.appendChild(ratingCount);
+  } else {
+    const fresh = document.createElement('span');
+    fresh.className = 'rating-new';
+    fresh.innerHTML = '<strong>New on WrenchNow</strong> · no ratings yet';
+    ratingRow.appendChild(fresh);
+  }
 
   // Rate note
   const rateNote = document.createElement('div');
@@ -3395,10 +3395,10 @@ async function loadMechanics() {
 
     if(!data){
       // Firestore: get all mechanics ordered by rating
-      const snap = await getDocs(
-        query(collection(db, 'mechanics'), orderBy('rating', 'desc'))
-      );
+      const snap = await db.collection('mechanics').get();
       data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Sort by featured first, then rating
+      data.sort((a,b) => { if(a.is_featured && !b.is_featured) return -1; if(!a.is_featured && b.is_featured) return 1; return (b.rating||0)-(a.rating||0); });
       try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), rows: data })); } catch(e){}
     }
 
@@ -3406,56 +3406,14 @@ async function loadMechanics() {
     MECHANICS = {};
     data.forEach(m => { MECHANICS[m.slug] = mechToLookup(m); });
 
-    // Remove loading state and render cards
-    const loadingEl = document.getElementById('mechsLoading');
-    if(loadingEl) loadingEl.remove();
-    grid.innerHTML = '';
-    // Sort: featured mechanics first, then by rating
-    const featured = data.filter(m => m.is_featured);
-    const regular = data.filter(m => !m.is_featured);
-
-    // Add featured section label if any featured mechanics
-    if(featured.length > 0) {
-      const featLabel = document.createElement('div');
-      featLabel.className = 'featured-section-label';
-      const labelSpan = document.createElement('span');
-      labelSpan.textContent = '★ Featured mechanics';
-      featLabel.appendChild(labelSpan);
-      grid.appendChild(featLabel);
-      featured.forEach(m => grid.appendChild(renderMechCard(m)));
-
-      if(regular.length > 0) {
-        const regLabel = document.createElement('div');
-        regLabel.className = 'featured-section-label';
-        const regSpan = document.createElement('span');
-        regSpan.style.color = 'var(--muted)';
-        regSpan.textContent = 'All mechanics';
-        regLabel.appendChild(regSpan);
-        regLabel.querySelector('::after');
-        grid.appendChild(regLabel);
-      }
-    }
-    regular.forEach(m => grid.appendChild(renderMechCard(m)));
-    highlightSavedMechanic();
-
-    // Count truly available mechanics (available_now = true)
-    const availableNow = data.filter(m => m.available_now);
-    const availCount = availableNow.length;
-
-    // Update section meta
-    const meta = document.getElementById('mechsMeta');
-    if(meta){
-      meta.textContent = 'Showing ' + data.length + ' mechanic' + (data.length !== 1 ? 's' : '') + ' near you · ';
-      const avEl = document.createElement('strong');
-      avEl.style.color = '#22c55e';
-      avEl.textContent = availCount + ' available right now';
-      meta.appendChild(avEl);
-    }
+    ALL_MECHS = data;
+    renderGrid();
+    const availCount = data.filter(m => m.available_now).length;
 
     // Hero badge — only show if mechanics are actually online
     const badge = document.getElementById('badgeLive');
     if(badge && availCount > 0){
-      badge.textContent = availCount + ' mechanic' + (availCount !== 1 ? 's' : '') + ' available near you right now';
+      badge.textContent = availCount + ' mechanic' + (availCount !== 1 ? 's' : '') + ' available right now';
       badge.style.display = 'inline-flex';
     }
 
@@ -3467,44 +3425,25 @@ async function loadMechanics() {
       scBadge.style.display = 'flex';
     }
 
-    // Update hero stats from real data
-    const statMechanics = document.getElementById('statMechanics');
-    const statJobs = document.getElementById('statJobs');
-    const statSaved = document.getElementById('statSaved');
-    const statArrival = document.getElementById('statArrival');
-    if(statMechanics) statMechanics.textContent = data.length;
-    if(statJobs){
-      const total = data.reduce((sum, m) => sum + (m.jobs_completed||0), 0);
-      statJobs.textContent = total > 0 ? total.toLocaleString() : '—';
-    }
-    // Avg saved and arrival time will populate once real job data exists
-    if(statSaved) statSaved.textContent = '—';
-    if(statArrival){
-      const avgs = data.map(m=>m.arrives_min).filter(Boolean);
-      statArrival.textContent = avgs.length ? Math.round(avgs.reduce((a,b)=>a+b,0)/avgs.length)+' min' : '—';
+    // Hero stats — only numbers we can actually stand behind; nothing shows until they exist
+    const statsRow = document.getElementById('heroStats');
+    if(statsRow){
+      statsRow.innerHTML = '';
+      const addStat = (num, lbl) => {
+        const w = document.createElement('div');
+        const n = document.createElement('div'); n.className = 'hstat-num'; n.textContent = num;
+        const l = document.createElement('div'); l.className = 'hstat-label'; l.textContent = lbl;
+        w.appendChild(n); w.appendChild(l); statsRow.appendChild(w);
+      };
+      const totalJobs = data.reduce((sum, m) => sum + (m.jobs_completed||0), 0);
+      if(data.length > 0) addStat(String(data.length), 'Mechanic' + (data.length !== 1 ? 's' : '') + ' on WrenchNow');
+      if(totalJobs > 0) addStat(totalJobs.toLocaleString(), 'Job' + (totalJobs !== 1 ? 's' : '') + ' completed');
     }
 
   } catch(err) {
     console.error('Failed to load mechanics:', err);
-    grid.innerHTML = '';
-    const errWrap = document.createElement('div');
-    errWrap.style.cssText = 'grid-column:1/-1;text-align:center;padding:3.5rem 2rem';
-    const errIcon = document.createElement('div');
-    errIcon.style.cssText = 'font-size:32px;margin-bottom:1rem';
-    errIcon.textContent = '🔧';
-    const errTitle = document.createElement('div');
-    errTitle.style.cssText = 'font-family:var(--font-display);font-size:22px;font-weight:700;color:var(--cream);margin-bottom:.6rem';
-    errTitle.textContent = "We're just getting started";
-    const errText = document.createElement('p');
-    errText.style.cssText = 'color:#6b6660;font-size:14px;line-height:1.7;max-width:400px;margin:0 auto';
-    errText.textContent = 'WrenchNow is growing fast. Mechanics are joining daily — check back soon and you\'ll find a verified pro ready to come to you.';
-    const errBtn = document.createElement('button');
-    errBtn.className = 'btn-ore';
-    errBtn.style.cssText = 'margin-top:1.5rem;border-radius:12px';
-    errBtn.textContent = 'Are you a mechanic? Join us →';
-    errBtn.addEventListener('click', () => showPanel('mechanic'));
-    errWrap.appendChild(errIcon); errWrap.appendChild(errTitle); errWrap.appendChild(errText); errWrap.appendChild(errBtn);
-    grid.appendChild(errWrap);
+    ALL_MECHS = [];
+    renderGrid();
   }
 }
 
@@ -3521,7 +3460,8 @@ function showPanel(name){
   document.querySelectorAll('.npill').forEach(p=>p.classList.remove('on'));
   document.getElementById('panel-'+name).classList.add('on');
   const tabs = document.querySelectorAll('.npill');
-  const idx = {customer:0,mechanic:1,dashboard:2}[name];
+  const idx = {customer:0,mechanic:1,dashboard:2,admin:3}[name];
+  if(name === 'admin') loadAdmin();
   if(tabs[idx]) tabs[idx].classList.add('on');
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -3544,49 +3484,181 @@ document.addEventListener('change', function(e) {
   }
 });
 
-// ─── FILTER CHIPS ──────────────────────────────────────
-let currentFilter = 'all';
-function filterToggle(el, filter) {
+// ─── SEARCH / FILTER / SORT ────────────────────────────
+// One source of truth for what the grid shows. The hero search card,
+// the filter chips and the sort pills all write to `view`, then renderGrid().
+let ALL_MECHS = [];
+const view = { filter: 'all', sort: 'rating', terms: [] };
+
+const SERVICE_KEYS = {
+  oil:          { label: 'oil change',    re: /\boil\b|lube/ },
+  brakes:       { label: 'brakes',        re: /brak|rotor|caliper/ },
+  battery:      { label: 'battery',       re: /batter|jump.?start/ },
+  tires:        { label: 'tires',         re: /\bt[iy]re|flat repair|wheel/ },
+  ac:           { label: 'AC / heat',     re: /\ba\/?c\b|air.?con|hvac|heat|climate|cooling/ },
+  diagnostic:   { label: 'diagnostics',   re: /diagnos|engine|\bobd/ },
+  transmission: { label: 'transmission',  re: /transmi|clutch|gearbox/ },
+  electrical:   { label: 'electrical',    re: /electric|wiring|starter|alternator/ },
+  european:     { label: 'European cars', re: /europe|bmw|audi|mercedes|volkswagen|\bvw\b|volvo|porsche/ }
+};
+// What a customer types in plain English → which service it probably is
+const SYMPTOM_KEYS = [
+  [/\boil\b|lube/, 'oil'],
+  [/brak|grind|squeal|squeak|pedal/, 'brakes'],
+  [/batter|won'?t start|wont start|dead|jump|click/, 'battery'],
+  [/\bt[iy]re|flat|puncture|wheel/, 'tires'],
+  [/\ba\/?c\b|air.?con|heat|not cool|blow/, 'ac'],
+  [/check engine|engine light|warning light|light on|code|diagnos|noise|smell|leak|shak|vibrat|stall/, 'diagnostic'],
+  [/transmi|gear|shift|clutch/, 'transmission'],
+  [/electric|wiring|fuse|starter|alternator/, 'electrical']
+];
+
+function hasRating(m){ return (m.jobs_completed || 0) > 0 && Number(m.rating) > 0; }
+function mechCity(m){
+  if(m.city) return String(m.city);
+  const hit = /experience · (.+)$/.exec(m.tagline || '');
+  return hit ? hit[1].trim() : '';
+}
+function mechMatches(m, key){
+  const k = SERVICE_KEYS[key];
+  if(!k) return true;
+  const specs = (m.specialties || []).join(' ').toLowerCase();
+  // "General repairs" mechanics take any standard job (but don't claim a European specialty)
+  if(key !== 'european' && /general|all repairs|full.?service/.test(specs)) return true;
+  return k.re.test(specs + ' ' + (m.tagline || '').toLowerCase());
+}
+const SORTS = {
+  rating:    (a,b) => ((b.verified === true ? 1 : 0) - (a.verified === true ? 1 : 0)) || (hasRating(b) - hasRating(a)) || (hasRating(a) ? Number(b.rating) - Number(a.rating) : 0) || ((b.jobs_completed||0) - (a.jobs_completed||0)),
+  price:     (a,b) => (a.rate_num || 1e9) - (b.rate_num || 1e9),
+  jobs:      (a,b) => (b.jobs_completed||0) - (a.jobs_completed||0),
+  available: (a,b) => ((b.available_now ? 1 : 0) - (a.available_now ? 1 : 0)) || SORTS.rating(a,b)
+};
+
+function gridEmpty(title, text, buttons){
+  const wrap = document.createElement('div'); wrap.className = 'grid-empty';
+  const t = document.createElement('div'); t.className = 'grid-empty-title'; t.textContent = title;
+  const p = document.createElement('p'); p.textContent = text;
+  const row = document.createElement('div'); row.className = 'grid-empty-actions';
+  (buttons || []).forEach(([label, cls, fn]) => {
+    const b = document.createElement('button'); b.className = cls; b.textContent = label;
+    b.addEventListener('click', fn); row.appendChild(b);
+  });
+  wrap.appendChild(t); wrap.appendChild(p); wrap.appendChild(row);
+  return wrap;
+}
+
+function resetView(){
+  view.filter = 'all'; view.terms = [];
+  document.querySelectorAll('.filter-chip').forEach((c,i) => c.classList.toggle('on', i === 0));
+  document.querySelectorAll('#chips .chip').forEach(c => c.classList.remove('on'));
+  renderGrid();
+}
+
+function renderGrid(){
+  const grid = document.getElementById('mechsGrid');
+  const meta = document.getElementById('mechsMeta');
+  if(!grid) return;
+  grid.innerHTML = '';
+
+  if(!ALL_MECHS.length){
+    if(meta) meta.textContent = '';
+    grid.appendChild(gridEmpty("We're just getting started",
+      "We're signing up our first mechanics right now. Check back soon — or if you turn wrenches yourself, grab a founding spot.",
+      [['Are you a mechanic? Join us →', 'btn-ore', () => showPanel('mechanic')]]));
+    return;
+  }
+
+  let list = ALL_MECHS.slice();
+  if(view.filter === 'available') list = list.filter(m => m.available_now);
+  else if(view.filter !== 'all') list = list.filter(m => mechMatches(m, view.filter));
+  if(view.terms.length) list = list.filter(m => view.terms.some(k => mechMatches(m, k)));
+  list.sort(SORTS[view.sort] || SORTS.rating);
+
+  const narrowed = view.filter !== 'all' || view.terms.length > 0;
+  const what = view.terms.length ? view.terms.map(k => SERVICE_KEYS[k].label).join(' or ')
+             : view.filter === 'available' ? 'available now'
+             : (SERVICE_KEYS[view.filter] || {}).label || '';
+
+  if(meta){
+    meta.textContent = '';
+    if(narrowed){
+      meta.appendChild(document.createTextNode(list.length + ' of ' + ALL_MECHS.length + ' mechanic' + (ALL_MECHS.length !== 1 ? 's' : '') + ' — ' + what));
+      const clr = document.createElement('button'); clr.className = 'meta-clear'; clr.textContent = 'Show all';
+      clr.addEventListener('click', resetView); meta.appendChild(clr);
+    } else {
+      const avail = ALL_MECHS.filter(m => m.available_now).length;
+      meta.appendChild(document.createTextNode(ALL_MECHS.length + ' mechanic' + (ALL_MECHS.length !== 1 ? 's' : '') + (avail ? ' · ' : '')));
+      if(avail){ const s = document.createElement('strong'); s.style.color = '#22c55e'; s.textContent = avail + ' available right now'; meta.appendChild(s); }
+    }
+  }
+
+  if(!list.length){
+    grid.appendChild(gridEmpty('No one lists ' + what + ' yet',
+      "Most mechanics can still diagnose it on site. See everyone, or send us the job and we'll match you.",
+      [['Show all mechanics', 'btn-ghost', resetView], ['Let us match you', 'btn-ore', () => openBooking(null)]]));
+    return;
+  }
+
+  const label = (text, muted) => {
+    const el = document.createElement('div'); el.className = 'featured-section-label';
+    const sp = document.createElement('span'); sp.textContent = text; if(muted) sp.style.color = 'var(--muted)';
+    el.appendChild(sp); return el;
+  };
+  const featured = list.filter(m => m.is_featured);
+  const regular  = list.filter(m => !m.is_featured);
+  if(featured.length){
+    grid.appendChild(label('★ Featured mechanics'));
+    featured.forEach(m => grid.appendChild(renderMechCard(m)));
+    if(regular.length) grid.appendChild(label('All mechanics', true));
+  }
+  regular.forEach(m => grid.appendChild(renderMechCard(m)));
+  highlightSavedMechanic();
+}
+
+function filterToggle(el, filter){
   document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('on'));
   el.classList.add('on');
-  currentFilter = filter;
-  const cards = document.querySelectorAll('.mcard');
-  cards.forEach(card => {
-    if(filter === 'all') {
-      card.style.display = '';
-      return;
-    }
-    const slug = card.getAttribute('data-slug') || '';
-    const name = (card.getAttribute('data-name') || '').toLowerCase();
-    // Use visible text of tags for filtering
-    const tags = Array.from(card.querySelectorAll('.mtag')).map(t => t.textContent.toLowerCase()).join(' ');
-    const avail = card.querySelector('.avail-pill');
-    const isAvailable = avail && avail.classList.contains('on');
-
-    let show = false;
-    if(filter === 'available') show = isAvailable;
-    else if(filter === 'oil') show = tags.includes('oil');
-    else if(filter === 'brakes') show = tags.includes('brake');
-    else if(filter === 'battery') show = tags.includes('battery');
-    else if(filter === 'diagnostic') show = tags.includes('diagno') || tags.includes('engine');
-    else if(filter === 'european') show = tags.includes('european') || tags.includes('bmw') || tags.includes('audi') || tags.includes('mercedes');
-    else show = true;
-
-    card.style.display = show ? '' : 'none';
-  });
-
-  // Update results count
-  const visible = document.querySelectorAll('.mcard:not([style*="display: none"])').length;
-  const meta = document.getElementById('mechsMeta');
-  if(meta && filter !== 'all') {
-    meta.innerHTML = visible + ' mechanic' + (visible !== 1 ? 's' : '') + ' match this filter';
-  }
+  view.filter = filter;
+  view.terms = [];
+  document.querySelectorAll('#chips .chip').forEach(c => c.classList.remove('on'));
+  renderGrid();
 }
 
-function sortToggle(el){
-  document.querySelectorAll('.sort-pill').forEach(p=>p.classList.remove('on'));
+function sortToggle(el, key){
+  document.querySelectorAll('.sort-pill').forEach(p => p.classList.remove('on'));
   el.classList.add('on');
+  view.sort = key || 'rating';
+  renderGrid();
 }
+
+// Hero search card → filters the grid and is carried into the booking form
+function runSearch(){
+  const text = (document.getElementById('searchService').value || '').toLowerCase();
+  const keys = new Set();
+  document.querySelectorAll('#chips .chip.on').forEach(c => { if(c.dataset.key) keys.add(c.dataset.key); });
+  if(text) SYMPTOM_KEYS.forEach(([re, k]) => { if(re.test(text)) keys.add(k); });
+  view.terms = Array.from(keys);
+  view.filter = 'all';
+  document.querySelectorAll('.filter-chip').forEach((c,i) => c.classList.toggle('on', i === 0));
+  renderGrid();
+  document.getElementById('mechs-section').scrollIntoView({ behavior: 'smooth' });
+}
+['searchLocation','searchService','searchVehicle'].forEach(id => {
+  const el = document.getElementById(id);
+  if(el) el.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); runSearch(); } });
+});
+
+// Escape closes whichever overlay is on top
+document.addEventListener('keydown', e => {
+  if(e.key !== 'Escape') return;
+  const on = id => { const el = document.getElementById(id); return el && el.classList.contains('on'); };
+  if(on('agreementOverlay')) return closeAgreement();
+  if(on('contactOverlay')) return closeContact();
+  if(on('authOverlay')) return closeAuth();
+  if(on('bookingModal')) return closeModal();
+  if(on('applyOverlay')) return closeApply();
+  if(on('profileOverlay')) return closeProfile();
+});
 
 // ─── CHARTS ────────────────────────────────────────────
 (function(){
@@ -3614,17 +3686,21 @@ function buildDateTabs(){
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const now = new Date();
   row.innerHTML = '';
-  for(let i=0;i<4;i++){
+  // If every slot for today has already passed, start from tomorrow
+  const lastSlot = Math.max(0, ...Array.from(document.querySelectorAll('#timeSlots .slot-time')).map(el => slotMinutes(el.textContent)));
+  const start = (now.getHours()*60 + now.getMinutes() + 60) > lastSlot ? 1 : 0;
+  for(let n=0;n<4;n++){
+    const i = n + start;
     const d = new Date(now);
     d.setDate(now.getDate()+i);
     const label = i===0
       ? 'Today ' + months[d.getMonth()] + ' ' + d.getDate()
       : days[d.getDay()] + ' ' + months[d.getMonth()] + ' ' + d.getDate();
     const dayStr = i===0 ? 'Today' : days[d.getDay()];
-    if(i===0) selectedDate = label;
+    if(n===0) selectedDate = label;
 
     const tab = document.createElement('div');
-    tab.className = 'date-tab' + (i===0 ? ' on' : '');
+    tab.className = 'date-tab' + (n===0 ? ' on' : '');
     const dayEl = document.createElement('div');
     dayEl.className = 'date-day';
     dayEl.textContent = dayStr;
@@ -3637,12 +3713,46 @@ function buildDateTabs(){
     (function(lbl){ tab.addEventListener('click', function(){ selectDate(this, lbl); }); })(label);
     row.appendChild(tab);
   }
+  refreshSlots();
 }
 
+function slotMinutes(t){
+  const m = /^(\d+):(\d+)\s*(AM|PM)$/i.exec((t||'').trim());
+  if(!m) return 0;
+  return ((+m[1] % 12) + (m[3].toUpperCase() === 'PM' ? 12 : 0)) * 60 + (+m[2]);
+}
+// Times earlier than an hour from now can't be requested for today
+function refreshSlots(){
+  const isToday = (selectedDate||'').startsWith('Today');
+  const now = new Date();
+  const cutoff = now.getHours()*60 + now.getMinutes() + 60;
+  let firstOpen = null, current = null;
+  document.querySelectorAll('#timeSlots .slot').forEach(s => {
+    const past = isToday && slotMinutes(s.querySelector('.slot-time').textContent) < cutoff;
+    s.classList.toggle('taken', past);
+    s.querySelector('.slot-avail').textContent = past ? 'Passed' : '';
+    if(past) s.classList.remove('on');
+    else { if(!firstOpen) firstOpen = s; if(s.classList.contains('on')) current = s; }
+  });
+  if(!current && firstOpen){ firstOpen.classList.add('on'); current = firstOpen; }
+  if(current) selectedTime = current.querySelector('.slot-time').textContent;
+}
+
+let pendingBooking = null; // remembers what the visitor was booking while they sign up / log in
 function openBooking(mechName){
-  if(!currentUser){ openAuth('signup'); return; }
+  if(!currentUser){ pendingBooking = { mech: mechName || null }; openAuth('signup'); return; }
+  pendingBooking = null;
   currentStep = 1;
   buildDateTabs();
+  // Carry over whatever was typed in the search card (only into fields still empty)
+  const carry = (fromId, toId, fallback) => {
+    const from = document.getElementById(fromId), to = document.getElementById(toId);
+    if(to && !to.value) to.value = ((from && from.value.trim()) || fallback || '');
+  };
+  const pickedChips = Array.from(document.querySelectorAll('#chips .chip.on')).map(c => c.dataset.label).filter(Boolean).join(', ');
+  carry('searchService', 'modalService', pickedChips);
+  carry('searchVehicle', 'modalVehicle');
+  carry('searchLocation', 'modalAddress');
   prefillBookingFields();
   const modal = document.getElementById('bookingModal');
   const av = document.getElementById('modalAvatar');
@@ -3719,6 +3829,7 @@ function selectDate(el, label){
   document.querySelectorAll('.date-tab').forEach(d=>d.classList.remove('on'));
   el.classList.add('on');
   selectedDate = label;
+  refreshSlots();
 }
 
 function selectSlot(el){
@@ -3750,10 +3861,7 @@ async function confirmBooking(agreedToTerms=false){
   let bookingId = null;
 
   try {
-    // 1. Save booking to Supabase
-    const token = sessionStorage.getItem('ww_token');
-    // Save booking to Firestore
-    const bookingRef = await addDoc(collection(db, 'bookings'), {
+    const bookingRef = await db.collection('bookings').add({
       customer_id:    currentUser?.uid || null,
       customer_email: currentUser?.email || '',
       customer_name:  currentUser?.displayName || '',
@@ -3770,7 +3878,7 @@ async function confirmBooking(agreedToTerms=false){
       agreed_to_terms: true,
       agreed_at:      new Date().toISOString(),
       status:         'pending',
-      created_at:     serverTimestamp()
+      created_at:     firebase.firestore.FieldValue.serverTimestamp()
     });
     bookingId = bookingRef.id;
     // Save vehicle, address, mechanic to customer profile
@@ -3791,12 +3899,15 @@ async function confirmBooking(agreedToTerms=false){
   // 3. Build success message with payment prompt
   const mechFirst = selectedMechName ? selectedMechName.split(' ')[0] : 'Your mechanic';
   const successSubEl = document.getElementById('successSub');
-  successSubEl.innerHTML = mechFirst + ' is confirmed for <strong>' + selectedTime + ' ' + when + '</strong>.<br>You\'ll get a text when they\'re on their way.';
+  const toWhom = selectedMechName && selectedMechName !== 'Available Mechanic' ? ' to ' + esc(mechFirst) : '';
+  successSubEl.innerHTML = 'Your request' + toWhom + ' for <strong>' + esc(selectedTime + ' ' + when) + '</strong> is in.<br>We\'ll email ' + esc(currentUser?.email || 'you') + ' as soon as it\'s confirmed.';
 
   // 4. Add Stripe payment button to success state
   const existingPayBtn = document.getElementById('stripePayBtn');
   if(existingPayBtn) existingPayBtn.remove();
 
+  // Hidden while the Stripe link is still a test-mode link (real cards can't pay a test link)
+  if(!STRIPE_PAYMENT_LINK.includes('/test_')){
   const payWrap = document.createElement('div');
   payWrap.id = 'stripePayBtn';
   payWrap.style.cssText = 'margin:1rem 0;padding:1rem;background:rgba(242,90,0,0.06);border:0.5px solid rgba(242,90,0,0.2);border-radius:14px;text-align:center';
@@ -3831,14 +3942,13 @@ async function confirmBooking(agreedToTerms=false){
   payWrap.appendChild(payBtn);
   payWrap.appendChild(skipBtn);
   ss.insertBefore(payWrap, ss.querySelector('.tracking-box'));
+  }
 
-  if(btn){ btn.disabled=false; btn.innerHTML='<i class="ti ti-circle-check" aria-hidden="true"></i> Confirm Booking — It\'s Free'; }
+  if(btn){ btn.disabled=false; btn.innerHTML='<i class="ti ti-circle-check" aria-hidden="true"></i> Send Booking Request — No Fee'; }
 
-  // 5. Send confirmation email via Supabase Edge Function
-  // (Edge Function reads RESEND_API_KEY from Supabase env vars)
   sendBookingConfirmationEmail({
     customerEmail: currentUser?.email || '',
-    customerName:  currentUser?.user_metadata?.full_name || 'there',
+    customerName:  currentUser?.displayName || 'there',
     mechName:      selectedMechName,
     service,
     vehicle,
@@ -3875,7 +3985,7 @@ function openProfile(mechKey){
 
   document.getElementById('profileName').textContent = m.name;
   document.getElementById('profileTagline').textContent = m.tagline;
-  document.getElementById('profileRating').textContent = m.rating || '—';
+  document.getElementById('profileRating').textContent = m.rating ? Number(m.rating).toFixed(1) : 'New';
   const ratingSub = document.getElementById('profileRatingSub');
   if(ratingSub && m.rating && parseFloat(m.rating) > 0) {
     const stars = '★'.repeat(Math.floor(parseFloat(m.rating))) + (parseFloat(m.rating) % 1 >= 0.5 ? '★' : '');
@@ -3908,8 +4018,43 @@ function openProfile(mechKey){
     specsEl.appendChild(tag);
   });
 
+  // Badges and stats come from the mechanic's own record — nothing is claimed by default
+  const badgesEl = document.getElementById('profileBadges');
+  if(badgesEl){
+    badgesEl.innerHTML = '';
+    const addBadge = (cls, icon, text) => {
+      const b = document.createElement('div'); b.className = 'pbadge ' + cls;
+      const i = document.createElement('i'); i.className = 'ti ' + icon; i.setAttribute('aria-hidden','true');
+      b.appendChild(i); b.appendChild(document.createTextNode(' ' + text)); badgesEl.appendChild(b);
+    };
+    if(m.featured) addBadge('pbadge-top', 'ti-star', 'Featured');
+    if(m.badge === 'top') addBadge('pbadge-top', 'ti-award', 'Top Pro');
+    if(m.verified) addBadge('pbadge-verified', 'ti-shield-check', 'Verified — background, driving record, skills & insurance');
+    else addBadge('pbadge-insured', 'ti-clock', 'Verification in progress');
+  }
+  let shown = 0;
+  document.querySelectorAll('#profileOverlay .pstat').forEach(p => {
+    const v = (p.querySelector('.pstat-num').textContent || '').trim();
+    const ok = v && v !== '—' && v !== 'undefined' && v !== 'null';
+    p.style.display = ok ? '' : 'none'; if(ok) shown++;
+  });
+  const statRow = document.querySelector('#profileOverlay .profile-stat-row');
+  if(statRow) statRow.style.display = shown ? '' : 'none';
+  const areaCard = document.getElementById('profileAreaCard');
+  if(areaCard){
+    areaCard.style.display = m.city ? '' : 'none';
+    document.getElementById('profileArea').textContent = m.city ? m.city + ' area' : '';
+  }
+
   document.getElementById('profileOverlay').classList.add('on');
   document.body.style.overflow = 'hidden';
+}
+
+function shareProfile(btn){
+  const url = window.location.href;
+  if(navigator.share){ navigator.share({ title: 'WrenchNow', url }).catch(() => {}); return; }
+  const done = () => { const old = btn.innerHTML; btn.textContent = 'Link copied'; setTimeout(() => { btn.innerHTML = old; }, 1600); };
+  if(navigator.clipboard) navigator.clipboard.writeText(url).then(done).catch(() => {});
 }
 
 function closeProfile(){
@@ -3927,35 +4072,13 @@ function bookFromProfile(){
 }
 
 
-// ═══════════════════════════════════════════════════════════
-// RESEND EMAIL SYSTEM
-// All emails are sent via Supabase Edge Functions so the
-// Resend API key never touches the browser.
-//
-// SETUP REQUIRED IN SUPABASE:
-// 1. Go to Edge Functions → New Function → name it "send-email"
-// 2. Add secret: RESEND_API_KEY = re_QnMPRVNR_3iUr3EQE9v69AKBk1ZebdmoC
-// 3. Deploy the function code below (see comment at bottom)
-// ═══════════════════════════════════════════════════════════
 
 // Email via Firebase Cloud Functions (deploy separately)
 const EDGE_FN_URL = 'https://us-central1-wrench-now.cloudfunctions.net/sendEmail';
 
 async function callEmailFn(payload) {
-  try {
-    const token = sessionStorage.getItem('ww_token');
-    await fetch(EDGE_FN_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + (token || ''),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload)
-    });
-  } catch(err) {
-    // Non-fatal — booking is already saved
-    console.warn('Email send failed (non-fatal):', err.message);
-  }
+  // Intentionally does nothing. Booking, application and approval emails are sent by the
+  // Cloud Functions in functions/index.js when the matching Firestore record is written.
 }
 
 // ── EMAIL 1: Customer booking confirmation ──────────────
@@ -4015,178 +4138,19 @@ function sendMechanicApprovalEmail({mechEmail, mechName, slug}) {
   });
 }
 
-// ── EMAIL 4: 45-day re-engagement ──────────────────────
-// Triggered by a Supabase cron job, not from the browser.
-// See Supabase → Database → Extensions → pg_cron
-// SQL: SELECT cron.schedule('45-day-reengagement', '0 9 * * *',
-//   $$ SELECT net.http_post(url:='https://us-central1-wrench-now.cloudfunctions.net/sendEmail',
-//   body:='{"type":"reengagement"}') $$);
-
-/*
-═══════════════════════════════════════════════════════════
-SUPABASE EDGE FUNCTION CODE
-Create this at: Supabase → Edge Functions → New Function
-Name it: send-email
-Add secret: RESEND_API_KEY = re_QnMPRVNR_3iUr3EQE9v69AKBk1ZebdmoC
-
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-
-const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
-const FROM = 'WrenchNow <noreply@resend.dev>'
-
-const templates = {
-  booking_confirmation: (d) => ({
-    subject: `Your WrenchNow booking is confirmed — ${d.mechName}`,
-    html: `
-      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 24px">
-        <div style="font-size:24px;font-weight:900;letter-spacing:2px;margin-bottom:24px">
-          WRENCH<span style="color:#f25a00">WOW</span>
-        </div>
-        <h2 style="font-size:22px;margin-bottom:8px">You're booked, ${d.customerName}!</h2>
-        <p style="color:#666;margin-bottom:24px">Here's your booking summary:</p>
-        <div style="background:#f9f9f9;border-radius:12px;padding:20px;margin-bottom:24px">
-          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee">
-            <span style="color:#666">Mechanic</span><strong>${d.mechName}</strong>
-          </div>
-          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee">
-            <span style="color:#666">Service</span><strong>${d.service}</strong>
-          </div>
-          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee">
-            <span style="color:#666">Vehicle</span><strong>${d.vehicle}</strong>
-          </div>
-          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee">
-            <span style="color:#666">Location</span><strong>${d.address}</strong>
-          </div>
-          <div style="display:flex;justify-content:space-between;padding:8px 0">
-            <span style="color:#666">Date & time</span><strong>${d.date} · ${d.time}</strong>
-          </div>
-        </div>
-        <p style="color:#666;font-size:14px">Questions? Reply to this email. Your mechanic will arrive within 15 minutes of your selected time.</p>
-        <div style="margin-top:32px;padding-top:24px;border-top:1px solid #eee;font-size:12px;color:#999">
-          WrenchNow · Denver, CO · <a href="${d.siteUrl}" style="color:#f25a00">webmechaniq.netlify.app</a>
-        </div>
-      </div>`
-  }),
-
-  mechanic_notification: (d) => ({
-    subject: `New booking — ${d.service} — ${d.date} ${d.time}`,
-    html: `
-      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 24px">
-        <div style="font-size:24px;font-weight:900;letter-spacing:2px;margin-bottom:24px">
-          WRENCH<span style="color:#f25a00">WOW</span>
-        </div>
-        <h2 style="font-size:22px;margin-bottom:8px">New booking, ${d.mechName}!</h2>
-        <div style="background:#fff8f5;border:1px solid #ffd4b8;border-radius:12px;padding:20px;margin-bottom:24px">
-          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee">
-            <span style="color:#666">Customer</span><strong>${d.customerName}</strong>
-          </div>
-          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee">
-            <span style="color:#666">Service</span><strong>${d.service}</strong>
-          </div>
-          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee">
-            <span style="color:#666">Vehicle</span><strong>${d.vehicle}</strong>
-          </div>
-          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee">
-            <span style="color:#666">Location</span><strong>${d.address}</strong>
-          </div>
-          <div style="display:flex;justify-content:space-between;padding:8px 0">
-            <span style="color:#666">When</span><strong>${d.date} · ${d.time}</strong>
-          </div>
-        </div>
-        <a href="${d.siteUrl}" style="display:inline-block;background:#f25a00;color:#fff;border-radius:8px;padding:12px 24px;text-decoration:none;font-weight:700">
-          View in Dashboard →
-        </a>
-      </div>`
-  }),
-
-  mechanic_approved: (d) => ({
-    subject: "You're live on WrenchNow — welcome!",
-    html: `
-      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 24px">
-        <div style="font-size:24px;font-weight:900;letter-spacing:2px;margin-bottom:24px">
-          WRENCH<span style="color:#f25a00">WOW</span>
-        </div>
-        <h2 style="font-size:22px;margin-bottom:8px">You're approved, ${d.mechName}!</h2>
-        <p style="color:#666;margin-bottom:24px">
-          Your profile is now live on WrenchNow as a <strong>Founding Mechanic</strong> — you pay zero platform fees during our launch period. Customers in your area can find and book you right now.
-        </p>
-        <div style="background:#f0fff4;border:1px solid #b2f5c8;border-radius:12px;padding:16px;margin-bottom:24px">
-          <p style="margin:0;font-size:14px;color:#2d6a4f">
-            <strong>Tips for your first booking:</strong><br>
-            · Respond to booking notifications within 15 minutes<br>
-            · Send a message when you're 10 minutes away<br>
-            · Ask the customer to leave a review after the job
-          </p>
-        </div>
-        <a href="${d.siteUrl}" style="display:inline-block;background:#f25a00;color:#fff;border-radius:8px;padding:12px 24px;text-decoration:none;font-weight:700">
-          View your profile →
-        </a>
-      </div>`
-  }),
-}
-
-serve(async (req) => {
-  if(req.method === 'OPTIONS') return new Response('ok', {headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'*'}})
-  
-  try {
-    const body = await req.json()
-    const { type, to, data } = body
-    
-    const template = templates[type]
-    if(!template || !to) return new Response(JSON.stringify({error:'Missing type or to'}), {status:400})
-    
-    const { subject, html } = template(data || {})
-    
-    const r = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {'Authorization': 'Bearer ' + RESEND_API_KEY, 'Content-Type': 'application/json'},
-      body: JSON.stringify({ from: FROM, to, subject, html })
-    })
-    
-    const result = await r.json()
-    return new Response(JSON.stringify(result), {
-      headers: {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}
-    })
-  } catch(e) {
-    return new Response(JSON.stringify({error:e.message}), {status:500})
-  }
-})
-═══════════════════════════════════════════════════════════
-*/
 
 
-// ═══════════════════════════════════════════════════════════
-// CUSTOMER MEMORY SYSTEM
-// Saves vehicle, address, and favourite mechanic so
-// returning customers never have to type them again.
-//
-// SUPABASE SETUP — run this SQL once in SQL Editor:
-//
-// CREATE TABLE IF NOT EXISTS customer_profiles (
-//   id UUID REFERENCES auth.users(id) PRIMARY KEY,
-//   vehicle TEXT,
-//   address TEXT,
-//   saved_mechanic_slug TEXT,
-//   last_service_date DATE,
-//   last_service_type TEXT,
-//   updated_at TIMESTAMPTZ DEFAULT NOW()
-// );
-// ALTER TABLE customer_profiles ENABLE ROW LEVEL SECURITY;
-// CREATE POLICY "Users manage own profile"
-//   ON customer_profiles
-//   USING (auth.uid() = id)
-//   WITH CHECK (auth.uid() = id);
-// ═══════════════════════════════════════════════════════════
+
+
 
 let customerProfile = null; // In-memory cache for this session
 
-// ── Load profile from Supabase ─────────────────────────
 async function loadCustomerProfile() {
   if(!currentUser) return;
   try {
     // Load customer profile from Firestore
-    const profileDoc = await getDoc(doc(db, 'customer_profiles', currentUser.uid));
-    customerProfile = profileDoc.exists() ? profileDoc.data() : null;
+    const profileDoc = await db.collection('customer_profiles').doc(currentUser.uid).get();
+    customerProfile = profileDoc.exists ? profileDoc.data() : null;
     if(customerProfile) prefillBookingFields();
   } catch(e) {
     console.warn('Could not load customer profile:', e.message);
@@ -4212,7 +4176,7 @@ async function saveCustomerProfile(vehicle, address, mechSlug, serviceType) {
   if(!currentUser) return;
   try {
     // Save customer profile to Firestore (merge so we don't overwrite)
-    await setDoc(doc(db, 'customer_profiles', currentUser.uid), {
+    await db.collection('customer_profiles').doc(currentUser.uid).set({
       vehicle: vehicle || customerProfile?.vehicle || '',
       address: address || customerProfile?.address || '',
       saved_mechanic_slug: mechSlug || customerProfile?.saved_mechanic_slug || '',
@@ -4390,11 +4354,10 @@ function closeLegalOutside(e, id) {
 // Customer must accept terms before booking is saved
 // ═══════════════════════════════════════════════════════════
 
-function openProUpgrade() {
-  // Opens Stripe payment link for featured mechanic subscription
-  // Replace STRIPE_PAYMENT_LINK with a Stripe subscription link for $29/month
-  const proLink = 'https://buy.stripe.com/test_eVq8wQ7Yqa9NeQq9zn7Re00'; // TODO: replace with Pro subscription link
-  window.open(proLink, '_blank', 'noopener noreferrer');
+function openProUpgrade(btn) {
+  // Featured subscription needs its own LIVE Stripe link — set FEATURED_PAYMENT_LINK at the top of this script
+  if(FEATURED_PAYMENT_LINK){ window.open(FEATURED_PAYMENT_LINK, '_blank', 'noopener noreferrer'); return; }
+  if(btn){ btn.disabled = true; btn.textContent = 'Featured listings open soon'; }
 }
 
 let agreementPending = false; // Flag to track if we're in agreement flow
@@ -4439,7 +4402,7 @@ function closeAgreement() {
   agreementPending = false;
   // Re-enable the confirm button
   const btn = document.querySelector('#step3 .btn-next');
-  if(btn){ btn.disabled=false; btn.innerHTML='<i class="ti ti-circle-check" aria-hidden="true"></i> Confirm Booking — It\'s Free'; }
+  if(btn){ btn.disabled=false; btn.innerHTML='<i class="ti ti-circle-check" aria-hidden="true"></i> Send Booking Request — No Fee'; }
 }
 
 function toggleAgreementBtn() {
@@ -4457,7 +4420,352 @@ async function proceedWithBooking() {
   await confirmBooking(true); // pass true = already agreed
 }
 
-// ─── INIT ──────────────────────────────────────────────
+
+// ═══════════════════════════════════════════════════════════
+// ADMIN — applications, bookings, verification + payback
+// Only loads for a signed-in user who has a document at admins/{uid}
+// (created once in the Firebase console). Firestore rules enforce the
+// same check server-side, so hiding the tab is not the security.
+// ═══════════════════════════════════════════════════════════
+let isAdmin = false;
+const ADMIN_CHECKS = [
+  ['fee_paid',   'Verification fee paid'],
+  ['background', 'Background + driving record clear'],
+  ['skills',     'ASE or references checked'],
+  ['insurance',  'Insurance certificate on file']
+];
+
+async function checkAdmin(){
+  isAdmin = false;
+  const pill = document.getElementById('adminPill');
+  try {
+    if(currentUser){
+      const doc = await db.collection('admins').doc(currentUser.uid).get();
+      isAdmin = !!doc.exists;
+    }
+  } catch(e){ isAdmin = false; }
+  if(pill) pill.style.display = isAdmin ? '' : 'none';
+  if(!isAdmin && document.getElementById('panel-admin').classList.contains('on')) showPanel('customer');
+}
+
+function tsMillis(t){ return t && t.seconds ? t.seconds * 1000 : (t ? Date.parse(t) || 0 : 0); }
+function fmtDate(t){ const ms = tsMillis(t); return ms ? new Date(ms).toLocaleDateString(undefined, { month:'short', day:'numeric' }) : ''; }
+
+async function loadAdmin(){
+  const root = document.getElementById('adminBody');
+  if(!root) return;
+  if(!isAdmin){ root.innerHTML = '<div class="admin-empty">Admin access only.</div>'; return; }
+  root.innerHTML = '<div class="admin-empty">Loading…</div>';
+  try {
+    const [appSnap, mechSnap, bookSnap, privSnap, msgSnap] = await Promise.all([
+      db.collection('mechanic_applications').get(),
+      db.collection('mechanics').get(),
+      db.collection('bookings').get(),
+      db.collection('mechanic_private').get(),
+      db.collection('messages').get()
+    ]);
+    const msgs = msgSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => tsMillis(b.created_at) - tsMillis(a.created_at));
+    const apps  = appSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => tsMillis(b.created_at) - tsMillis(a.created_at));
+    const mechs = mechSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const books = bookSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => tsMillis(b.created_at) - tsMillis(a.created_at));
+    const priv  = {}; privSnap.docs.forEach(d => { priv[d.id] = d.data(); });
+    const done  = {}; books.forEach(b => { if(b.status === 'completed' && b.mechanic_slug) done[b.mechanic_slug] = (done[b.mechanic_slug] || 0) + 1; });
+
+    // Keep the public job count in step with confirmed-complete bookings (never lowers a count)
+    for(const m of mechs){
+      const n = done[m.slug] || 0;
+      if(n > (m.jobs_completed || 0)){
+        m.jobs_completed = n;
+        try { await db.collection('mechanics').doc(m.id).update({ jobs_completed: n }); sessionStorage.removeItem('ww_mechanics_cache'); } catch(e){}
+      }
+    }
+
+    root.innerHTML = '';
+    root.appendChild(adminApplications(apps.filter(a => (a.status || 'pending') === 'pending'), mechs));
+    root.appendChild(adminBookings(books.slice(0, 40), priv, mechs));
+    root.appendChild(adminMessages(msgs));
+    root.appendChild(adminMechanics(mechs, priv, done));
+  } catch(err){
+    console.error('Admin load failed:', err);
+    root.innerHTML = '<div class="admin-empty">Could not load admin data — check that the Firestore rules are deployed and your account has an admins/{uid} document.</div>';
+  }
+}
+
+function adminSection(title, count){
+  const sec = document.createElement('div'); sec.className = 'admin-sec';
+  const h = document.createElement('div'); h.className = 'admin-sec-title'; h.textContent = title;
+  const c = document.createElement('span'); c.className = 'admin-count'; c.textContent = count; h.appendChild(c);
+  sec.appendChild(h); return sec;
+}
+function adminBtn(label, cls, fn){
+  const b = document.createElement('button'); b.className = 'admin-btn' + (cls ? ' ' + cls : ''); b.textContent = label;
+  b.addEventListener('click', async () => { b.disabled = true; try { await fn(); } catch(e){ console.error(e); alert('That did not save: ' + (e.message || e.code || e)); } await loadAdmin(); });
+  return b;
+}
+function adminTag(text, cls){ const p = document.createElement('span'); p.className = 'admin-pill' + (cls ? ' ' + cls : ''); p.textContent = text; return p; }
+function contactLine(email, phone){
+  const frag = document.createDocumentFragment();
+  if(email){ const a = document.createElement('a'); a.href = 'mailto:' + email; a.textContent = email; frag.appendChild(a); }
+  if(email && phone) frag.appendChild(document.createTextNode(' · '));
+  if(phone){ const a = document.createElement('a'); a.href = 'tel:' + String(phone).replace(/[^+\d]/g, ''); a.textContent = phone; frag.appendChild(a); }
+  return frag;
+}
+
+
+// ─── CONTACT FORM ──────────────────────────────────────
+function openContact(){
+  document.getElementById('contactForm').style.display = '';
+  document.getElementById('contactDone').style.display = 'none';
+  document.getElementById('contactError').style.display = 'none';
+  if(currentUser){
+    const n = document.getElementById('contactName'), e = document.getElementById('contactEmail');
+    if(!n.value) n.value = currentUser.displayName || '';
+    if(!e.value) e.value = currentUser.email || '';
+  }
+  document.getElementById('contactOverlay').classList.add('on');
+}
+function closeContact(){ document.getElementById('contactOverlay').classList.remove('on'); }
+async function sendContact(){
+  const name = document.getElementById('contactName').value.trim();
+  const email = document.getElementById('contactEmail').value.trim();
+  const message = document.getElementById('contactMsg').value.trim();
+  const err = document.getElementById('contactError'), btn = document.getElementById('contactBtn');
+  const fail = m => { err.textContent = m; err.style.display = 'block'; };
+  err.style.display = 'none';
+  if(!name) return fail('Please enter your name.');
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return fail('Please enter a valid email so we can reply.');
+  if(message.length < 5) return fail('Please write a short message.');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    await db.collection('messages').add({
+      name: name.slice(0, 80), email: email.slice(0, 120), message: message.slice(0, 2000),
+      status: 'new', created_at: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    document.getElementById('contactMsg').value = '';
+    document.getElementById('contactForm').style.display = 'none';
+    document.getElementById('contactDone').style.display = 'block';
+  } catch(e){ fail("We couldn't send that. Please try again in a minute."); }
+  btn.disabled = false; btn.textContent = 'Send message';
+}
+
+// Admin: contact messages
+function adminMessages(msgs){
+  const fresh = msgs.filter(m => m.status !== 'done');
+  const sec = adminSection('Messages', fresh.length + ' new');
+  if(!fresh.length){ const e = document.createElement('div'); e.className = 'admin-empty'; e.textContent = 'No new messages.'; sec.appendChild(e); return sec; }
+  fresh.forEach(m => {
+    const card = document.createElement('div'); card.className = 'admin-card';
+    const row = document.createElement('div'); row.className = 'admin-row';
+    const left = document.createElement('div');
+    const nm = document.createElement('div'); nm.className = 'admin-name'; nm.textContent = m.name || '(no name)';
+    const meta = document.createElement('div'); meta.className = 'admin-meta'; meta.appendChild(contactLine(m.email));
+    left.appendChild(nm); left.appendChild(meta);
+    row.appendChild(left); row.appendChild(adminTag(fmtDate(m.created_at) || 'new'));
+    const body = document.createElement('div'); body.className = 'admin-bio'; body.style.whiteSpace = 'pre-wrap'; body.textContent = m.message || '';
+    const acts = document.createElement('div'); acts.className = 'admin-actions';
+    const reply = document.createElement('a'); reply.className = 'admin-btn primary'; reply.style.textDecoration = 'none';
+    reply.href = 'mailto:' + (m.email || '') + '?subject=' + encodeURIComponent('Re: your message to WrenchNow'); reply.textContent = 'Reply by email';
+    acts.appendChild(reply);
+    acts.appendChild(adminBtn('Mark handled', '', () => db.collection('messages').doc(m.id).update({ status: 'done', handled_at: new Date().toISOString() })));
+    card.appendChild(row); card.appendChild(body); card.appendChild(acts);
+    sec.appendChild(card);
+  });
+  return sec;
+}
+
+// 1 ── Applications waiting on verification
+function adminApplications(apps, mechs){
+  const sec = adminSection('Applications to verify', apps.length);
+  if(!apps.length){ const e = document.createElement('div'); e.className = 'admin-empty'; e.textContent = 'No applications waiting.'; sec.appendChild(e); return sec; }
+  apps.forEach(a => {
+    const checks = Object.assign({ background:false, skills:false, insurance:false }, a.checks || {});
+    const state = { fee_paid: !!a.fee_paid, background: !!checks.background, skills: !!checks.skills, insurance: !!checks.insurance };
+    const card = document.createElement('div'); card.className = 'admin-card';
+    const row = document.createElement('div'); row.className = 'admin-row';
+    const left = document.createElement('div');
+    const nm = document.createElement('div'); nm.className = 'admin-name'; nm.textContent = a.name || '(no name)';
+    const meta = document.createElement('div'); meta.className = 'admin-meta';
+    meta.appendChild(document.createTextNode([a.city, (a.years_experience || 0) + ' yrs', a.rate_num ? '$' + a.rate_num + '/hr' : '', a.certifications].filter(Boolean).join(' · ')));
+    meta.appendChild(document.createElement('br')); meta.appendChild(contactLine(a.email, a.phone));
+    if(a.specialties){ meta.appendChild(document.createElement('br')); meta.appendChild(document.createTextNode('Specialties: ' + a.specialties)); }
+    left.appendChild(nm); left.appendChild(meta);
+    row.appendChild(left); row.appendChild(adminTag('Applied ' + fmtDate(a.created_at)));
+    card.appendChild(row);
+    if(a.bio){ const bio = document.createElement('div'); bio.className = 'admin-bio'; bio.textContent = a.bio; card.appendChild(bio); }
+
+    const boxWrap = document.createElement('div'); boxWrap.className = 'admin-checks';
+    const approve = adminBtn('Approve & publish profile', 'primary', () => approveApplication(a, mechs));
+    const refresh = () => { approve.disabled = !ADMIN_CHECKS.every(([k]) => state[k]); };
+    ADMIN_CHECKS.forEach(([key, label]) => {
+      const lab = document.createElement('label');
+      const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = state[key];
+      cb.addEventListener('change', async () => {
+        state[key] = cb.checked; refresh();
+        const patch = key === 'fee_paid' ? { fee_paid: cb.checked } : { ['checks.' + key]: cb.checked };
+        try { await db.collection('mechanic_applications').doc(a.id).update(patch); }
+        catch(e){ cb.checked = !cb.checked; state[key] = cb.checked; refresh(); alert('Could not save: ' + (e.message || e.code)); }
+      });
+      lab.appendChild(cb); lab.appendChild(document.createTextNode(label)); boxWrap.appendChild(lab);
+    });
+    card.appendChild(boxWrap);
+    const acts = document.createElement('div'); acts.className = 'admin-actions';
+    acts.appendChild(approve);
+    acts.appendChild(adminBtn('Reject', '', async () => {
+      if(!confirm('Reject ' + (a.name || 'this applicant') + '? If the background check is the reason, follow the notice steps your check provider gives you first.')) return;
+      await db.collection('mechanic_applications').doc(a.id).update({ status: 'rejected', decided_at: new Date().toISOString() });
+    }));
+    card.appendChild(acts);
+    refresh();
+    sec.appendChild(card);
+  });
+  return sec;
+}
+
+async function approveApplication(a, mechs){
+  let slug = makeSlug(a.name || 'mechanic');
+  const taken = new Set(mechs.map(m => m.slug));
+  if(taken.has(slug)){ let i = 2; while(taken.has(slug + '-' + i)) i++; slug = slug + '-' + i; }
+  const palettes = [
+    { bg:'rgba(242,90,0,.15)',   color:'var(--ore)' }, { bg:'rgba(59,158,255,.12)', color:'var(--blue)' },
+    { bg:'rgba(46,199,122,.1)',  color:'var(--green)' }, { bg:'rgba(245,184,0,.1)', color:'var(--amber)' }
+  ];
+  const pal = palettes[(a.name || '').length % palettes.length];
+  const years = parseInt(a.years_experience) || 0;
+  const rate = parseInt(a.rate_num) || 75;
+  const specs = Array.isArray(a.specialties_list) && a.specialties_list.length ? a.specialties_list
+              : (a.specialties ? String(a.specialties).split(',').map(s => s.trim()).filter(Boolean) : ['General Repairs']);
+  const batch = db.batch();
+  batch.set(db.collection('mechanics').doc(slug), {
+    slug, name: a.name, city: a.city || '',
+    initials: (a.name || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2),
+    avatar_bg: pal.bg, avatar_color: pal.color,
+    tagline: (a.certifications ? a.certifications + ' · ' : '') + years + ' yr' + (years !== 1 ? 's' : '') + ' experience · ' + (a.city || ''),
+    rating: 0, jobs_completed: 0, rate_num: rate, rate_display: '$' + rate,
+    repeat_pct: '—', on_time_pct: '—', response_time: '—',
+    bio: a.bio || '', specialties: specs,
+    verified: true, verified_at: new Date().toISOString(), badge_type: 'verified', is_featured: false,
+    available_now: true, avail_label: 'Available now',
+    created_at: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  batch.set(db.collection('mechanic_private').doc(slug), {
+    email: a.email || '', phone: a.phone || '', application_id: a.id,
+    fee_paid: true, fee_amount: VERIFY_FEE, payback_status: 'earning',
+    approved_at: new Date().toISOString()
+  });
+  batch.update(db.collection('mechanic_applications').doc(a.id), { status: 'approved', mechanic_slug: slug, decided_at: new Date().toISOString() });
+  await batch.commit();
+  try { sessionStorage.removeItem('ww_mechanics_cache'); } catch(e){}
+  loadMechanics();
+}
+
+// 2 ── Bookings
+function adminBookings(books, priv, mechs){
+  const open = books.filter(b => ['pending','confirmed'].includes(b.status || 'pending')).length;
+  const sec = adminSection('Bookings', open + ' open');
+  if(!books.length){ const e = document.createElement('div'); e.className = 'admin-empty'; e.textContent = 'No bookings yet.'; sec.appendChild(e); return sec; }
+  books.forEach(b => {
+    const st = b.status || 'pending';
+    const card = document.createElement('div'); card.className = 'admin-card';
+    const row = document.createElement('div'); row.className = 'admin-row';
+    const left = document.createElement('div');
+    const nm = document.createElement('div'); nm.className = 'admin-name';
+    nm.textContent = (b.service || 'Service') + ' — ' + (b.booking_date || '') + ' ' + (b.booking_time || '');
+    const meta = document.createElement('div'); meta.className = 'admin-meta';
+    meta.appendChild(document.createTextNode('Customer: ' + (b.customer_name || '') + ' ')); meta.appendChild(contactLine(b.customer_email));
+    meta.appendChild(document.createElement('br'));
+    meta.appendChild(document.createTextNode('Mechanic: ' + (b.mechanic_name || 'Unassigned') + ' '));
+    const p = priv[b.mechanic_slug]; if(p) meta.appendChild(contactLine(p.email, p.phone));
+    meta.appendChild(document.createElement('br'));
+    meta.appendChild(document.createTextNode([b.vehicle, b.address, b.urgency && b.urgency !== 'flexible' ? 'Urgency: ' + b.urgency : '', b.notes].filter(Boolean).join(' · ')));
+    left.appendChild(nm); left.appendChild(meta);
+    row.appendChild(left);
+    row.appendChild(adminTag(st, st === 'completed' ? 'ok' : st === 'confirmed' ? 'warn' : st === 'cancelled' ? '' : 'due'));
+    card.appendChild(row);
+    const setStatus = s => () => db.collection('bookings').doc(b.id).update({ status: s, [s + '_at']: new Date().toISOString(), status_by: 'admin' });
+    const acts = document.createElement('div'); acts.className = 'admin-actions'; acts.style.marginTop = '.7rem';
+    // "Let us match you" bookings arrive with no mechanic — pick one here
+    if(!b.mechanic_slug && (st === 'pending' || st === 'confirmed')){
+      const sel = document.createElement('select'); sel.className = 'admin-btn'; sel.style.maxWidth = '220px';
+      const o0 = document.createElement('option'); o0.value = ''; o0.textContent = 'Assign a mechanic…'; sel.appendChild(o0);
+      (mechs || []).filter(m => m.verified).forEach(m => { const o = document.createElement('option'); o.value = m.slug; o.textContent = m.name + ' · ' + (m.rate_display || '') + '/hr'; sel.appendChild(o); });
+      sel.addEventListener('change', async () => {
+        const m = (mechs || []).find(x => x.slug === sel.value); if(!m) return;
+        sel.disabled = true;
+        try { await db.collection('bookings').doc(b.id).update({ mechanic_slug: m.slug, mechanic_name: m.name, rate_num: m.rate_num || b.rate_num || 0, assigned_at: new Date().toISOString() }); }
+        catch(e){ alert('Could not assign: ' + (e.message || e.code)); }
+        loadAdmin();
+      });
+      acts.appendChild(sel);
+    }
+    if(st === 'pending') acts.appendChild(adminBtn('Mark confirmed', 'primary', setStatus('confirmed')));
+    if(st === 'pending' || st === 'confirmed'){
+      acts.appendChild(adminBtn('Mark job complete', 'good', setStatus('completed')));
+      acts.appendChild(adminBtn('Cancel', '', setStatus('cancelled')));
+    }
+    if(acts.children.length) card.appendChild(acts);
+    sec.appendChild(card);
+  });
+  return sec;
+}
+
+// 3 ── Mechanics: verification status + fee payback after PAYBACK_JOBS completed jobs
+function adminMechanics(mechs, priv, done){
+  const due = mechs.filter(m => { const p = priv[m.slug]; return p && p.fee_paid && p.payback_status !== 'paid' && (done[m.slug] || 0) >= PAYBACK_JOBS; }).length;
+  const sec = adminSection('Mechanics & fee payback', due ? due + ' payback due' : mechs.length + ' live');
+  if(!mechs.length){ const e = document.createElement('div'); e.className = 'admin-empty'; e.textContent = 'No mechanics published yet.'; sec.appendChild(e); return sec; }
+  mechs.sort((a,b) => (a.name || '').localeCompare(b.name || '')).forEach(m => {
+    const p = priv[m.slug]; const n = done[m.slug] || 0;
+    const card = document.createElement('div'); card.className = 'admin-card';
+    const row = document.createElement('div'); row.className = 'admin-row';
+    const left = document.createElement('div');
+    const nm = document.createElement('div'); nm.className = 'admin-name'; nm.textContent = m.name || m.slug;
+    const meta = document.createElement('div'); meta.className = 'admin-meta';
+    meta.appendChild(document.createTextNode([mechCity(m), m.rate_display ? m.rate_display + '/hr' : '', n + ' completed job' + (n !== 1 ? 's' : '')].filter(Boolean).join(' · ')));
+    if(p){ meta.appendChild(document.createElement('br')); meta.appendChild(contactLine(p.email, p.phone)); }
+    left.appendChild(nm); left.appendChild(meta);
+    const right = document.createElement('div'); right.style.textAlign = 'right';
+    right.appendChild(adminTag(m.verified ? 'Verified' : 'Not verified', m.verified ? 'ok' : 'warn'));
+    row.appendChild(left); row.appendChild(right);
+    card.appendChild(row);
+
+    const acts = document.createElement('div'); acts.className = 'admin-actions'; acts.style.marginTop = '.7rem'; acts.style.alignItems = 'center';
+    if(p && p.fee_paid){
+      const status = document.createElement('div'); status.style.marginRight = 'auto';
+      if(p.payback_status === 'paid'){
+        status.appendChild(adminTag('$' + (p.fee_amount || VERIFY_FEE) + ' paid back ' + fmtDate(p.payback_paid_at), 'ok'));
+      } else if(n >= PAYBACK_JOBS){
+        status.appendChild(adminTag('Payback due — $' + (p.fee_amount || VERIFY_FEE), 'due'));
+      } else {
+        const t = document.createElement('div'); t.className = 'admin-meta'; t.textContent = 'Fee payback: ' + n + ' of ' + PAYBACK_JOBS + ' jobs';
+        const bar = document.createElement('div'); bar.className = 'payback-bar'; const fill = document.createElement('div'); fill.style.width = Math.round(n / PAYBACK_JOBS * 100) + '%'; bar.appendChild(fill);
+        status.appendChild(t); status.appendChild(bar);
+      }
+      acts.appendChild(status);
+      if(p.payback_status !== 'paid' && n >= PAYBACK_JOBS){
+        acts.appendChild(adminBtn('I sent the $' + (p.fee_amount || VERIFY_FEE) + ' — mark paid back', 'primary',
+          () => db.collection('mechanic_private').doc(m.slug).update({ payback_status: 'paid', payback_paid_at: new Date().toISOString() })));
+      }
+    } else {
+      const t = document.createElement('div'); t.className = 'admin-meta'; t.style.marginRight = 'auto';
+      t.textContent = 'Joined before the verification fee — no payback owed.'; acts.appendChild(t);
+    }
+    const upd = patch => async () => { await db.collection('mechanics').doc(m.id).update(patch); try { sessionStorage.removeItem('ww_mechanics_cache'); } catch(e){} loadMechanics(); };
+    if(!m.verified) acts.appendChild(adminBtn("I've checked them — mark verified", 'good', upd({ verified: true, verified_at: new Date().toISOString(), badge_type: 'verified' })));
+    acts.appendChild(adminBtn(m.available_now ? 'Set unavailable' : 'Set available', '', upd(m.available_now ? { available_now: false, avail_label: 'Not taking jobs right now' } : { available_now: true, avail_label: 'Available now' })));
+    card.appendChild(acts);
+    sec.appendChild(card);
+  });
+  return sec;
+}
+
+// Fill in the fee / job-count numbers wherever the copy mentions them (after the modals below the script exist)
+document.addEventListener('DOMContentLoaded', () => {
+document.querySelectorAll('[data-fee]').forEach(el => { el.textContent = '$' + VERIFY_FEE; });
+document.querySelectorAll('[data-payback-jobs]').forEach(el => { el.textContent = PAYBACK_JOBS; });
+});
+
+
+// Functions are global — no window assignment needed with compat SDK
 loadMechanics();
 
 // ─── URGENCY BANNER ────────────────────────────────────
@@ -4563,105 +4871,68 @@ function makeSlug(n) {
 }
 
 async function submitApplication() {
-  const name      = document.getElementById('applyName').value.trim();
-  const email     = document.getElementById('applyEmail').value.trim();
-  const phone     = document.getElementById('applyPhone').value.trim();
-  const city      = document.getElementById('applyCity').value.trim();
-  const years     = document.getElementById('applyYears').value;
-  const specs     = document.getElementById('applySpecs').value.trim();
-  const certs     = document.getElementById('applyCerts').value.trim();
-  const bio       = document.getElementById('applyBio').value.trim();
+  const val = id => (document.getElementById(id).value || '').trim();
+  const name = val('applyName'), email = val('applyEmail'), phone = val('applyPhone'), city = val('applyCity');
+  const years = val('applyYears'), rate = val('applyRate'), specs = val('applySpecs'), certs = val('applyCerts'), bio = val('applyBio');
   const tools     = document.getElementById('applyTools').checked;
   const transport = document.getElementById('applyTransport').checked;
   const errEl     = document.getElementById('applyError');
   const btn       = document.getElementById('applySubmitBtn');
+  const fail = msg => { errEl.textContent = msg; errEl.style.display = 'block'; };
 
   errEl.style.display = 'none';
-
-  // Validate
-  if(!name)  { errEl.textContent='Please enter your full name.'; errEl.style.display='block'; return; }
-  if(!email) { errEl.textContent='Please enter your email address.'; errEl.style.display='block'; return; }
-  if(!phone) { errEl.textContent='Please enter your phone number.'; errEl.style.display='block'; return; }
-  if(!city)  { errEl.textContent='Please enter the city you will work in.'; errEl.style.display='block'; return; }
-  if(!years) { errEl.textContent='Please enter your years of experience.'; errEl.style.display='block'; return; }
-  if(!bio)   { errEl.textContent='Please tell us a bit about yourself.'; errEl.style.display='block'; return; }
-  if(!tools || !transport) { errEl.textContent='You must have your own tools and transportation to join.'; errEl.style.display='block'; return; }
+  if(!name)  return fail('Please enter your full name.');
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return fail('Please enter a valid email address.');
+  if(!phone) return fail('Please enter your phone number.');
+  if(!city)  return fail('Please enter the city you will work in.');
+  if(!years) return fail('Please enter your years of experience.');
+  const rateNum = parseInt(rate);
+  if(!(rateNum >= 30 && rateNum <= 300)) return fail('Please enter your hourly rate (between $30 and $300).');
+  if(!bio)   return fail('Please tell us a bit about yourself.');
+  if(!tools || !transport) return fail('You must have your own tools and transportation to join.');
   const agreeTerms = document.getElementById('applyAgreeTerms');
-  if(agreeTerms && !agreeTerms.checked) { errEl.textContent='Please read and agree to the Terms of Service, Privacy Policy, and Mechanic Agreement.'; errEl.style.display='block'; return; }
+  if(agreeTerms && !agreeTerms.checked) return fail('Please read and agree to the Terms of Service, Privacy Policy, and Mechanic Agreement.');
 
   btn.disabled = true;
   btn.innerHTML = '<i class="ti ti-loader" style="animation:spin .7s linear infinite"></i> Submitting…';
 
-  const autoApprove = looksHuman(name, email, bio, years);
-  const appStatus   = autoApprove ? 'approved' : 'pending';
-
-  const avatarPalette = [
-    { bg:'rgba(242,90,0,.15)',   color:'var(--ore)' },
-    { bg:'rgba(59,158,255,.12)', color:'var(--blue)' },
-    { bg:'rgba(46,199,122,.1)',  color:'var(--green)' },
-    { bg:'rgba(180,60,200,.12)',color:'#c47de0' },
-    { bg:'rgba(245,184,0,.1)',   color:'var(--amber)' },
-    { bg:'rgba(242,90,0,.1)',    color:'var(--ore-bright)' },
-  ];
-  const palette  = avatarPalette[Math.floor(Math.random() * avatarPalette.length)];
-  const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-  const specsArray = specs ? specs.split(',').map(s => s.trim()).filter(Boolean) : ['General Repairs'];
-
   try {
-    // 1. Save application record
-    // Save application to Firestore
-    await addDoc(collection(db, 'mechanic_applications'), {
-      name, email, phone, city,
-      years_experience: parseInt(years) || 0,
-      specialties: specs,
-      certifications: certs,
-      bio, has_tools: tools,
-      has_transport: transport,
+    // Saved as PENDING. A profile is only published from the Admin tab after verification.
+    const ref = await db.collection('mechanic_applications').add({
+      name: name.slice(0, 80), email: email.slice(0, 120), phone: phone.slice(0, 30), city: city.slice(0, 80),
+      years_experience: Math.min(parseInt(years) || 0, 60),
+      rate_num: rateNum,
+      specialties: specs.slice(0, 300),
+      certifications: certs.slice(0, 200),
+      bio: bio.slice(0, 1500),
+      has_tools: tools, has_transport: transport,
       agreed_to_terms: true,
-      status: appStatus,
-      created_at: serverTimestamp()
+      status: 'pending',
+      fee_paid: false,
+      fee_amount: VERIFY_FEE,
+      created_at: firebase.firestore.FieldValue.serverTimestamp()
     });
 
-    // 2. Auto-approve — insert into mechanics table
-    if(autoApprove) {
-      const mechSlug = makeSlug(name);
-      await addDoc(collection(db, 'mechanics'), {
-        slug: mechSlug,
-        name, initials,
-        avatar_bg: palette.bg,
-        avatar_color: palette.color,
-        tagline: (certs ? certs + ' · ' : '') + parseInt(years) + ' yr' + (parseInt(years) !== 1 ? 's' : '') + ' experience · ' + city,
-        rating: 5.00,
-        rate_num: 75,
-        rate_display: '$75',
-        jobs_completed: 0,
-        repeat_pct: '—',
-        on_time_pct: '—',
-        response_time: '~15 min',
-        bio, specialties: specsArray,
-        badge_type: 'new',
-        is_featured: false,
-        distance_mi: 5.0,
-        arrives_min: 30,
-        available_now: true,
-        avail_label: 'Available now',
-        created_at: serverTimestamp()
-      });
-      try { sessionStorage.removeItem('ww_mechanics_cache'); } catch(e){}
-      sendMechanicApprovalEmail({mechEmail: email, mechName: name, slug: mechSlug});
+    // Fee step: straight to Stripe when a live link is configured, otherwise we email the link
+    const payBtn = document.getElementById('applyPayBtn'), payLater = document.getElementById('applyPayLater');
+    if(VERIFY_PAYMENT_LINK){
+      const u = new URL(VERIFY_PAYMENT_LINK);
+      u.searchParams.set('client_reference_id', ref.id);
+      u.searchParams.set('prefilled_email', email);
+      payBtn.href = u.toString();
+      payBtn.style.display = 'inline-flex'; payLater.style.display = 'none';
+    } else {
+      payBtn.style.display = 'none'; payLater.style.display = 'block';
     }
-
-    // Show success
     document.getElementById('applyForm').style.display = 'none';
     document.getElementById('applySuccess').style.display = 'block';
-
   } catch(err) {
     console.error('submitApplication error:', err);
-    errEl.textContent = 'Something went wrong: ' + err.message;
-    errEl.style.display = 'block';
-    btn.disabled = false;
-    btn.innerHTML = '<i class="ti ti-send"></i> Submit Application';
+    fail(err.code === 'unavailable' ? "We couldn't reach the server. Check your connection and try again."
+       : 'Something went wrong sending your application. Please try again in a minute.');
   }
+  btn.disabled = false;
+  btn.innerHTML = '<i class="ti ti-send"></i> Submit Application';
 }
 
 // ─── MY BOOKINGS ───────────────────────────────────────
@@ -4672,7 +4943,6 @@ async function openMyBookings() {
   document.getElementById('myBookingsSub').textContent = 'Loading your bookings…';
 
   try {
-    const token = sessionStorage.getItem('ww_token');
     const userId = currentUser ? currentUser.uid : null;
     if(!userId) {
       document.getElementById('myBookingsSub').textContent = 'Please log in to view bookings.';
@@ -4680,12 +4950,11 @@ async function openMyBookings() {
       return;
     }
     // Firestore: get this customer's bookings
-    const snap = await getDocs(
-      query(collection(db, 'bookings'),
-        where('customer_id', '==', userId),
-        orderBy('created_at', 'desc'))
-    );
-    const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const snap = await db.collection('bookings').where('customer_id', '==', userId).get();
+    // Note: sorted client-side to avoid requiring a Firestore composite index
+    let data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    // Sort by created_at descending client-side
+    data.sort((a,b) => { const ta = a.created_at?.seconds||0; const tb = b.created_at?.seconds||0; return tb-ta; });
 
     if(!data.length) {
       document.getElementById('myBookingsSub').textContent = 'No bookings yet.';
@@ -4750,6 +5019,23 @@ async function openMyBookings() {
 
       item.appendChild(bHead);
       item.appendChild(detail);
+      if(statusRaw === 'pending' || statusRaw === 'confirmed'){
+        const acts = document.createElement('div'); acts.className = 'mbi-actions';
+        const mk = (label, cls, status, ask) => {
+          const bt = document.createElement('button'); bt.className = cls; bt.textContent = label;
+          bt.addEventListener('click', async () => {
+            if(!confirm(ask)) return;
+            bt.disabled = true;
+            try { await db.collection('bookings').doc(b.id).update({ status, [status + '_at']: new Date().toISOString(), status_by: 'customer' }); }
+            catch(e){ alert('Could not update this booking — please try again.'); }
+            openMyBookings();
+          });
+          return bt;
+        };
+        acts.appendChild(mk("Job's done — mark complete", 'admin-btn good', 'completed', 'Confirm the work is finished? This goes on your mechanic\'s record.'));
+        acts.appendChild(mk('Cancel request', 'admin-btn', 'cancelled', 'Cancel this booking request?'));
+        item.appendChild(acts);
+      }
       bBody.appendChild(item);
     });
 
@@ -4792,9 +5078,9 @@ async function doSignup() {
 
   try {
     // Firebase Auth: create user
-    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    const cred = await auth.createUserWithEmailAndPassword(email, password);
     // Save display name
-    await updateProfile(cred.user, { displayName: name });
+    await cred.user.updateProfile({ displayName: name });
     sucEl.textContent = '✓ Account created! You can now log in.';
     sucEl.style.display = 'block';
     btn.textContent = 'Account created!';
@@ -4827,17 +5113,16 @@ async function doLogin() {
   btn.disabled = true; btn.textContent = 'Logging in…';
 
   try {
-    // Firebase login (duplicate block — handled above)
-
-    // Store session
-    currentUser = data.user;
-    // sessionStorage: tab-scoped, cleared when tab closes — safer than localStorage
-    sessionStorage.setItem('ww_token', data.access_token);
-    sessionStorage.setItem('ww_user', JSON.stringify(data.user));
-    updateNavAuth(data.user);
+    const cred = await auth.signInWithEmailAndPassword(email, password);
+    currentUser = cred.user;
+    sessionStorage.setItem('ww_user', JSON.stringify({ uid: cred.user.uid, email: cred.user.email, displayName: cred.user.displayName }));
+    loadCustomerProfile();
+    updateNavAuth(cred.user);
     closeAuth();
   } catch(err) {
-    errEl.textContent = err.message === 'Invalid login credentials' ? 'Wrong email or password.' : (err.message || 'Login failed.');
+    const msg = (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found')
+      ? 'Wrong email or password.' : (err.message || 'Login failed.');
+    errEl.textContent = msg;
     errEl.style.display = 'block';
     btn.disabled = false; btn.textContent = 'Log in';
   }
@@ -4860,10 +5145,11 @@ function updateNavAuth(user) {
     loggedOut.style.display = 'flex';
     loggedIn.style.display = 'none';
   }
+  checkAdmin();
 }
 
 async function signOut() {
-  await fbSignOut(auth);
+  await auth.signOut();
   sessionStorage.removeItem('ww_user');
   currentUser = null;
   customerProfile = null;
@@ -4879,6 +5165,9 @@ function openAuth(mode='signup') {
 function closeAuth() {
   document.getElementById('authOverlay').classList.remove('on');
   document.body.style.overflow = '';
+  // Pick the booking back up if they signed in to make one
+  const p = pendingBooking; pendingBooking = null;
+  if(p && currentUser) openBooking(p.mech);
 }
 
 function closeAuthOutside(e) {
@@ -4896,7 +5185,7 @@ function switchAuth(mode) {
 }
 
 // Firebase Auth state listener — fires on page load and on login/logout
-onAuthStateChanged(auth, (user) => {
+auth.onAuthStateChanged((user) => {
   if(user) {
     currentUser = user;
     sessionStorage.setItem('ww_user', JSON.stringify({ uid: user.uid, email: user.email, displayName: user.displayName }));
@@ -4924,17 +5213,25 @@ onAuthStateChanged(auth, (user) => {
 
     <!-- Success state -->
     <div class="apply-success" id="applySuccess" style="display:none">
-      <div class="apply-success-icon">🎉</div>
-      <div class="apply-success-title" id="applySuccessTitle">You're a Founding Mechanic! 🎉</div>
-      <div class="apply-success-sub" id="applySuccessSub">You're now live on WrenchNow with <strong>zero platform fees</strong> during our launch period. Your profile is visible to customers right now. Welcome to the network.</div>
-      <button class="btn-ore" style="border-radius:11px" onclick="closeApply();loadMechanics()">See my profile →</button>
+      <div class="apply-success-icon">✅</div>
+      <div class="apply-success-title" id="applySuccessTitle">Application received</div>
+      <div class="apply-success-sub" id="applySuccessSub">Your profile goes live once you're verified. Here's what happens next:</div>
+      <div class="apply-steps">
+        <div class="apply-step"><b>1</b><span>Pay the one-time <span data-fee>$49</span> verification fee. It covers your background and driving-record check.</span></div>
+        <div class="apply-step"><b>2</b><span>You'll get an email invite to complete the check, and we'll ask for your ASE certificate or two references, plus proof of insurance.</span></div>
+        <div class="apply-step"><b>3</b><span>Once everything clears, your profile is published with the Verified badge.</span></div>
+      </div>
+      <div class="payback-note" style="max-width:400px;margin:0 auto 1.25rem;text-align:left"><strong>You get the <span data-fee>$49</span> back.</strong> After your <span data-payback-jobs>5</span>th completed job that the customer confirms, we pay the fee back to you in full.</div>
+      <a class="btn-ore" id="applyPayBtn" style="border-radius:11px;text-decoration:none;display:none" target="_blank" rel="noopener noreferrer"><i class="ti ti-lock" aria-hidden="true"></i> Pay <span data-fee>$49</span> verification fee</a>
+      <div id="applyPayLater" style="display:none;font-size:13px;color:var(--muted);max-width:400px;margin:0 auto">We'll email your secure payment link within one business day.</div>
+      <div style="margin-top:.9rem"><button class="legal-footer-link" onclick="closeApply()">Close</button></div>
     </div>
 
     <!-- Form state -->
     <div id="applyForm">
       <div class="apply-head">
         <div class="apply-title">Join WrenchNow</div>
-        <div class="apply-sub">Takes 5 minutes · Free to apply · Go live in 3–5 days</div>
+        <div class="apply-sub">Takes 5 minutes · <span data-fee>$49</span> verification fee, paid back after <span data-payback-jobs>5</span> jobs · Live in 3–5 days once verified</div>
       </div>
       <div class="apply-body">
         <div class="apply-error" id="applyError"></div>
@@ -4965,6 +5262,10 @@ onAuthStateChanged(auth, (user) => {
         <div class="apply-field">
           <label class="apply-label">Years of professional experience *</label>
           <input class="apply-input" id="applyYears" type="number" min="0" max="50" placeholder="e.g. 5"/>
+        </div>
+        <div class="apply-field">
+          <label class="apply-label">Your hourly rate ($) *</label>
+          <input class="apply-input" id="applyRate" type="number" min="30" max="300" placeholder="e.g. 85"/>
         </div>
         <div class="apply-field">
           <label class="apply-label">Your specialties (comma separated)</label>
@@ -5028,6 +5329,27 @@ onAuthStateChanged(auth, (user) => {
 <!-- ══════════════════════════════════════════════ -->
 <!-- AUTH MODAL -->
 <!-- ══════════════════════════════════════════════ -->
+<div class="auth-overlay" id="contactOverlay" onclick="if(event.target===this)closeContact()">
+  <div class="auth-box">
+    <button class="auth-close" onclick="closeContact()" aria-label="Close"><i class="ti ti-x" aria-hidden="true"></i></button>
+    <div id="contactForm">
+      <div class="auth-title">Contact us</div>
+      <div class="auth-sub">Questions, a problem with a booking, anything — we read every message.</div>
+      <div class="auth-error" id="contactError"></div>
+      <div class="auth-field"><label class="auth-label" for="contactName">Your name</label><input class="auth-input" id="contactName" type="text" placeholder="First and last name"/></div>
+      <div class="auth-field"><label class="auth-label" for="contactEmail">Email to reply to</label><input class="auth-input" id="contactEmail" type="email" placeholder="you@email.com"/></div>
+      <div class="auth-field"><label class="auth-label" for="contactMsg">Message</label><textarea class="auth-input" id="contactMsg" rows="4" style="resize:vertical" placeholder="How can we help?"></textarea></div>
+      <button class="auth-btn" id="contactBtn" onclick="sendContact()">Send message</button>
+    </div>
+    <div id="contactDone" style="display:none;text-align:center;padding:1.5rem 0">
+      <div style="font-size:34px;margin-bottom:.75rem">✅</div>
+      <div class="auth-title">Message sent</div>
+      <div class="auth-sub">We'll reply to the email you gave us.</div>
+      <button class="auth-btn" style="margin-top:1rem" onclick="closeContact()">Done</button>
+    </div>
+  </div>
+</div>
+
 <div class="auth-overlay" id="authOverlay" onclick="closeAuthOutside(event)">
   <div class="auth-box">
     <button class="auth-close" onclick="closeAuth()" aria-label="Close"><i class="ti ti-x" aria-hidden="true"></i></button>
@@ -5236,7 +5558,7 @@ onAuthStateChanged(auth, (user) => {
       <ul>
         <li><strong>With Mechanics:</strong> When you book a service, we share your name, vehicle information, and service address with the Mechanic you have selected</li>
         <li><strong>With Customers:</strong> Mechanic profiles including name, location, specialties, ratings, and verified job prices are visible to all users</li>
-        <li><strong>With service providers:</strong> We use Supabase (database), Stripe (payments), and Resend (email) to operate the platform. These providers process data on our behalf under confidentiality obligations</li>
+        <li><strong>With service providers:</strong> We use Google Firebase (database and sign-in), Stripe (payments), Resend (email), and, for mechanic applicants who consent, a background-check provider to operate the platform. These providers process data on our behalf under confidentiality obligations</li>
         <li><strong>For legal reasons:</strong> We may disclose information if required by law, court order, or to protect the rights and safety of WrenchNow, its users, or the public</li>
         <li><strong>Business transfers:</strong> In the event of a merger, acquisition, or sale of assets, your information may be transferred as part of that transaction</li>
       </ul>
@@ -5366,6 +5688,7 @@ onAuthStateChanged(auth, (user) => {
       </ul>
 
       <h2>6. Platform Fee and Payments</h2>
+      <p><strong>Launch period and verification fee.</strong> During the launch period the platform fee is 0%. Applicants pay a one-time verification fee of <span data-fee>$49</span>, which covers a third-party background and driving-record check and is not refunded once the check has been ordered. After your <span data-payback-jobs>5</span>th completed job that the customer has confirmed through the platform, WrenchNow will pay you an amount equal to the verification fee. Outside the launch period, the following applies:</p>
       <p>WrenchNow charges a platform fee on each completed transaction. The current platform fee is 15% of the total job value. This fee is subject to change with 30 days' notice.</p>
       <p>Payments are processed through Stripe Connect. You are required to maintain a valid Stripe Connect account to receive payments. WrenchNow is not responsible for delays or failures in payment processing caused by Stripe or by errors in your account information.</p>
 

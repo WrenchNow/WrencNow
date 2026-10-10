@@ -1,0 +1,68 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    // You are an admin if a document exists at admins/{your uid}. Create it once in the Firebase console.
+    function isAdmin() {
+      return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    match /admins/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;   // lets the site check "am I an admin?"
+      allow list, write: if false;                            // only editable in the console
+    }
+
+    // Public mechanic profiles: anyone can read, only an admin can publish or change them.
+    match /mechanics/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Mechanic email, phone, fee and payback status — never public.
+    match /mechanic_private/{slug} {
+      allow read, write: if isAdmin();
+    }
+
+    // Anyone can apply, but only as a pending, unpaid, unchecked application.
+    match /mechanic_applications/{id} {
+      allow create: if request.resource.data.status == 'pending'
+                    && request.resource.data.fee_paid == false
+                    && !('checks' in request.resource.data)
+                    && !('mechanic_slug' in request.resource.data)
+                    && request.resource.data.name is string  && request.resource.data.name.size()  <= 80
+                    && request.resource.data.email is string && request.resource.data.email.size() <= 120
+                    && request.resource.data.bio is string   && request.resource.data.bio.size()   <= 1500;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Customers create and see their own bookings, and may only mark them completed or cancelled.
+    match /bookings/{id} {
+      allow create: if signedIn()
+                    && request.resource.data.customer_id == request.auth.uid
+                    && request.resource.data.status == 'pending';
+      allow read: if isAdmin() || (signedIn() && resource.data.customer_id == request.auth.uid);
+      allow update: if isAdmin() || (
+                       signedIn()
+                    && resource.data.customer_id == request.auth.uid
+                    && resource.data.status in ['pending', 'confirmed']
+                    && request.resource.data.status in ['completed', 'cancelled']
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['status', 'completed_at', 'cancelled_at', 'status_by']));
+      allow delete: if isAdmin();
+    }
+
+    // Contact form: anyone can send a message, only an admin can read them.
+    match /messages/{id} {
+      allow create: if request.resource.data.status == 'new'
+                    && request.resource.data.name is string    && request.resource.data.name.size()    <= 80
+                    && request.resource.data.email is string   && request.resource.data.email.size()   <= 120
+                    && request.resource.data.message is string && request.resource.data.message.size() <= 2000;
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /customer_profiles/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+  }
+}
