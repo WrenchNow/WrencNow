@@ -4,6 +4,10 @@
  * What runs here (the website no longer sends any email itself):
  *   onApplicationCreated  – new mechanic application → email the applicant next steps + tell you
  *   stripeWebhook         – verification fee paid on Stripe → marks the application fee_paid
+ *   onApplicationUpdated  – fee paid (or you press "Send background check invite") → Checkr emails
+ *                           the applicant their background-check link; nobody types their details
+ *   checkrWebhook         – Checkr finishes the report → the result shows on the application in the
+ *                           Admin tab (CLEAR ticks the box; anything else is flagged for you to review)
  *   onMechanicPublished   – you approve an applicant in the Admin tab → welcome email
  *   onBookingCreated      – new booking → email the mechanic, the customer and you
  *   onBookingUpdated      – confirmed → email the customer; completed → update the mechanic's job count
@@ -12,6 +16,7 @@
  */
 const { onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/firestore');
 const { onRequest } = require('firebase-functions/v2/https');
+const crypto = require('crypto');
 const { defineSecret, defineString } = require('firebase-functions/params');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
@@ -22,6 +27,9 @@ const db = getFirestore();
 const RESEND_API_KEY        = defineSecret('RESEND_API_KEY');
 const STRIPE_SECRET_KEY     = defineSecret('STRIPE_SECRET_KEY');
 const STRIPE_WEBHOOK_SECRET = defineSecret('STRIPE_WEBHOOK_SECRET');
+const CHECKR_API_KEY        = defineSecret('CHECKR_API_KEY');        // set to the word none until Checkr approves your account
+const CHECKR_PACKAGE        = defineString('CHECKR_PACKAGE', { default: '' });   // package slug from your Checkr dashboard
+const CHECKR_STATE          = defineString('CHECKR_STATE', { default: 'CO' });   // state your mechanics work in
 const ADMIN_EMAIL           = defineString('ADMIN_EMAIL');                       // where your own alerts go
 const EMAIL_FROM            = defineString('EMAIL_FROM', { default: 'WrenchNow <onboarding@resend.dev>' });
 const SITE_URL              = defineString('SITE_URL', { default: 'https://webmechaniq.netlify.app' });
@@ -82,7 +90,7 @@ exports.onApplicationCreated = onDocumentCreated(
       html: layout('Thanks, ' + (a.name || '').split(' ')[0] + ' — application received',
         `<p>Your profile goes live once you are verified. Here is what happens next:</p>
          <ol><li>Pay the one-time $${VERIFY_FEE} verification fee. It covers your background and driving-record check.</li>
-         <li>You will get a separate email invite to complete the check. Reply to this email with your ASE certificate or two work references, and proof of liability insurance.</li>
+         <li>You will get a separate email from our background-check partner with a link to complete the check. Reply to this email with your ASE certificate or two work references, and proof of liability insurance.</li>
          <li>Once everything clears, your profile is published with the Verified badge.</li></ol>
          ${payHtml}`),
       replyTo: ADMIN_EMAIL.value()
@@ -149,6 +157,72 @@ exports.stripeWebhook = onRequest(
       if (!priv.empty) {
         const slug = await setFeatured(priv.docs[0].data().email, false);
         await toAdmin('Featured subscription ended — ' + (slug || customer), layout('Featured removed', rows([['Mechanic', slug]]) + '<p>Their subscription ended, so the Featured badge was removed.</p>'));
+      }
+    }
+    res.json({ received: true });
+  });
+
+// ── Background check (Checkr) ──────────────────────────────
+const checkrOn = () => { const k = CHECKR_API_KEY.value(); return !!k && k !== 'none' && !!CHECKR_PACKAGE.value(); };
+async function checkr(path, body) {
+  const res = await fetch('https://api.checkr.com/v1' + path, {
+    method: 'POST',
+    headers: { Authorization: 'Basic ' + Buffer.from(CHECKR_API_KEY.value() + ':').toString('base64'), 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error('Checkr ' + res.status + ': ' + JSON.stringify(json).slice(0, 300));
+  return json;
+}
+
+// Fee paid, or you pressed "Send background check invite" → Checkr emails the applicant.
+// The applicant enters their own SSN, date of birth and licence on Checkr's page and consents there.
+exports.onApplicationUpdated = onDocumentUpdated(
+  { document: 'mechanic_applications/{id}', secrets: [CHECKR_API_KEY, RESEND_API_KEY] },
+  async (event) => {
+    const before = event.data.before.data(), a = event.data.after.data();
+    const trigger = (!before.fee_paid && a.fee_paid) || (!before.checkr_requested && a.checkr_requested);
+    if (!trigger || a.checkr_candidate_id || a.status !== 'pending') return;
+    if (!checkrOn()) {
+      await toAdmin('Send a background check by hand — ' + (a.name || ''),
+        layout('Background check not automated yet', rows([['Name', a.name], ['Email', a.email]])
+          + '<p>Checkr is not connected, so no invite was sent. Send it from your Checkr dashboard, then tick the box in the Admin tab.</p>'));
+      return;
+    }
+    try {
+      const candidate = await checkr('/candidates', { email: a.email, phone: a.phone || undefined, custom_id: event.params.id });
+      await checkr('/invitations', { candidate_id: candidate.id, package: CHECKR_PACKAGE.value(), work_locations: [{ country: 'US', state: CHECKR_STATE.value() }] });
+      await event.data.after.ref.update({ checkr_candidate_id: candidate.id, background_status: 'invited', background_updated_at: new Date().toISOString() });
+    } catch (err) {
+      console.error('Checkr invite failed:', err.message);
+      await event.data.after.ref.update({ background_status: 'error', background_error: String(err.message).slice(0, 300) });
+      await toAdmin('Background check invite FAILED — ' + (a.name || ''), layout('Could not send the Checkr invite', rows([['Name', a.name], ['Email', a.email], ['Error', err.message]])));
+    }
+  });
+
+// Checkr reports back here. Add this function's URL as a webhook in your Checkr dashboard.
+exports.checkrWebhook = onRequest(
+  { secrets: [CHECKR_API_KEY, RESEND_API_KEY] },
+  async (req, res) => {
+    const expected = crypto.createHmac('sha256', CHECKR_API_KEY.value()).update(req.rawBody).digest('hex');
+    const got = String(req.headers['x-checkr-signature'] || '');
+    if (got.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(got), Buffer.from(expected))) { res.status(400).send('Bad signature'); return; }
+    const type = req.body && req.body.type, obj = (req.body && req.body.data && req.body.data.object) || {};
+    const candidateId = obj.candidate_id;
+    if (candidateId && (type === 'invitation.completed' || type === 'report.created' || type === 'report.completed')) {
+      const snap = await db.collection('mechanic_applications').where('checkr_candidate_id', '==', candidateId).limit(1).get();
+      if (!snap.empty) {
+        const ref = snap.docs[0].ref, a = snap.docs[0].data();
+        if (type !== 'report.completed') {
+          await ref.update({ background_status: 'pending', background_updated_at: new Date().toISOString() });
+        } else {
+          const clear = obj.result === 'clear';
+          await ref.update({ background_status: clear ? 'clear' : 'consider', background_report_id: obj.id || '', background_updated_at: new Date().toISOString(), ...(clear ? { 'checks.background': true } : {}) });
+          await toAdmin((clear ? 'Background check CLEAR — ' : 'Background check NEEDS REVIEW — ') + (a.name || ''),
+            layout(clear ? 'Background check came back clear' : 'Background check needs your review', rows([['Name', a.name], ['Email', a.email], ['Result', obj.result || 'see report']])
+              + (clear ? '<p>The box is ticked in the Admin tab. Finish the remaining checks and approve.</p>'
+                       : '<p>Open the report in your Checkr dashboard before deciding. If you turn them down because of it, follow the notice steps Checkr provides.</p>')));
+        }
       }
     }
     res.json({ received: true });

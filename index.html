@@ -2277,6 +2277,28 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
   .nav-pills .npill { font-size: 12px !important; }
 }
 
+
+/* ── Service levels, service picker, profile photos, background-check status ── */
+.level-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1rem; }
+.level-opt { border: 0.5px solid var(--border-med); border-radius: 12px; padding: 12px 14px; cursor: pointer; background: var(--raised); text-align: left; font-family: var(--font-body); color: var(--ink); }
+.level-opt b { display: block; font-size: 14px; color: var(--cream); margin-bottom: 3px; }
+.level-opt span { font-size: 12px; color: var(--muted); line-height: 1.45; display: block; }
+.level-opt.on { border-color: var(--ore); background: var(--ore-dim); }
+.svc-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: .5rem; }
+.svc-opt { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink); border: 0.5px solid var(--border); background: var(--raised); border-radius: 20px; padding: 6px 11px; cursor: pointer; }
+.svc-opt input { accent-color: var(--ore); }
+.svc-group-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); font-weight: 600; margin: .6rem 0 .4rem; }
+.photo-row { display: flex; align-items: center; gap: 12px; }
+.photo-prev { width: 64px; height: 64px; border-radius: 14px; background: var(--raised); border: 0.5px solid var(--border-med); object-fit: cover; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 22px; overflow: hidden; }
+.photo-prev img, .avatar img, .profile-avatar img, .admin-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.avatar.has-photo, .profile-avatar.has-photo { padding: 0; overflow: hidden; }
+.admin-photo { width: 52px; height: 52px; border-radius: 12px; overflow: hidden; flex-shrink: 0; background: var(--surface); }
+.mtag-level { background: rgba(59,158,255,.1); border-color: rgba(59,158,255,.25); color: var(--blue); }
+.basic-note { display: none; background: rgba(59,158,255,.08); border: 0.5px solid rgba(59,158,255,.25); border-radius: 10px; padding: 9px 13px; font-size: 12.5px; color: var(--ink); margin-bottom: .9rem; line-height: 1.5; }
+.basic-note.on { display: block; }
+.basic-note.err { background: rgba(255,77,77,.08); border-color: rgba(255,77,77,.3); }
+@media (max-width: 600px) { .level-pick { grid-template-columns: 1fr; } }
+
 </style>
 
 
@@ -2661,7 +2683,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
       <div>
         <ul class="req-list">
           <li class="req-item"><i class="ti ti-circle-check" aria-hidden="true"></i> Valid driver's license + clean driving record</li>
-          <li class="req-item"><i class="ti ti-circle-check" aria-hidden="true"></i> ASE certification or 3+ years professional experience</li>
+          <li class="req-item"><i class="ti ti-circle-check" aria-hidden="true"></i> Basic maintenance: no certification needed. Full-service repair: ASE certification or 3+ years</li>
           <li class="req-item"><i class="ti ti-circle-check" aria-hidden="true"></i> Your own tools and transport vehicle</li>
           <li class="req-item"><i class="ti ti-circle-check" aria-hidden="true"></i> Proof of general liability insurance</li>
           <li class="req-item"><i class="ti ti-circle-check" aria-hidden="true"></i> A phone and email you check — booking requests come to you there</li>
@@ -2901,15 +2923,16 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
         <div class="modal-title">What does your car need?</div>
         <div class="modal-sub">Step 1 of 3 — plain English is totally fine</div>
 
+        <div class="basic-note" id="basicNote"></div>
         <div class="field">
           <label class="field-label" style="margin-bottom:7px;display:block">Common services — tap one to start</label>
           <div class="vehicle-chips" id="serviceChips">
-            <button class="vehicle-chip" onclick="setServiceChip(this,'Oil change')">🛢 Oil change</button>
+            <button class="vehicle-chip" data-basic="1" onclick="setServiceChip(this,'Oil change')">🛢 Oil change</button>
             <button class="vehicle-chip" onclick="setServiceChip(this,'Brake pads')">🛑 Brakes</button>
-            <button class="vehicle-chip" onclick="setServiceChip(this,'Battery replacement')">🔋 Battery</button>
+            <button class="vehicle-chip" data-basic="1" onclick="setServiceChip(this,'Battery replacement')">🔋 Battery</button>
             <button class="vehicle-chip" onclick="setServiceChip(this,'Check engine light')">🔍 Check engine</button>
             <button class="vehicle-chip" onclick="setServiceChip(this,'AC not cooling')">❄️ AC / Heat</button>
-            <button class="vehicle-chip" onclick="setServiceChip(this,'Tyre rotation')">🔄 Tyres</button>
+            <button class="vehicle-chip" data-basic="1" onclick="setServiceChip(this,'Tyre rotation')">🔄 Tyres</button>
           </div>
         </div>
 
@@ -3202,6 +3225,8 @@ function mechToLookup(m) {
     avail: m.avail_label,
     bio: m.bio,
     specs: m.specialties || [],
+    level: mechLevel(m),
+    photo: safePhoto(m.photo),
     bookBtn: 'Book ' + m.name.split(' ')[0] + ' Now'
   };
 }
@@ -3234,7 +3259,7 @@ function renderMechCard(m) {
   avatar.className = 'avatar';
   avatar.style.background = m.avatar_bg;
   avatar.style.color = m.avatar_color;
-  avatar.textContent = m.initials;
+  setAvatar(avatar, m.initials, m.photo);
 
   // Name + location
   const meta = document.createElement('div');
@@ -3283,6 +3308,7 @@ function renderMechCard(m) {
   // Tags
   const tagsEl = document.createElement('div');
   tagsEl.className = 'mcard-tags';
+  if(mechLevel(m) === 'basic'){ const lv=document.createElement('span'); lv.className='mtag mtag-level'; lv.textContent='Basic maintenance only'; tagsEl.appendChild(lv); }
   const tagList = (m.specialties||[]).slice(0,4);
   const extra = (m.specialties||[]).length - 4;
   tagList.forEach(t => { const s=document.createElement('span'); s.className='mtag'; s.textContent=t; tagsEl.appendChild(s); });
@@ -3482,6 +3508,22 @@ document.addEventListener('change', function(e) {
   }
 });
 
+// ─── SERVICE LEVELS ─────────────────────────────────────
+// Mechanics pick from this fixed list when they apply, so nobody can claim work they
+// weren't approved for. "basic" mechanics only ever see and match the basic list.
+const BASIC_SERVICES = ['Oil change', 'Battery replacement', 'Tire rotation', 'Wiper blades', 'Bulbs & lights', 'Air & cabin filters', 'Fluid top-off', 'Jump start'];
+const FULL_SERVICES  = ['Brakes', 'Check engine diagnostics', 'AC / heating', 'Electrical', 'Suspension & steering', 'Tune-up / spark plugs', 'Belts & hoses', 'Cooling system', 'Transmission service', 'European vehicles'];
+const BASIC_KEYS = ['oil', 'battery', 'tires'];
+function mechLevel(m){ return m && m.service_level === 'basic' ? 'basic' : 'full'; }
+function safePhoto(p){ return typeof p === 'string' && p.indexOf('data:image/jpeg;base64,') === 0 && p.length < 120000 ? p : ''; }
+function setAvatar(el, initials, photo){
+  const src = safePhoto(photo);
+  el.textContent = '';
+  el.classList.toggle('has-photo', !!src);
+  if(src){ const img = document.createElement('img'); img.src = src; img.alt = ''; el.appendChild(img); }
+  else el.textContent = initials || '';
+}
+
 // ─── SEARCH / FILTER / SORT ────────────────────────────
 // One source of truth for what the grid shows. The hero search card,
 // the filter chips and the sort pills all write to `view`, then renderGrid().
@@ -3520,6 +3562,7 @@ function mechCity(m){
 function mechMatches(m, key){
   const k = SERVICE_KEYS[key];
   if(!k) return true;
+  if(mechLevel(m) === 'basic' && !BASIC_KEYS.includes(key)) return false;
   const specs = (m.specialties || []).join(' ').toLowerCase();
   // "General repairs" mechanics take any standard job (but don't claim a European specialty)
   if(key !== 'european' && /general|all repairs|full.?service/.test(specs)) return true;
@@ -3736,6 +3779,7 @@ function refreshSlots(){
   if(current) selectedTime = current.querySelector('.slot-time').textContent;
 }
 
+let selectedMechLevel = 'full';
 let pendingBooking = null; // remembers what the visitor was booking while they sign up / log in
 function openBooking(mechName){
   if(!currentUser){ pendingBooking = { mech: mechName || null }; openAuth('signup'); return; }
@@ -3762,7 +3806,7 @@ function openBooking(mechName){
     nameEl.textContent = mechName;
     av.textContent = mechName.split(' ').map(w=>w[0]).join('');
     const key = Object.keys(MECHANICS).find(k=>MECHANICS[k].name===mechName);
-    if(key){ av.style.background=MECHANICS[key].bg; av.style.color=MECHANICS[key].color; selectedMechRate=MECHANICS[key].rateNum; }
+    if(key){ av.style.background=MECHANICS[key].bg; av.style.color=MECHANICS[key].color; selectedMechRate=MECHANICS[key].rateNum; setAvatar(av, av.textContent, MECHANICS[key].photo); }
   } else {
     selectedMechName = 'Available Mechanic';
     nameEl.textContent = 'Available Mechanic';
@@ -3770,6 +3814,16 @@ function openBooking(mechName){
     selectedMechRate = 85;
   }
   rateEl.innerHTML = '$'+selectedMechRate+'<span style="font-size:12px;color:var(--muted);font-weight:400">/hr</span>';
+
+  // Basic-maintenance mechanics: only their kind of job can be requested
+  const mk = Object.keys(MECHANICS).find(k => MECHANICS[k].name === selectedMechName);
+  selectedMechLevel = mechName && mk ? MECHANICS[mk].level : 'full';
+  if(!mechName) av.classList.remove('has-photo');
+  document.querySelectorAll('#serviceChips .vehicle-chip').forEach(c => { c.style.display = (selectedMechLevel === 'basic' && !c.dataset.basic) ? 'none' : ''; });
+  const bn = document.getElementById('basicNote');
+  bn.classList.remove('err');
+  bn.classList.toggle('on', selectedMechLevel === 'basic');
+  if(selectedMechLevel === 'basic') bn.textContent = selectedMechName.split(' ')[0] + ' does basic maintenance only: ' + ((mk && MECHANICS[mk].specs.length ? MECHANICS[mk].specs : BASIC_SERVICES).join(', ')) + '. For brakes, diagnostics or repairs, pick a full-service mechanic.';
 
   document.getElementById('modalBody').style.display='';
   document.getElementById('bookingHeader').style.display='';
@@ -3789,6 +3843,18 @@ function closeModalOutside(e){
 }
 
 function goStep(n){
+  // Stop a repair job being sent to a basic-maintenance mechanic
+  if(n === 2 && currentStep === 1 && selectedMechLevel === 'basic'){
+    const text = ((document.getElementById('modalService').value || '') + ' ' + (document.getElementById('modalNotes').value || '')).toLowerCase();
+    const beyond = SYMPTOM_KEYS.filter(([re, k]) => !BASIC_KEYS.includes(k) && re.test(text)).map(([, k]) => SERVICE_KEYS[k].label);
+    if(beyond.length){
+      const bn = document.getElementById('basicNote');
+      bn.classList.add('on', 'err');
+      bn.textContent = 'That sounds like ' + beyond.join(' / ') + ' work, which ' + selectedMechName.split(' ')[0] + " isn't approved for. Close this and choose a full-service mechanic, or use \"Let us match you\".";
+      document.getElementById('modalBody').scrollTop = 0;
+      return;
+    }
+  }
   document.querySelectorAll('.booking-step').forEach(s=>s.classList.remove('on'));
   document.getElementById('step'+n).classList.add('on');
   currentStep = n;
@@ -3977,7 +4043,7 @@ function openProfile(mechKey){
   currentProfileMech = mechKey;
 
   const av = document.getElementById('profileAvatar');
-  av.textContent = m.initials;
+  setAvatar(av, m.initials, m.photo);
   av.style.background = m.bg;
   av.style.color = m.color;
 
@@ -4587,7 +4653,15 @@ function adminApplications(apps, mechs){
     meta.appendChild(document.createElement('br')); meta.appendChild(contactLine(a.email, a.phone));
     if(a.specialties){ meta.appendChild(document.createElement('br')); meta.appendChild(document.createTextNode('Specialties: ' + a.specialties)); }
     left.appendChild(nm); left.appendChild(meta);
-    row.appendChild(left); row.appendChild(adminTag('Applied ' + fmtDate(a.created_at)));
+    if(safePhoto(a.photo)){ const ph = document.createElement('div'); ph.className = 'admin-photo'; const im = document.createElement('img'); im.src = safePhoto(a.photo); im.alt = ''; ph.appendChild(im); row.appendChild(ph); left.style.flex = '1'; }
+    row.appendChild(left);
+    const tags = document.createElement('div'); tags.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end';
+    tags.appendChild(adminTag(a.service_level === 'full' ? 'Full-service' : 'Basic maintenance', a.service_level === 'full' ? 'warn' : ''));
+    const bg = a.background_status || '';
+    const bgLabel = { invited: 'Check: invite sent', pending: 'Check: in progress', clear: 'Check: CLEAR', consider: 'Check: NEEDS REVIEW', error: 'Check: could not send' }[bg] || 'Check: not started';
+    tags.appendChild(adminTag(bgLabel, bg === 'clear' ? 'ok' : (bg === 'consider' || bg === 'error') ? 'due' : bg ? 'warn' : ''));
+    tags.appendChild(adminTag('Applied ' + fmtDate(a.created_at)));
+    row.appendChild(tags);
     card.appendChild(row);
     if(a.bio){ const bio = document.createElement('div'); bio.className = 'admin-bio'; bio.textContent = a.bio; card.appendChild(bio); }
 
@@ -4608,6 +4682,8 @@ function adminApplications(apps, mechs){
     card.appendChild(boxWrap);
     const acts = document.createElement('div'); acts.className = 'admin-actions';
     acts.appendChild(approve);
+    if(!a.background_status && !a.checkr_requested) acts.appendChild(adminBtn('Send background check invite', '', () => db.collection('mechanic_applications').doc(a.id).update({ checkr_requested: true })));
+    acts.appendChild(adminBtn(a.service_level === 'full' ? 'Limit to Basic' : 'Allow Full-service', '', () => db.collection('mechanic_applications').doc(a.id).update({ service_level: a.service_level === 'full' ? 'basic' : 'full' })));
     acts.appendChild(adminBtn('Reject', '', async () => {
       if(!confirm('Reject ' + (a.name || 'this applicant') + '? If the background check is the reason, follow the notice steps your check provider gives you first.')) return;
       await db.collection('mechanic_applications').doc(a.id).update({ status: 'rejected', decided_at: new Date().toISOString() });
@@ -4630,11 +4706,14 @@ async function approveApplication(a, mechs){
   const pal = palettes[(a.name || '').length % palettes.length];
   const years = parseInt(a.years_experience) || 0;
   const rate = parseInt(a.rate_num) || 75;
-  const specs = Array.isArray(a.specialties_list) && a.specialties_list.length ? a.specialties_list
-              : (a.specialties ? String(a.specialties).split(',').map(s => s.trim()).filter(Boolean) : ['General Repairs']);
+  const level = a.service_level === 'basic' ? 'basic' : 'full';   // applications from before levels existed count as full
+  let specs = Array.isArray(a.specialties_list) && a.specialties_list.length ? a.specialties_list
+            : (a.specialties ? String(a.specialties).split(',').map(s => s.trim()).filter(Boolean) : []);
+  if(level === 'basic') specs = specs.filter(sv => BASIC_SERVICES.includes(sv));
+  if(!specs.length) specs = level === 'basic' ? ['Oil change'] : ['General Repairs'];
   const batch = db.batch();
   batch.set(db.collection('mechanics').doc(slug), {
-    slug, name: a.name, city: a.city || '',
+    slug, name: a.name, city: a.city || '', service_level: level, photo: safePhoto(a.photo),
     initials: (a.name || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2),
     avatar_bg: pal.bg, avatar_color: pal.color,
     tagline: (a.certifications ? a.certifications + ' · ' : '') + years + ' yr' + (years !== 1 ? 's' : '') + ' experience · ' + (a.city || ''),
@@ -4718,7 +4797,7 @@ function adminMechanics(mechs, priv, done){
     const left = document.createElement('div');
     const nm = document.createElement('div'); nm.className = 'admin-name'; nm.textContent = m.name || m.slug;
     const meta = document.createElement('div'); meta.className = 'admin-meta';
-    meta.appendChild(document.createTextNode([mechCity(m), m.rate_display ? m.rate_display + '/hr' : '', n + ' completed job' + (n !== 1 ? 's' : '')].filter(Boolean).join(' · ')));
+    meta.appendChild(document.createTextNode([mechLevel(m) === 'basic' ? 'Basic maintenance' : 'Full-service', mechCity(m), m.rate_display ? m.rate_display + '/hr' : '', n + ' completed job' + (n !== 1 ? 's' : '')].filter(Boolean).join(' · ')));
     if(p){ meta.appendChild(document.createElement('br')); meta.appendChild(contactLine(p.email, p.phone)); }
     left.appendChild(nm); left.appendChild(meta);
     const right = document.createElement('div'); right.style.textAlign = 'right';
@@ -4733,6 +4812,7 @@ function adminMechanics(mechs, priv, done){
     acts.appendChild(note);
     const upd = patch => async () => { await db.collection('mechanics').doc(m.id).update(patch); try { sessionStorage.removeItem('ww_mechanics_cache'); } catch(e){} loadMechanics(); };
     if(!m.verified) acts.appendChild(adminBtn("I've checked them — mark verified", 'good', upd({ verified: true, verified_at: new Date().toISOString(), badge_type: 'verified' })));
+    acts.appendChild(adminBtn(mechLevel(m) === 'basic' ? 'Allow Full-service' : 'Limit to Basic', '', upd(mechLevel(m) === 'basic' ? { service_level: 'full' } : { service_level: 'basic', specialties: (m.specialties || []).filter(sv => BASIC_SERVICES.includes(sv)).concat((m.specialties || []).some(sv => BASIC_SERVICES.includes(sv)) ? [] : ['Oil change']) })));
     acts.appendChild(adminBtn(m.is_featured ? 'Remove Featured' : 'Make Featured', m.is_featured ? '' : 'primary', upd({ is_featured: !m.is_featured })));
     acts.appendChild(adminBtn(m.available_now ? 'Set unavailable' : 'Set available', '', upd(m.available_now ? { available_now: false, avail_label: 'Not taking jobs right now' } : { available_now: true, avail_label: 'Available now' })));
     card.appendChild(acts);
@@ -4852,10 +4932,51 @@ function makeSlug(n) {
     .slice(0, 30) + '_' + Date.now().toString(36);
 }
 
+let applyLevel = 'basic', applyPhotoData = '';
+function renderApplyServices(){
+  const wrap = document.getElementById('applyServices'); if(!wrap) return;
+  const picked = new Set(Array.from(wrap.querySelectorAll('input:checked')).map(i => i.value));
+  wrap.innerHTML = '';
+  const group = (label, list) => {
+    const l = document.createElement('div'); l.className = 'svc-group-label'; l.textContent = label; wrap.appendChild(l);
+    const g = document.createElement('div'); g.className = 'svc-grid';
+    list.forEach(sv => { const lab = document.createElement('label'); lab.className = 'svc-opt'; const cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = sv; cb.checked = picked.has(sv); lab.appendChild(cb); lab.appendChild(document.createTextNode(sv)); g.appendChild(lab); });
+    wrap.appendChild(g);
+  };
+  group('Basic maintenance', BASIC_SERVICES);
+  if(applyLevel === 'full') group('Repair & diagnostics', FULL_SERVICES);
+}
+function setApplyLevel(lv){
+  applyLevel = lv === 'full' ? 'full' : 'basic';
+  document.getElementById('levelBasic').classList.toggle('on', applyLevel === 'basic');
+  document.getElementById('levelFull').classList.toggle('on', applyLevel === 'full');
+  renderApplyServices();
+}
+// Photo is shrunk in the browser to a small square JPEG and saved with the application (no file storage needed)
+function pickApplyPhoto(input){
+  const file = input.files && input.files[0]; if(!file) return;
+  const img = new Image();
+  img.onload = () => {
+    const S = 240, c = document.createElement('canvas'); c.width = S; c.height = S;
+    const side = Math.min(img.width, img.height);
+    c.getContext('2d').drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, S, S);
+    applyPhotoData = c.toDataURL('image/jpeg', 0.8);
+    const prev = document.getElementById('applyPhotoPrev'); prev.textContent = '';
+    const el = document.createElement('img'); el.src = applyPhotoData; el.alt = 'Your photo'; prev.appendChild(el);
+    URL.revokeObjectURL(img.src);
+  };
+  img.onerror = () => { applyPhotoData = ''; alert("That file isn't an image we can read. Try a JPG or PNG."); };
+  img.src = URL.createObjectURL(file);
+}
+document.addEventListener('DOMContentLoaded', renderApplyServices);
+
 async function submitApplication() {
   const val = id => (document.getElementById(id).value || '').trim();
   const name = val('applyName'), email = val('applyEmail'), phone = val('applyPhone'), city = val('applyCity');
-  const years = val('applyYears'), rate = val('applyRate'), specs = val('applySpecs'), certs = val('applyCerts'), bio = val('applyBio');
+  const years = val('applyYears'), rate = val('applyRate'), certs = val('applyCerts'), bio = val('applyBio');
+  const allowed = applyLevel === 'full' ? BASIC_SERVICES.concat(FULL_SERVICES) : BASIC_SERVICES;
+  const services = Array.from(document.querySelectorAll('#applyServices input:checked')).map(i => i.value).filter(v => allowed.includes(v));
+  const specs = services.join(', ');
   const tools     = document.getElementById('applyTools').checked;
   const transport = document.getElementById('applyTransport').checked;
   const errEl     = document.getElementById('applyError');
@@ -4870,6 +4991,8 @@ async function submitApplication() {
   if(!years) return fail('Please enter your years of experience.');
   const rateNum = parseInt(rate);
   if(!(rateNum >= 30 && rateNum <= 300)) return fail('Please enter your hourly rate (between $30 and $300).');
+  if(!services.length) return fail('Tick at least one service you will offer.');
+  if(applyLevel === 'full' && !(parseInt(years) >= 3) && !certs) return fail('Full-service repair needs ASE certification or 3+ years of experience. Add your certification, or choose Basic maintenance.');
   if(!bio)   return fail('Please tell us a bit about yourself.');
   if(!tools || !transport) return fail('You must have your own tools and transportation to join.');
   const agreeTerms = document.getElementById('applyAgreeTerms');
@@ -4884,7 +5007,10 @@ async function submitApplication() {
       name: name.slice(0, 80), email: email.slice(0, 120), phone: phone.slice(0, 30), city: city.slice(0, 80),
       years_experience: Math.min(parseInt(years) || 0, 60),
       rate_num: rateNum,
+      service_level: applyLevel,
       specialties: specs.slice(0, 300),
+      specialties_list: services,
+      photo: safePhoto(applyPhotoData),
       certifications: certs.slice(0, 200),
       bio: bio.slice(0, 1500),
       has_tools: tools, has_transport: transport,
@@ -5249,12 +5375,27 @@ auth.onAuthStateChanged((user) => {
           <input class="apply-input" id="applyRate" type="number" min="30" max="300" placeholder="e.g. 85"/>
         </div>
         <div class="apply-field">
-          <label class="apply-label">Your specialties (comma separated)</label>
-          <input class="apply-input" id="applySpecs" type="text" placeholder="Oil Change, Brakes, Engine Diagnostics, AC…"/>
+          <label class="apply-label">What kind of work will you take? *</label>
+          <div class="level-pick">
+            <button type="button" class="level-opt on" id="levelBasic" onclick="setApplyLevel('basic')"><b>Basic maintenance</b><span>Oil changes, batteries, tire rotations, filters, bulbs. No certification needed.</span></button>
+            <button type="button" class="level-opt" id="levelFull" onclick="setApplyLevel('full')"><b>Full-service repair</b><span>Brakes, diagnostics, AC, electrical and more. Needs ASE certification or 3+ years.</span></button>
+          </div>
+          <label class="apply-label">Services you'll offer * (tick all that apply)</label>
+          <div id="applyServices"></div>
         </div>
         <div class="apply-field">
           <label class="apply-label">Any certifications? (ASE, manufacturer, etc.)</label>
           <input class="apply-input" id="applyCerts" type="text" placeholder="e.g. ASE Master Technician, Toyota Certified"/>
+        </div>
+        <div class="apply-field">
+          <label class="apply-label">Profile photo (optional)</label>
+          <div class="photo-row">
+            <div class="photo-prev" id="applyPhotoPrev"><i class="ti ti-user" aria-hidden="true"></i></div>
+            <div>
+              <input type="file" id="applyPhoto" accept="image/*" onchange="pickApplyPhoto(this)" style="font-size:12px;color:var(--muted);max-width:220px"/>
+              <div style="font-size:11px;color:var(--muted);margin-top:4px">A clear photo of your face. Customers like knowing who's coming.</div>
+            </div>
+          </div>
         </div>
         <div class="apply-field">
           <label class="apply-label">Tell us about yourself *</label>

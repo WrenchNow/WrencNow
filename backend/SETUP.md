@@ -22,6 +22,7 @@ Cloud Functions need the Blaze (pay-as-you-go) plan.
 cd functions && npm install && cd ..
 firebase functions:secrets:set RESEND_API_KEY          # the NEW key, after rotating the leaked one
 firebase functions:secrets:set STRIPE_SECRET_KEY       # sk_live_...
+firebase functions:secrets:set CHECKR_API_KEY          # type the word none until Checkr approves your account
 firebase functions:secrets:set STRIPE_WEBHOOK_SECRET   # whsec_... (from step 4; use a placeholder for the first deploy)
 firebase deploy --only functions
 ```
@@ -48,3 +49,11 @@ If the CLI offers to delete an older `sendEmail` function, say yes. The site no 
 7. A mechanic pays the $29/month Featured link with the same email they applied with → they are pinned as Featured automatically. Cancelling removes it. You can also toggle Featured by hand in the Admin tab.
 
 Without step 3 everything still works by hand from the Admin tab; you just get no emails and tick "fee paid" yourself.
+
+## 5. Checkr (automatic background checks)
+1. Open a Checkr business account and ask them to enable API access. They have to approve the account before live checks work.
+2. In Checkr, note the **slug** of the package you want (criminal + driving record).
+3. `firebase functions:secrets:set CHECKR_API_KEY` with your live key, set `CHECKR_PACKAGE` to that slug when the deploy asks, then `firebase deploy --only functions`.
+4. In Checkr → Developer settings → Webhooks, add the `checkrWebhook` URL printed by the deploy.
+
+After that: fee paid → Checkr emails the applicant → the result appears on their card in the Admin tab ("Check: CLEAR" or "NEEDS REVIEW"). Until then, the "Send background check invite" button just emails you a reminder to send it by hand.

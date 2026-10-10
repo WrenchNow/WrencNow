@@ -30,6 +30,10 @@ service cloud.firestore {
                     && request.resource.data.fee_paid == false
                     && !('checks' in request.resource.data)
                     && !('mechanic_slug' in request.resource.data)
+                    && !('background_status' in request.resource.data)
+                    && !('checkr_requested' in request.resource.data)
+                    && request.resource.data.service_level in ['basic', 'full']
+                    && (!('photo' in request.resource.data) || (request.resource.data.photo is string && request.resource.data.photo.size() <= 120000))
                     && request.resource.data.name is string  && request.resource.data.name.size()  <= 80
                     && request.resource.data.email is string && request.resource.data.email.size() <= 120
                     && request.resource.data.bio is string   && request.resource.data.bio.size()   <= 1500;
