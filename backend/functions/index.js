@@ -11,10 +11,14 @@
  *   onMechanicPublished   – you approve an applicant in the Admin tab → welcome email
  *   onBookingCreated      – new booking → email the mechanic, the customer and you
  *   onBookingUpdated      – confirmed → email the customer; completed → update the mechanic's job count
+ *                           cancelled → tell the mechanic the job is off
+ *   onReviewWritten       – a review is posted or deleted → the mechanic's star rating and review
+ *                           count are recalculated from their real reviews
+ *   onMessageCreated      – contact form message → forwarded to you
  *   stripeWebhook also handles the Featured subscription: paid → the mechanic with that email is
  *   pinned as Featured; cancelled → Featured is removed. You are emailed either way.
  */
-const { onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/firestore');
+const { onDocumentCreated, onDocumentUpdated, onDocumentWritten } = require('firebase-functions/v2/firestore');
 const { onRequest } = require('firebase-functions/v2/https');
 const crypto = require('crypto');
 const { defineSecret, defineString } = require('firebase-functions/params');
@@ -32,7 +36,7 @@ const CHECKR_PACKAGE        = defineString('CHECKR_PACKAGE', { default: '' });  
 const CHECKR_STATE          = defineString('CHECKR_STATE', { default: 'CO' });   // state your mechanics work in
 const ADMIN_EMAIL           = defineString('ADMIN_EMAIL');                       // where your own alerts go
 const EMAIL_FROM            = defineString('EMAIL_FROM', { default: 'WrenchNow <onboarding@resend.dev>' });
-const SITE_URL              = defineString('SITE_URL', { default: 'https://webmechaniq.netlify.app' });
+const SITE_URL              = defineString('SITE_URL', { default: 'https://wondrous-granita-ea4a9e.netlify.app' });
 const VERIFY_PAYMENT_LINK   = defineString('VERIFY_PAYMENT_LINK', { default: '' }); // same live link as in the site file
 
 const VERIFY_FEE = 49;   // keep in step with the constant at the top of the site script
@@ -254,7 +258,7 @@ exports.onBookingCreated = onDocumentCreated(
   { document: 'bookings/{id}', secrets: [RESEND_API_KEY] },
   async (event) => {
     const b = event.data.data();
-    const details = rows([['Service', b.service], ['Vehicle', b.vehicle], ['Where', b.address], ['Requested time', (b.booking_date || '') + ' · ' + (b.booking_time || '')],
+    const details = rows([['Service', b.service], ['Vehicle', b.vehicle], ['Where', b.address], ['Requested time', (b.booking_date || '') + ' · ' + (b.booking_time || '')], ['Customer phone', b.customer_phone],
       ['Urgency', b.urgency && b.urgency !== 'flexible' ? b.urgency : ''], ['Notes', b.notes]]);
     const p = await mechanicPrivate(b.mechanic_slug);
 
@@ -303,7 +307,7 @@ exports.onBookingUpdated = onDocumentUpdated(
           to: assigned.email, replyTo: after.customer_email,
           subject: 'New booking request — ' + (after.service || 'service'),
           html: layout('New booking request', `<p>${esc(after.customer_name || 'A customer')} needs a mechanic and we matched the job to you.</p>`
-            + rows([['Service', after.service], ['Vehicle', after.vehicle], ['Where', after.address], ['Requested time', (after.booking_date || '') + ' · ' + (after.booking_time || '')], ['Notes', after.notes]])
+            + rows([['Service', after.service], ['Vehicle', after.vehicle], ['Where', after.address], ['Requested time', (after.booking_date || '') + ' · ' + (after.booking_time || '')], ['Customer phone', after.customer_phone], ['Notes', after.notes]])
             + '<p><strong>Reply to this email</strong> to confirm the time with the customer.</p>')
         });
       }
@@ -319,7 +323,20 @@ exports.onBookingUpdated = onDocumentUpdated(
       });
       return;
     }
+    if (after.status === 'cancelled') {
+      const p = await mechanicPrivate(after.mechanic_slug);
+      if (p && p.email) await sendEmail({ to: p.email, subject: 'Booking cancelled — ' + (after.service || 'service'),
+        html: layout('This booking was cancelled', `<p>${esc(after.customer_name || 'The customer')} cancelled the request below. Nothing more to do.</p>`
+          + rows([['Service', after.service], ['Vehicle', after.vehicle], ['Was requested for', (after.booking_date || '') + ' · ' + (after.booking_time || '')]])) });
+      if (after.status_by === 'admin') await sendEmail({ to: after.customer_email, replyTo: ADMIN_EMAIL.value(), subject: 'Your WrenchNow booking was cancelled',
+        html: layout('Your booking was cancelled', '<p>We had to cancel this request. Reply to this email if you have questions, or book another mechanic on the site.</p>' + rows([['Service', after.service], ['Was requested for', (after.booking_date || '') + ' · ' + (after.booking_time || '')]])) });
+      return;
+    }
     if (after.status !== 'completed' || !after.mechanic_slug) return;
+    if (after.status_by !== 'customer') {
+      await sendEmail({ to: after.customer_email, replyTo: ADMIN_EMAIL.value(), subject: 'How did it go with ' + (after.mechanic_name || 'your mechanic') + '?',
+        html: layout('Your job is marked complete', `<p>Thanks for using WrenchNow. A quick star rating helps the next customer choose, and helps good mechanics get more work.</p><p><a href="${esc(SITE_URL.value())}">Open WrenchNow</a>, tap your initials, then My bookings to rate this job.</p>`) });
+    }
 
     const slug = after.mechanic_slug;
     const countSnap = await db.collection('bookings').where('mechanic_slug', '==', slug).where('status', '==', 'completed').count().get();
@@ -328,4 +345,19 @@ exports.onBookingUpdated = onDocumentUpdated(
     // public job count (never lowered)
     const mechSnap = await db.collection('mechanics').where('slug', '==', slug).get();
     await Promise.all(mechSnap.docs.filter(d => (d.data().jobs_completed || 0) < jobs).map(d => d.ref.update({ jobs_completed: jobs })));
+  });
+
+// ── 6. Reviews → the mechanic's public star rating ─────────
+exports.onReviewWritten = onDocumentWritten(
+  { document: 'reviews/{id}' },
+  async (event) => {
+    const data = (event.data.after.exists ? event.data.after.data() : event.data.before.data()) || {};
+    const slug = data.mechanic_slug;
+    if (!slug) return;
+    const snap = await db.collection('reviews').where('mechanic_slug', '==', slug).get();
+    const ratings = snap.docs.map(d => Number(d.data().rating)).filter(n => n >= 1 && n <= 5);
+    const count = ratings.length;
+    const avg = count ? Math.round(ratings.reduce((a, b) => a + b, 0) / count * 10) / 10 : 0;
+    const mech = await db.collection('mechanics').where('slug', '==', slug).get();
+    await Promise.all(mech.docs.map(d => d.ref.update({ rating: avg, review_count: count })));
   });

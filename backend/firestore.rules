@@ -44,7 +44,10 @@ service cloud.firestore {
     match /bookings/{id} {
       allow create: if signedIn()
                     && request.resource.data.customer_id == request.auth.uid
-                    && request.resource.data.status == 'pending';
+                    && request.resource.data.status == 'pending'
+                    && request.resource.data.service is string && request.resource.data.service.size() <= 300
+                    && request.resource.data.address is string && request.resource.data.address.size() <= 300
+                    && (!('notes' in request.resource.data) || (request.resource.data.notes is string && request.resource.data.notes.size() <= 2000));
       allow read: if isAdmin() || (signedIn() && resource.data.customer_id == request.auth.uid);
       allow update: if isAdmin() || (
                        signedIn()
@@ -63,6 +66,22 @@ service cloud.firestore {
                     && request.resource.data.email is string   && request.resource.data.email.size()   <= 120
                     && request.resource.data.message is string && request.resource.data.message.size() <= 2000;
       allow read, update, delete: if isAdmin();
+    }
+
+    // Reviews: public to read. A customer may post one review per booking, only for their own
+    // completed booking, and the review must name the mechanic that booking was with.
+    match /reviews/{bookingId} {
+      allow read: if true;
+      allow create: if signedIn()
+                    && request.resource.data.customer_id == request.auth.uid
+                    && request.resource.data.booking_id == bookingId
+                    && request.resource.data.rating is int
+                    && request.resource.data.rating >= 1 && request.resource.data.rating <= 5
+                    && request.resource.data.comment is string && request.resource.data.comment.size() <= 600
+                    && get(/databases/$(database)/documents/bookings/$(bookingId)).data.customer_id == request.auth.uid
+                    && get(/databases/$(database)/documents/bookings/$(bookingId)).data.status == 'completed'
+                    && get(/databases/$(database)/documents/bookings/$(bookingId)).data.mechanic_slug == request.resource.data.mechanic_slug;
+      allow update, delete: if isAdmin();
     }
 
     match /customer_profiles/{uid} {

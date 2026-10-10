@@ -10,6 +10,8 @@ Run these once from this `backend` folder. You need the Firebase CLI (`npm i -g 
 Do this **before** step 2, or the new rules will lock you out of the Admin tab.
 
 ## 2. Lock down the database
+You can also paste `firestore.rules` into Firebase console → Firestore → Rules → Publish instead of using the command. Re-publish whenever this file changes: reviews, photos and service levels all depend on the latest version.
+
 ```
 firebase use wrench-now
 firebase deploy --only firestore:rules
