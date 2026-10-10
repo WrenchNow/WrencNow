@@ -34,8 +34,9 @@ If the CLI offers to delete an older `sendEmail` function, say yes. The site no 
 
 ## 4. Stripe
 1. Create a **live** Payment Link for the $49 verification fee. Paste it into `VERIFY_PAYMENT_LINK` near the top of the site's script.
-2. Developers → Webhooks → add endpoint: the `stripeWebhook` URL printed by the deploy, event `checkout.session.completed`.
-3. Copy the signing secret into `STRIPE_WEBHOOK_SECRET` (step 3 command) and deploy functions again.
+2. Create a **live** $29/month subscription Payment Link for Featured. Paste it into `FEATURED_PAYMENT_LINK` near the top of the site's script.
+3. Developers → Webhooks → add endpoint: the `stripeWebhook` URL printed by the deploy, events `checkout.session.completed` and `customer.subscription.deleted`.
+4. Copy the signing secret into `STRIPE_WEBHOOK_SECRET` (step 3 command) and deploy functions again.
 
 ## How the flow runs afterwards
 1. Mechanic applies → saved as pending → gets the fee link.
@@ -44,6 +45,6 @@ If the CLI offers to delete an older `sendEmail` function, say yes. The site no 
 4. All four ticked → "Approve & publish" → profile goes live with the Verified badge.
 5. Customer books → mechanic, customer and you are emailed.
 6. Customer (or you) marks the job complete → the job count updates.
-7. At 5 completed jobs → you get a "Payback due" email → send the $49 → press "mark paid back".
+7. A mechanic pays the $29/month Featured link with the same email they applied with → they are pinned as Featured automatically. Cancelling removes it. You can also toggle Featured by hand in the Admin tab.
 
 Without step 3 everything still works by hand from the Admin tab; you just get no emails and tick "fee paid" yourself.

@@ -6,11 +6,9 @@
  *   stripeWebhook         – verification fee paid on Stripe → marks the application fee_paid
  *   onMechanicPublished   – you approve an applicant in the Admin tab → welcome email
  *   onBookingCreated      – new booking → email the mechanic, the customer and you
- *   onBookingUpdated      – confirmed → email the customer; completed → count the mechanic's
- *                           jobs and, at PAYBACK_JOBS, flag the fee payback as due and email you
- *
- * NOT automated: sending the payback money itself. You pay the mechanic, then press
- * "mark paid back" in the Admin tab. (Automatic transfers need Stripe Connect.)
+ *   onBookingUpdated      – confirmed → email the customer; completed → update the mechanic's job count
+ *   stripeWebhook also handles the Featured subscription: paid → the mechanic with that email is
+ *   pinned as Featured; cancelled → Featured is removed. You are emailed either way.
  */
 const { onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/firestore');
 const { onRequest } = require('firebase-functions/v2/https');
@@ -29,8 +27,7 @@ const EMAIL_FROM            = defineString('EMAIL_FROM', { default: 'WrenchNow <
 const SITE_URL              = defineString('SITE_URL', { default: 'https://webmechaniq.netlify.app' });
 const VERIFY_PAYMENT_LINK   = defineString('VERIFY_PAYMENT_LINK', { default: '' }); // same live link as in the site file
 
-const VERIFY_FEE   = 49;   // keep in step with the constants at the top of the site script
-const PAYBACK_JOBS = 5;
+const VERIFY_FEE = 49;   // keep in step with the constant at the top of the site script
 
 // ── helpers ────────────────────────────────────────────────
 const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -87,8 +84,7 @@ exports.onApplicationCreated = onDocumentCreated(
          <ol><li>Pay the one-time $${VERIFY_FEE} verification fee. It covers your background and driving-record check.</li>
          <li>You will get a separate email invite to complete the check. Reply to this email with your ASE certificate or two work references, and proof of liability insurance.</li>
          <li>Once everything clears, your profile is published with the Verified badge.</li></ol>
-         ${payHtml}
-         <p><strong>You get the $${VERIFY_FEE} back:</strong> after your ${PAYBACK_JOBS}th completed job that the customer confirms, we pay the fee back in full.</p>`),
+         ${payHtml}`),
       replyTo: ADMIN_EMAIL.value()
     });
     await toAdmin('New mechanic application — ' + (a.name || ''),
@@ -126,6 +122,35 @@ exports.stripeWebhook = onRequest(
         }
       }
     }
+    // Featured subscription ($29/mo): match the payer's email to a mechanic and pin them
+    const setFeatured = async (email, on) => {
+      if (!email) return null;
+      const priv = await db.collection('mechanic_private').where('email', '==', email).limit(1).get();
+      if (priv.empty) return null;
+      const slug = priv.docs[0].id;
+      const mech = await db.collection('mechanics').where('slug', '==', slug).get();
+      await Promise.all(mech.docs.map(d => d.ref.update({ is_featured: on })));
+      await priv.docs[0].ref.update({ featured: on, featured_changed_at: new Date().toISOString() });
+      return slug;
+    };
+    if (event.type === 'checkout.session.completed' && event.data.object.mode === 'subscription') {
+      const session = event.data.object;
+      const email = (session.customer_details && session.customer_details.email) || session.customer_email || '';
+      const slug = await setFeatured(email, true);
+      if (slug) await db.collection('mechanic_private').doc(slug).update({ stripe_customer: session.customer || '' });
+      await toAdmin((slug ? '' : 'ACTION NEEDED: ') + 'Featured subscription paid — ' + email,
+        layout(slug ? 'New Featured mechanic' : 'Featured payment with no matching mechanic',
+          rows([['Email', email], ['Mechanic', slug || 'no mechanic uses this email']])
+          + (slug ? '<p>They are now pinned as Featured.</p>' : '<p>Nobody was made Featured. Find the mechanic and press "Make Featured" in the Admin tab.</p>')));
+    }
+    if (event.type === 'customer.subscription.deleted') {
+      const customer = event.data.object.customer;
+      const priv = await db.collection('mechanic_private').where('stripe_customer', '==', customer).limit(1).get();
+      if (!priv.empty) {
+        const slug = await setFeatured(priv.docs[0].data().email, false);
+        await toAdmin('Featured subscription ended — ' + (slug || customer), layout('Featured removed', rows([['Mechanic', slug]]) + '<p>Their subscription ended, so the Featured badge was removed.</p>'));
+      }
+    }
     res.json({ received: true });
   });
 
@@ -144,7 +169,7 @@ exports.onMechanicPublished = onDocumentCreated(
       html: layout('Welcome aboard, ' + (m.name || '').split(' ')[0],
         `<p>Your checks cleared and your profile is now live with the <strong>Verified</strong> badge.</p>
          <p>Booking requests will arrive by email with the customer's details. Reply to the customer to confirm the time.</p>
-         <p>Complete ${PAYBACK_JOBS} jobs that customers confirm and we pay your $${p.fee_amount || VERIFY_FEE} verification fee back.</p>
+         <p>Want to be seen first? Featured mechanics are pinned to the top of search results for $29/month.</p>
          <p><a href="${esc(SITE_URL.value())}">See your profile</a></p>`),
       replyTo: ADMIN_EMAIL.value()
     });
@@ -190,7 +215,7 @@ exports.onMessageCreated = onDocumentCreated(
       html: layout('New contact message', rows([['From', m.name], ['Email', m.email]]) + `<p style="white-space:pre-wrap">${esc(m.message)}</p><p>Reply to this email to answer them.</p>`) });
   });
 
-// ── 5. Booking confirmed / completed → job count + fee payback ──
+// ── 5. Booking confirmed / completed → job count ──
 exports.onBookingUpdated = onDocumentUpdated(
   { document: 'bookings/{id}', secrets: [RESEND_API_KEY] },
   async (event) => {
@@ -229,21 +254,4 @@ exports.onBookingUpdated = onDocumentUpdated(
     // public job count (never lowered)
     const mechSnap = await db.collection('mechanics').where('slug', '==', slug).get();
     await Promise.all(mechSnap.docs.filter(d => (d.data().jobs_completed || 0) < jobs).map(d => d.ref.update({ jobs_completed: jobs })));
-
-    // fee payback
-    const privRef = db.collection('mechanic_private').doc(slug);
-    const privDoc = await privRef.get();
-    const p = privDoc.exists ? privDoc.data() : null;
-    if (p && p.fee_paid && p.payback_status === 'earning' && jobs >= PAYBACK_JOBS) {
-      await privRef.update({ payback_status: 'due', payback_due_at: new Date().toISOString() });
-      const amount = p.fee_amount || VERIFY_FEE;
-      await toAdmin('Payback due — $' + amount + ' to ' + (after.mechanic_name || slug),
-        layout('Verification fee payback is due', rows([['Mechanic', after.mechanic_name], ['Email', p.email], ['Phone', p.phone], ['Completed jobs', String(jobs)], ['Amount', '$' + amount]])
-          + '<p>Send the payment, then press "mark paid back" in the Admin tab.</p>'));
-      await sendEmail({
-        to: p.email, replyTo: ADMIN_EMAIL.value(),
-        subject: 'You hit ' + PAYBACK_JOBS + ' jobs — your $' + amount + ' is coming back',
-        html: layout(PAYBACK_JOBS + ' jobs done', `<p>That is ${PAYBACK_JOBS} completed jobs on WrenchNow. As promised, we are sending your $${amount} verification fee back. We will be in touch about how you would like to receive it.</p>`)
-      });
-    }
   });
