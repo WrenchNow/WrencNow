@@ -3600,28 +3600,27 @@ function renderMechCard(m) {
 async function loadMechanics() {
   const grid = document.getElementById('mechsGrid');
   const CACHE_KEY = 'ww_mechanics_cache';
-  const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+  const CACHE_TTL = 30 * 60 * 1000; // offline fallback only
   try {
     // Serve from cache if fresh
+    // Always load fresh so changes (pausing, hiding, edits) show everywhere right away.
+    // The saved copy is only used if the database can't be reached.
     let data = null;
-    try {
-      const cached = sessionStorage.getItem(CACHE_KEY);
-      if(cached){
-        const { ts, rows } = JSON.parse(cached);
-        if(Date.now() - ts < CACHE_TTL){ data = rows; }
-      }
-    } catch(e){}
+    let snap = null;
+    try { snap = await db.collection('mechanics').get(); }
+    catch(err){
+      try { const cached = sessionStorage.getItem(CACHE_KEY); if(cached){ const { ts, rows } = JSON.parse(cached); if(Date.now() - ts < CACHE_TTL) data = rows; } } catch(e){}
+      if(!data) throw err;
+    }
 
     if(!data){
-      // Firestore: get all mechanics ordered by rating
-      const snap = await db.collection('mechanics').get();
       data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       // Sort by featured first, then rating
       data.sort((a,b) => { if(a.is_featured && !b.is_featured) return -1; if(!a.is_featured && b.is_featured) return 1; return (b.rating||0)-(a.rating||0); });
       try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), rows: data })); } catch(e){}
     }
 
-    data = data.map(normalizeMech).filter(Boolean);
+    data = data.map(normalizeMech).filter(Boolean).filter(m => !m.hidden);
     LOAD_FAILED = false;
 
     // Build local lookup for modals
@@ -3741,6 +3740,7 @@ function normalizeMech(m){
     is_featured: m.is_featured === true, verified: m.verified === true,
     available_now: m.available_now === true,
     service_level: m.service_level === 'basic' ? 'basic' : 'full', photo: safePhoto(m.photo), payouts_ready: m.payouts_ready === true,
+    hidden: m.hidden === true,
     diag_fee_cents: Number.isInteger(m.diag_fee_cents) && m.diag_fee_cents >= 0 && m.diag_fee_cents <= 50000 ? m.diag_fee_cents : null,
     insured: m.insured === true && (!m.insured_until || !(Date.parse(m.insured_until) < Date.now())), insured_until: str(m.insured_until, 10),
     no_shows: Math.max(0, parseInt(m.no_shows) || 0), late_cancels: Math.max(0, parseInt(m.late_cancels) || 0),
@@ -5392,6 +5392,7 @@ async function loadMechPortal(){
     await checkMechanic(); loadMechanics();
   });
   head.appendChild(av); head.appendChild(t); head.appendChild(tog);
+  if(m.hidden){ const hn = document.createElement('div'); hn.className = 'admin-meta'; hn.style.flexBasis = '100%'; hn.textContent = 'Your profile is hidden from customers right now. Contact WrenchNow to show it again.'; head.appendChild(hn); }
   if(!m.is_featured){ const f = document.createElement('button'); f.className = 'admin-btn'; f.textContent = 'Get Featured — $29/mo'; f.addEventListener('click', () => openProUpgrade(f)); head.appendChild(f); }
   root.appendChild(head);
 
@@ -6240,6 +6241,7 @@ function adminMechanics(mechs, priv, done, insDocs){
     if(p){ meta.appendChild(document.createElement('br')); meta.appendChild(contactLine(p.email, p.phone)); }
     left.appendChild(nm); left.appendChild(meta);
     const right = document.createElement('div'); right.style.textAlign = 'right';
+    if(m.hidden){ right.appendChild(adminTag('Hidden', 'warn')); right.appendChild(document.createTextNode(' ')); }
     if(m.is_featured){ right.appendChild(adminTag('Featured', 'due')); right.appendChild(document.createTextNode(' ')); }
     right.appendChild(adminTag(m.verified ? 'Verified' : 'Not verified', m.verified ? 'ok' : 'warn'));
     const ins = insDocs[m.id];
@@ -6260,21 +6262,25 @@ function adminMechanics(mechs, priv, done, insDocs){
     if(ins && !m.insured) acts.appendChild(adminBtn("Certificate checks out — mark insured", 'good', upd({ insured: true, insured_until: ins.expires, insured_checked_at: new Date().toISOString() })));
     if(m.insured) acts.appendChild(adminBtn('Remove Insured', '', upd({ insured: false })));
     acts.appendChild(adminBtn(m.is_featured ? 'Remove Featured' : 'Make Featured', m.is_featured ? '' : 'primary', upd({ is_featured: !m.is_featured })));
+    acts.appendChild(adminBtn(m.hidden ? 'Show on site' : 'Hide from site', m.hidden ? 'primary' : '', upd(m.hidden ? { hidden: false } : { hidden: true, is_featured: false })));
     acts.appendChild(adminBtn(m.available_now ? 'Pause bookings' : 'Resume bookings', '', upd(m.available_now ? { available_now: false, avail_label: 'Not taking jobs right now' } : { available_now: true, avail_label: 'Taking bookings' })));
     // Edit the public details, or take the profile off the site
     const editBtn = document.createElement('button'); editBtn.className = 'admin-btn'; editBtn.textContent = 'Edit';
     const form = document.createElement('div'); form.className = 'admin-edit'; form.style.display = 'none';
+    const nameIn = document.createElement('input'); nameIn.type = 'text'; nameIn.maxLength = 80; nameIn.value = m.name || ''; nameIn.placeholder = 'Name customers see'; nameIn.setAttribute('aria-label', 'Name customers see');
     const rateIn = document.createElement('input'); rateIn.type = 'number'; rateIn.min = 20; rateIn.max = 500; rateIn.value = m.rate_num || ''; rateIn.placeholder = 'Rate $/hr'; rateIn.setAttribute('aria-label', 'Hourly rate');
     const cityIn = document.createElement('input'); cityIn.type = 'text'; cityIn.value = mechCity(m); cityIn.placeholder = 'City'; cityIn.setAttribute('aria-label', 'City');
     const zipIn = document.createElement('input'); zipIn.type = 'text'; zipIn.maxLength = 5; zipIn.value = m.zip || ''; zipIn.placeholder = 'Home ZIP' + (m.geo_lat == null ? ' (no location yet)' : ''); zipIn.setAttribute('aria-label', 'Home ZIP');
     const radIn = document.createElement('select'); [10, 15, 25, 40].forEach(n => { const o = document.createElement('option'); o.value = n; o.textContent = 'Travels up to ' + n + ' mi'; if(n === m.radius_mi) o.selected = true; radIn.appendChild(o); }); radIn.setAttribute('aria-label', 'Travel radius');
     const bioIn = document.createElement('textarea'); bioIn.value = m.bio || ''; bioIn.placeholder = 'Bio'; bioIn.setAttribute('aria-label', 'Bio');
-    form.appendChild(rateIn); form.appendChild(cityIn); form.appendChild(zipIn); form.appendChild(radIn); form.appendChild(bioIn);
+    form.appendChild(nameIn); form.appendChild(rateIn); form.appendChild(cityIn); form.appendChild(zipIn); form.appendChild(radIn); form.appendChild(bioIn);
     const saveRow = document.createElement('div'); saveRow.className = 'admin-actions'; saveRow.style.gridColumn = '1 / -1';
     saveRow.appendChild(adminBtn('Save changes', 'primary', async () => {
       const rate = Math.round(Number(rateIn.value));
       if(!(rate >= 20 && rate <= 500)) throw new Error('Rate must be between $20 and $500 per hour.');
-      const patch = { rate_num: rate, rate_display: '$' + rate, city: cityIn.value.trim().slice(0, 80), bio: bioIn.value.trim().slice(0, 1500), radius_mi: Number(radIn.value) };
+      const nm = nameIn.value.trim().replace(/\s+/g, ' ');
+      if(nm.length < 2) throw new Error('Enter the name customers should see.');
+      const patch = { name: nm.slice(0, 80), initials: nm.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2), rate_num: rate, rate_display: '$' + rate, city: cityIn.value.trim().slice(0, 80), bio: bioIn.value.trim().slice(0, 1500), radius_mi: Number(radIn.value) };
       const z = zipIn.value.trim();
       if(z && !/^\d{5}$/.test(z)) throw new Error('ZIP must be 5 digits.');
       if(z && (z !== m.zip || m.geo_lat == null)){ const g = await geocode(z + ', USA'); patch.zip = z; patch.geo_lat = g ? g.lat : null; patch.geo_lng = g ? g.lng : null; if(!g) alert("Saved, but that ZIP couldn't be found on the map, so distance matching is off for this mechanic."); }
