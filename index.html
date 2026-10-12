@@ -2435,6 +2435,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
 .appr-banner{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:900;width:min(560px,calc(100vw - 32px));box-sizing:border-box;background:var(--raised);border:1px solid var(--ore);border-radius:12px;padding:12px 14px;display:none;gap:10px;align-items:center;box-shadow:0 10px 30px rgba(0,0,0,.5);font-size:14px;color:var(--cream)}
 .appr-banner.on{display:flex}
 .appr-banner button{flex-shrink:0}
+.quote-save{margin-top:.45rem;font-size:12.5px;color:var(--green);font-weight:600}
 .quote-top { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; flex-wrap: wrap; }
 @media (max-width: 480px){ .quote-top{ flex-direction: column; align-items: flex-start; gap: 4px; } .quote-top > div:last-child{ text-align: left !important; } }
 #bookingHeader .step-progress{ padding-right: 40px; }
@@ -3659,6 +3660,7 @@ async function loadMechanics() {
       const totalJobs = data.reduce((sum, m) => sum + (m.jobs_completed||0), 0);
       if(data.length > 0) addStat(String(data.length), 'Mechanic' + (data.length !== 1 ? 's' : '') + ' on WrenchNow');
       if(totalJobs > 0) addStat(totalJobs.toLocaleString(), 'Job' + (totalJobs !== 1 ? 's' : '') + ' completed');
+      renderSavingsStat();
     }
 
   } catch(err) {
@@ -3754,6 +3756,40 @@ async function sha256(text){
 function mechLevel(m){ return m && m.service_level === 'basic' ? 'basic' : 'full'; }
 // Showed up for booked jobs: completed ÷ (completed + no-shows + late cancellations). Needs 3+ booked jobs to mean anything.
 function reliability(m){ const total = (m.jobs_completed || 0) + (m.no_shows || 0) + (m.late_cancels || 0); return total >= 3 ? Math.round((m.jobs_completed || 0) / total * 100) : null; }
+// "What a shop would charge" — built from the job itself: labor hours at a typical shop's hourly rate,
+// plus the parts with a typical shop markup. Rates are set in Admin (defaults are deliberately conservative).
+function shopRates(){ const r = Number(SITE_CONFIG.shop_rate), mk = Number(SITE_CONFIG.parts_markup_pct); return { rate: r >= 60 && r <= 400 ? r : 185, markup: mk >= 0 && mk <= 150 ? mk : 30 }; }
+function laborHours(x, mech){
+  const h = Number(x.book_hours); if(h > 0 && h <= 40) return h;
+  const rate = mech && mech.rate_num; return rate > 0 && x.labor_cents > 0 ? Math.min(40, x.labor_cents / 100 / rate) : 0;
+}
+function shopEstimate(x, mech){   // x: quote or booking (labor_cents, parts_cents, book_hours)
+  const hrs = laborHours(x, mech); if(!hrs) return 0;
+  const { rate, markup } = shopRates();
+  return Math.round(hrs * rate * 100 + (x.parts_cents || 0) * (1 + markup / 100));
+}
+function jobSavings(b){
+  if(b.status !== 'completed' || ['refunded', 'chargeback'].includes(b.payment_status)) return 0;
+  const fin = b.revision && b.revision.status === 'approved' ? b.revision : b;
+  const paid = b.final_cents || b.price_cents || 0; if(!paid && b.booking_kind !== 'diagnosis') return 0;
+  const est = shopEstimate({ labor_cents: fin.labor_cents, parts_cents: fin.parts_cents, book_hours: b.book_hours }, ALL_MECHS.find(x => x.id === b.mechanic_doc) || {});
+  return est > paid ? est - paid : 0;
+}
+let SAVINGS = { total_cents: 0, jobs: 0 };
+function renderSavingsStat(){
+  const row = document.getElementById('heroStats'); if(!row) return;
+  let el = document.getElementById('savedStat');
+  if(!(SAVINGS.total_cents >= 10000)){ if(el) el.remove(); return; }   // show once it's a real number ($100+)
+  if(!el){ el = document.createElement('div'); el.id = 'savedStat'; el.innerHTML = '<div class="hstat-num"></div><div class="hstat-label"></div>'; row.appendChild(el); }
+  el.firstChild.textContent = money(Math.floor(SAVINGS.total_cents / 10000) * 10000) + '+';
+  el.lastChild.textContent = 'Saved vs. typical shop prices';
+  el.title = 'Across ' + SAVINGS.jobs + ' finished job' + (SAVINGS.jobs === 1 ? '' : 's') + ': the shop estimate (labor hours × typical shop rate + parts with shop markup) minus what customers paid.';
+}
+function savingsLine(x, mech, paid){
+  const est = shopEstimate(x, mech), save = est - paid;
+  if(!est || save < 1000 || save / est < 0.08) return '';   // only claim savings that are real and meaningful
+  return 'Typical shop ≈ ' + money(Math.round(est / 500) * 500) + ' · you save about ' + money(Math.round(save / 500) * 500) + ' (' + Math.round(save / est * 100) + '%)';
+}
 function priceLabel(b){ const c = b.final_cents || b.price_cents || 0; return b.booking_kind === 'diagnosis' && !c ? 'Free diagnosis' : money(c) + (b.booking_kind === 'diagnosis' && !b.final_cents ? ' diagnosis' : ''); }
 function diagLabel(m){ if(!m || mechLevel(m) === 'basic' || m.diag_fee_cents == null) return ''; return m.diag_fee_cents === 0 ? 'Free diagnosis' : 'Diagnosis ' + money(m.diag_fee_cents); }
 function isDiagnosisJob(text){ return /not sure|diagnos|check engine|warning light|weird noise|won'?t start|inspection/i.test(text || ''); }
@@ -4743,6 +4779,9 @@ async function loadAdmin(){
     const priv  = {}; privSnap.docs.forEach(d => { priv[d.id] = d.data(); });
     const done  = {}; books.forEach(b => { if(b.status === 'completed' && b.mechanic_slug && !['refunded', 'chargeback'].includes(b.payment_status)) done[b.mechanic_slug] = (done[b.mechanic_slug] || 0) + 1; });
     const insDocs = {}; insSnap.docs.forEach(d => { insDocs[d.id] = d.data(); });
+    // public "saved vs. shop prices" total, recomputed from every finished job
+    { const saved = books.reduce((t, b) => t + jobSavings(b), 0), sj = books.filter(b => jobSavings(b) > 0).length;
+      if(saved !== SAVINGS.total_cents || sj !== SAVINGS.jobs){ SAVINGS = { total_cents: saved, jobs: sj }; try { await db.collection('config').doc('stats').set({ saved_cents: saved, saved_jobs: sj, updated_at: new Date().toISOString() }, { merge: true }); } catch(e){} renderSavingsStat(); } }
     // no-shows and last-minute cancellations (the server keeps these too; this catches up if it hasn't run)
     for(const m of mechs){
       const mine = books.filter(b => b.mechanic_slug === m.slug);
@@ -4778,6 +4817,7 @@ async function loadAdmin(){
     root.appendChild(adminBookings(books.slice(0, 40), priv, mechs));
     root.appendChild(adminMessages(msgs));
     root.appendChild(adminMechanics(mechs, priv, done, insDocs));
+    root.appendChild(adminSavings(books));
     root.appendChild(adminReviews(reviews));
     if(broken.length) root.appendChild(adminBroken(broken));
   } catch(err){
@@ -4929,6 +4969,7 @@ const COMPARE = new Set();
 let SITE_CONFIG = { payments_on: false };
 function paymentsOn(){ return SITE_CONFIG.payments_on === true && !!FUNCTIONS_BASE; }
 (async () => { try { const d = await db.collection('config').doc('site').get(); if(d.exists) SITE_CONFIG = Object.assign({ payments_on: false }, d.data()); } catch(e){} applyPaymentCopy(); })();
+(async () => { try { const d = await db.collection('config').doc('stats').get(); if(d.exists){ const x = d.data(); SAVINGS = { total_cents: Math.max(0, parseInt(x.saved_cents) || 0), jobs: Math.max(0, parseInt(x.saved_jobs) || 0) }; renderSavingsStat(); } } catch(e){} })();
 function applyPaymentCopy(){
   const on = SITE_CONFIG.payments_on === true;
   const h = document.getElementById('howPayStep');
@@ -5155,6 +5196,7 @@ async function renderMyRequests(container, reqs){
       const when = document.createElement('div'); when.className = 'quote-meta'; when.style.marginTop = '.4rem';
       when.textContent = 'Can come ' + dayLabel(q.date_iso) + ' at ' + (q.time || '') + (q.valid_until ? ' · quote good until ' + new Date(Date.parse(q.valid_until)).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '');
       card.appendChild(when);
+      { const sv = savingsLine(q, raw, q.total_cents); if(sv){ const el = document.createElement('div'); el.className = 'quote-save'; el.textContent = sv; card.appendChild(el); } }
       if(q.note){ const n = document.createElement('div'); n.className = 'rev-text'; n.style.fontSize = '13px'; n.textContent = '“' + q.note + '”'; card.appendChild(n); }
       if(diagQ){ const dn = document.createElement('div'); dn.className = 'quote-meta'; dn.style.marginTop = '.3rem'; dn.textContent = 'This covers finding the problem. The repair price comes after, and nothing extra is done or charged until you approve it in the app.'; card.appendChild(dn); }
       const acts = document.createElement('div'); acts.className = 'mbi-actions';
@@ -5208,7 +5250,7 @@ async function acceptQuote(){
       booking_time: q.time,
       mechanic_slug: q.mechanic_slug || raw.slug || '', mechanic_name: q.mechanic_name || '', mechanic_doc: q.mechanic_doc, mechanic_uid: q.mechanic_uid,
       slot_id: slotId, request_id: r.id, quote_uid: q.mechanic_uid, booking_kind: q.kind === 'diagnosis' ? 'diagnosis' : 'job',
-      price_cents: q.total_cents, labor_cents: q.labor_cents, parts_cents: q.parts_cents, quote_note: q.note || '',
+      price_cents: q.total_cents, labor_cents: q.labor_cents, parts_cents: q.parts_cents, quote_note: q.note || '', ...(q.book_hours ? { book_hours: q.book_hours } : {}),
       rate_num: raw.rate_num || 0,
       agreed_to_terms: true, agreed_at: new Date().toISOString(),
       status: 'confirmed', payment_status: paymentsOn() ? 'needs_card' : 'pay_mechanic',
@@ -5498,6 +5540,7 @@ async function quoteRequestCard(r, m){
   const f = document.createElement('div'); f.className = 'rev-form'; f.style.gridTemplateColumns = 'repeat(auto-fit, minmax(125px, 1fr))';
   const lab = document.createElement('input'); lab.type = 'number'; lab.min = 0; lab.placeholder = 'Labor $'; lab.setAttribute('aria-label', 'Labor in dollars');
   const par = document.createElement('input'); par.type = 'number'; par.min = 0; par.placeholder = 'Parts $'; par.setAttribute('aria-label', 'Parts in dollars');
+  const hrs = document.createElement('input'); hrs.type = 'number'; hrs.min = 0; hrs.max = 40; hrs.step = 0.1; hrs.placeholder = 'Book hrs'; hrs.title = 'Standard labor time for this job from your labor guide (optional). Used to show the customer what a shop would charge.'; hrs.setAttribute('aria-label', 'Labor guide hours (optional)');
   const day = document.createElement('select'); day.setAttribute('aria-label', 'Day'); day.style.cssText = lab.style.cssText;
   const days = new Set(r.pref_dates || []); for(let i = 0; i < 10; i++){ const d = new Date(); d.setDate(d.getDate() + i); days.add(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')); }
   Array.from(days).sort().forEach(iso => { const o = document.createElement('option'); o.value = iso; o.textContent = dayLabel(iso) + ((r.pref_dates || []).includes(iso) ? ' ★' : ''); day.appendChild(o); });
@@ -5505,7 +5548,7 @@ async function quoteRequestCard(r, m){
   QUOTE_TIMES.forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t; tm.appendChild(o); });
   [day, tm].forEach(x => { x.style.background = 'var(--surface)'; x.style.border = '0.5px solid var(--border-med)'; x.style.borderRadius = '8px'; x.style.padding = '8px 10px'; x.style.color = 'var(--cream)'; x.style.fontFamily = 'var(--font-body)'; x.style.fontSize = '13px'; x.style.minWidth = '0'; });
   const note = document.createElement('input'); note.type = 'text'; note.maxLength = 300; note.className = 'full'; note.placeholder = "Note to the customer (what's included, parts brand, anything to check)"; note.style.gridColumn = '1 / -1';
-  if(mine && mine.status === 'sent'){ lab.value = mine.labor_cents / 100; par.value = mine.parts_cents / 100; day.value = mine.date_iso; tm.value = mine.time; note.value = mine.note || ''; }
+  if(mine && mine.status === 'sent'){ lab.value = mine.labor_cents / 100; par.value = mine.parts_cents / 100; day.value = mine.date_iso; tm.value = mine.time; note.value = mine.note || ''; if(mine.book_hours) hrs.value = mine.book_hours; }
   else if((r.pref_dates || []).length) day.value = r.pref_dates[0];
   const isDiag = isDiagnosisJob((r.service || '') + ' ' + (r.notes || ''));
   if(isDiag){
@@ -5529,7 +5572,7 @@ async function quoteRequestCard(r, m){
       if(slot.exists){ msg.textContent = 'You already have a job at ' + tm.value + ' on ' + dayLabel(day.value) + '. Pick another time.'; send.disabled = false; return; }
       await db.collection('requests').doc(r.id).collection('quotes').doc(currentUser.uid).set({
         mechanic_uid: currentUser.uid, mechanic_doc: m.id, mechanic_slug: m.slug, mechanic_name: m.name,
-        labor_cents: lc, parts_cents: pc, total_cents: lc + pc, kind: isDiag ? 'diagnosis' : 'job', date_iso: day.value, time: tm.value,
+        labor_cents: lc, parts_cents: pc, total_cents: lc + pc, kind: isDiag ? 'diagnosis' : 'job', ...(Number(hrs.value) > 0 && Number(hrs.value) <= 40 ? { book_hours: Math.round(Number(hrs.value) * 10) / 10 } : {}), date_iso: day.value, time: tm.value,
         note: note.value.trim().slice(0, 300), status: 'sent',
         valid_until: new Date(Date.now() + 48 * 3600 * 1000).toISOString(), updated_at: new Date().toISOString()
       });
@@ -5539,7 +5582,10 @@ async function quoteRequestCard(r, m){
   });
   acts.appendChild(send);
   if(mine && mine.status === 'sent'){ const wd = document.createElement('button'); wd.className = 'admin-btn'; wd.textContent = 'Withdraw'; wd.addEventListener('click', async () => { wd.disabled = true; try { await db.collection('requests').doc(r.id).collection('quotes').doc(currentUser.uid).update({ status: 'withdrawn', updated_at: new Date().toISOString() }); loadMechPortal(); } catch(e){ wd.disabled = false; } }); acts.appendChild(wd); }
-  f.appendChild(lab); f.appendChild(par); f.appendChild(day); f.appendChild(tm); f.appendChild(note); f.appendChild(acts); f.appendChild(msg);
+  const prev = document.createElement('div'); prev.className = 'admin-meta'; prev.style.gridColumn = '1 / -1';
+  const showPrev = () => { const q = { labor_cents: Math.round(Number(lab.value || 0) * 100), parts_cents: Math.round(Number(par.value || 0) * 100), book_hours: Number(hrs.value) || 0 }; const line = savingsLine(q, m, q.labor_cents + q.parts_cents); prev.textContent = line ? 'Customer sees: ' + line : (q.labor_cents || q.parts_cents ? 'Add book hours so the customer sees what a shop would charge.' : ''); };
+  [lab, par, hrs].forEach(x => x.addEventListener('input', showPrev)); showPrev();
+  f.appendChild(lab); f.appendChild(par); f.appendChild(hrs); f.appendChild(day); f.appendChild(tm); f.appendChild(note); f.appendChild(prev); f.appendChild(acts); f.appendChild(msg);
   card.appendChild(f);
   return card;
 }
@@ -5922,6 +5968,24 @@ function adminPayments(mechs){
     SITE_CONFIG.payments_on = on;
   }));
   card.appendChild(acts); sec.appendChild(card);
+  // "Typical shop" comparison shown on quotes
+  const sc = document.createElement('div'); sc.className = 'admin-card';
+  const st = document.createElement('div'); st.className = 'admin-meta';
+  const { rate, markup } = shopRates();
+  st.textContent = 'Quotes show "Typical shop ≈ $X · you save $Y", worked out from the job: labor hours × shop hourly rate + parts × shop markup. Keep these conservative so savings are never overstated. Now: $' + rate + '/hr, parts +' + markup + '%.';
+  sc.appendChild(st);
+  const sf = document.createElement('div'); sf.className = 'ins-form'; sf.style.gridTemplateColumns = 'repeat(auto-fit, minmax(150px, 1fr))';
+  const rIn = document.createElement('input'); rIn.type = 'number'; rIn.min = 60; rIn.max = 400; rIn.value = rate; rIn.setAttribute('aria-label', 'Shop hourly labor rate ($)'); rIn.title = 'Shop hourly labor rate ($)';
+  const mIn = document.createElement('input'); mIn.type = 'number'; mIn.min = 0; mIn.max = 150; mIn.value = markup; mIn.setAttribute('aria-label', 'Shop parts markup (%)'); mIn.title = 'Shop parts markup (%)';
+  sf.appendChild(rIn); sf.appendChild(mIn);
+  sf.appendChild(adminBtn('Save comparison rates', '', async () => {
+    const r = Math.round(Number(rIn.value)), mk = Math.round(Number(mIn.value));
+    if(!(r >= 60 && r <= 400)) throw new Error('Shop rate must be $60–$400 per hour.');
+    if(!(mk >= 0 && mk <= 150)) throw new Error('Parts markup must be 0–150%.');
+    await db.collection('config').doc('site').set({ shop_rate: r, parts_markup_pct: mk, updated_at: new Date().toISOString() }, { merge: true });
+    SITE_CONFIG.shop_rate = r; SITE_CONFIG.parts_markup_pct = mk;
+  }));
+  sc.appendChild(sf); sec.appendChild(sc);
   return sec;
 }
 async function adminRequests(reqs){
@@ -6105,6 +6169,37 @@ function adminBookings(books, priv, mechs){
     if(acts.children.length) card.appendChild(acts);
     sec.appendChild(card);
   });
+  return sec;
+}
+
+// Savings: what customers paid vs. a typical shop for the same job, by month and by mechanic
+function adminSavings(books){
+  const jobs = books.filter(b => jobSavings(b) > 0);
+  const total = jobs.reduce((t, b) => t + jobSavings(b), 0), paid = jobs.reduce((t, b) => t + (b.final_cents || b.price_cents || 0), 0);
+  const sec = adminSection('Customer savings', money(total) + ' saved');
+  const card = document.createElement('div'); card.className = 'admin-card';
+  const { rate, markup } = shopRates();
+  const head = document.createElement('div'); head.className = 'admin-meta';
+  head.textContent = jobs.length ? jobs.length + ' finished job' + (jobs.length === 1 ? '' : 's') + ' · customers paid ' + money(paid) + ' · a typical shop ≈ ' + money(paid + total) + ' · saved ' + Math.round(total / (paid + total) * 100) + '% on average. (Shop = labor hours × $' + rate + '/hr + parts +' + markup + '%.) The home page shows the total once it passes $100.'
+                           : 'No finished jobs with a saving yet. Savings appear here as jobs are marked complete.';
+  card.appendChild(head);
+  if(jobs.length){
+    const byMonth = {}, byMech = {};
+    jobs.forEach(b => { const k = (b.booking_date_iso || '').slice(0, 7) || 'unknown'; byMonth[k] = (byMonth[k] || 0) + jobSavings(b); const n = b.mechanic_name || 'Unknown'; byMech[n] = (byMech[n] || 0) + jobSavings(b); });
+    const tbl = (title, obj, sortByKey) => {
+      const w = document.createElement('div'); w.style.marginTop = '.8rem';
+      const t = document.createElement('div'); t.className = 'admin-name'; t.style.fontSize = '13px'; t.textContent = title; w.appendChild(t);
+      Object.entries(obj).sort((a, b) => sortByKey ? b[0].localeCompare(a[0]) : b[1] - a[1]).slice(0, 12).forEach(([k, v]) => {
+        const r = document.createElement('div'); r.className = 'admin-meta'; r.style.display = 'flex'; r.style.justifyContent = 'space-between';
+        const a = document.createElement('span'); a.textContent = sortByKey && k !== 'unknown' ? new Date(k + '-15').toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : k;
+        const c = document.createElement('span'); c.textContent = money(v); r.appendChild(a); r.appendChild(c); w.appendChild(r);
+      });
+      return w;
+    };
+    card.appendChild(tbl('By month', byMonth, true));
+    card.appendChild(tbl('By mechanic', byMech, false));
+  }
+  sec.appendChild(card);
   return sec;
 }
 
@@ -6495,7 +6590,8 @@ async function openMyBookings() {
       return;
     }
 
-    document.getElementById('myBookingsSub').textContent = (openReqs.length ? openReqs.length + ' open request' + (openReqs.length !== 1 ? 's' : '') + ' · ' : '') + data.length + ' booking' + (data.length !== 1 ? 's' : '');
+    const mySaved = data.reduce((t, b) => t + jobSavings(b), 0);
+    document.getElementById('myBookingsSub').textContent = (openReqs.length ? openReqs.length + ' open request' + (openReqs.length !== 1 ? 's' : '') + ' · ' : '') + data.length + ' booking' + (data.length !== 1 ? 's' : '') + (mySaved >= 1000 ? ' · you\'ve saved about ' + money(Math.round(mySaved / 500) * 500) + ' vs. a typical shop' : '');
     const bBody = document.getElementById('myBookingsBody');
     bBody.innerHTML = '';
     await renderMyRequests(bBody, openReqs);
@@ -6545,6 +6641,12 @@ async function openMyBookings() {
 
       item.appendChild(bHead);
       item.appendChild(detail);
+      if(['completed', 'confirmed'].includes(statusRaw) && (b.final_cents || b.price_cents)){
+        const fin = b.revision && b.revision.status === 'approved' ? b.revision : b;
+        const mraw = ALL_MECHS.find(x => x.id === b.mechanic_doc) || {};
+        const sv = savingsLine({ labor_cents: fin.labor_cents, parts_cents: fin.parts_cents, book_hours: b.book_hours }, mraw, b.final_cents || b.price_cents);
+        if(sv){ const el = document.createElement('div'); el.className = 'quote-save'; el.textContent = (statusRaw === 'completed' ? '✓ ' : '') + sv; item.appendChild(el); }
+      }
       // revised price from the mechanic: nothing changes until the customer approves
       if(b.revision && b.revision.status === 'pending'){
         const rv = document.createElement('div'); rv.className = 'pay-line warn';

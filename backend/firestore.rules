@@ -209,6 +209,7 @@ service cloud.firestore {
             && request.resource.data.total_cents is int
             && request.resource.data.total_cents == request.resource.data.labor_cents + request.resource.data.parts_cents
             && request.resource.data.get('kind', 'job') in ['job', 'diagnosis']
+            && (!('book_hours' in request.resource.data) || (request.resource.data.book_hours is number && request.resource.data.book_hours > 0 && request.resource.data.book_hours <= 40))
             && (request.resource.data.total_cents >= 500 || (request.resource.data.get('kind', 'job') == 'diagnosis' && request.resource.data.total_cents >= 0))
             && request.resource.data.total_cents <= 2000000
             && (!paymentsOn() || get(/databases/$(database)/documents/mechanics/$(request.resource.data.mechanic_doc)).data.get('payouts_ready', false) == true);

@@ -171,7 +171,7 @@ exports.stripeWebhook = onRequest(
     if (event.type === 'charge.refunded') {
       const ch = event.data.object;
       const bk = ch.payment_intent ? await db.collection('bookings').where('payment_intent', '==', ch.payment_intent).limit(1).get() : { empty: true };
-      if (!bk.empty) await bk.docs[0].ref.update({ payment_status: 'refunded', refunded_cents: ch.amount_refunded, refunded_at: new Date().toISOString() });
+      if (!bk.empty) { await bk.docs[0].ref.update({ payment_status: 'refunded', refunded_cents: ch.amount_refunded, refunded_at: new Date().toISOString() }); await recomputeSavings(); }
     }
     // Customer disputed the charge with their bank → flag it and tell you right away (you have a deadline to respond)
     if (event.type === 'charge.dispute.created') {
@@ -443,6 +443,7 @@ exports.onBookingUpdated = onDocumentUpdated(
     }
 
     await recomputeMechStats(after.mechanic_slug);
+    await recomputeSavings();
   });
 
 // Appointment time as epoch ms (bookings are stored as local Denver date + "2:00 PM")
@@ -456,6 +457,25 @@ function apptMs(iso, time) {
   let ms = wall - offsetAt(wall);
   ms = wall - offsetAt(ms);   // second pass gets daylight-saving change days right
   return ms;
+}
+
+// "Saved vs. typical shop prices" — same formula as the site: labor hours × shop rate + parts × shop markup, minus what was paid
+async function recomputeSavings() {
+  const cfg = (await db.collection('config').doc('site').get()).data() || {};
+  const rate = cfg.shop_rate >= 60 && cfg.shop_rate <= 400 ? cfg.shop_rate : 185, markup = cfg.parts_markup_pct >= 0 && cfg.parts_markup_pct <= 150 ? cfg.parts_markup_pct : 30;
+  const mechRate = {}; (await db.collection('mechanics').get()).docs.forEach(d => { mechRate[d.id] = Number(d.data().rate_num) || 0; });
+  let total = 0, jobs = 0;
+  (await db.collection('bookings').where('status', '==', 'completed').get()).docs.forEach(d => {
+    const b = d.data(); if (['refunded', 'chargeback'].includes(b.payment_status)) return;
+    const fin = b.revision && b.revision.status === 'approved' ? b.revision : b;
+    const paid = b.final_cents || b.price_cents || 0; if (!paid && b.booking_kind !== 'diagnosis') return;
+    const r = mechRate[b.mechanic_doc] || 0;
+    const hrs = b.book_hours > 0 && b.book_hours <= 40 ? b.book_hours : (r > 0 && fin.labor_cents > 0 ? Math.min(40, fin.labor_cents / 100 / r) : 0);
+    if (!hrs) return;
+    const est = Math.round(hrs * rate * 100 + (fin.parts_cents || 0) * (1 + markup / 100));
+    if (est > paid) { total += est - paid; jobs++; }
+  });
+  await db.collection('config').doc('stats').set({ saved_cents: total, saved_jobs: jobs, updated_at: new Date().toISOString() }, { merge: true });
 }
 
 // Jobs done (paid or settled, not refunded), no-shows and late cancellations → the public profile and ranking
