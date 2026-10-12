@@ -4613,11 +4613,17 @@ function openAccountSettings() {
   garageBtn.addEventListener('click', () => { close(); openGarage(); }); box.appendChild(garageBtn);
   const bookingsBtn = el('button', 'auth-btn', 'My bookings'); bookingsBtn.style.marginBottom = '1.1rem';
   bookingsBtn.addEventListener('click', () => { close(); openMyBookings(); }); box.appendChild(bookingsBtn);
+  if(MY_MECH){
+    const mp = el('button', 'auth-btn', 'Edit my mechanic profile'); mp.style.cssText = 'margin:-.5rem 0 1.1rem;background:transparent;border:0.5px solid var(--ore);color:var(--ore)';
+    mp.addEventListener('click', () => { close(); showPanel('dashboard'); setTimeout(() => { const t = Array.from(document.querySelectorAll('#mechPortal .admin-sec-title')).find(x => /Your profile/.test(x.textContent)); if(t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 900); });
+    box.appendChild(mp);
+  }
   const field = (id, label, type, ph, value) => {
     const wrap = el('div', 'auth-field'); const l = el('label', 'auth-label', label); l.setAttribute('for', id);
     const i = el('input', 'auth-input'); i.id = id; i.type = type; i.placeholder = ph; i.value = value || '';
     wrap.appendChild(l); wrap.appendChild(i); box.appendChild(wrap); return i;
   };
+  const nameIn = field('settingsName', 'Your name', 'text', 'First and last name', currentUser.displayName || '');
   const veh  = field('settingsVehicle', 'Your car', 'text', 'Year, make, model', customerProfile?.vehicle);
   const addr = field('settingsAddress', 'Your usual location', 'text', 'Home or work address', customerProfile?.address);
   const ph   = field('settingsPhone', 'Your phone', 'tel', 'So your mechanic can reach you', customerProfile?.phone);
@@ -4627,6 +4633,8 @@ function openAccountSettings() {
     saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
     let ok = true;
     try {
+      const nm = nameIn.value.trim().replace(/\s+/g, ' ').slice(0, 80);
+      if(nm && nm !== (currentUser.displayName || '')){ await currentUser.updateProfile({ displayName: nm }); updateNavAuth(currentUser); }
       await db.collection('customer_profiles').doc(currentUser.uid).set({ vehicle: veh.value.trim().slice(0, 80), address: addr.value.trim().slice(0, 160), phone: ph.value.trim().slice(0, 30), updated_at: new Date().toISOString() }, { merge: true });
       customerProfile = Object.assign({}, customerProfile, { vehicle: veh.value.trim(), address: addr.value.trim(), phone: ph.value.trim() });
       [['modalVehicle', veh], ['modalAddress', addr], ['modalPhone', ph]].forEach(([id, src]) => { const t = document.getElementById(id); if(t) t.value = src.value.trim(); });
