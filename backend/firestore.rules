@@ -8,6 +8,17 @@ service cloud.firestore {
       return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
+    // Online payments on? (Admin tab switch.) When on, only mechanics with Stripe payouts can quote.
+    function paymentsOn() {
+      return exists(/databases/$(database)/documents/config/site)
+          && get(/databases/$(database)/documents/config/site).data.get('payments_on', false) == true;
+    }
+
+    match /config/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     match /admins/{uid} {
       allow get: if signedIn() && request.auth.uid == uid;   // lets the site check "am I an admin?"
       allow list, write: if false;                            // only editable in the console
@@ -59,15 +70,22 @@ service cloud.firestore {
 
     // Customers create and see their own bookings, and may only mark them completed or cancelled.
     match /bookings/{id} {
+      // A booking only exists because the customer accepted a real quote: price, day and time must match it
+      function quote() { return get(/databases/$(database)/documents/requests/$(request.resource.data.request_id)/quotes/$(request.resource.data.mechanic_uid)).data; }
       allow create: if signedIn()
                     && request.resource.data.customer_id == request.auth.uid
-                    && request.resource.data.status == 'pending'
+                    && request.resource.data.status == 'confirmed'
+                    && request.resource.data.request_id is string
+                    && get(/databases/$(database)/documents/requests/$(request.resource.data.request_id)).data.customer_id == request.auth.uid
+                    && quote().status == 'sent'
+                    && quote().total_cents == request.resource.data.price_cents
+                    && quote().date_iso == request.resource.data.booking_date_iso
+                    && quote().time == request.resource.data.booking_time
+                    && quote().mechanic_doc == request.resource.data.mechanic_doc
+                    && request.resource.data.payment_status == (paymentsOn() ? 'needs_card' : 'pay_mechanic')
+                    && !('final_cents' in request.resource.data) && !('paid_cents' in request.resource.data)
                     && request.resource.data.service is string && request.resource.data.service.size() <= 300
-                    && request.resource.data.address is string && request.resource.data.address.size() <= 300
-                    && (!('notes' in request.resource.data) || (request.resource.data.notes is string && request.resource.data.notes.size() <= 2000))
-                    // the mechanic account named on the booking must really own that mechanic profile
-                    && (!('mechanic_uid' in request.resource.data) || request.resource.data.mechanic_uid == ''
-                        || get(/databases/$(database)/documents/mechanics/$(request.resource.data.mechanic_doc)).data.owner_uid == request.resource.data.mechanic_uid);
+                    && request.resource.data.address is string && request.resource.data.address.size() <= 300;
       allow read: if isAdmin() || (signedIn() && (resource.data.customer_id == request.auth.uid
                                                   || (resource.data.mechanic_uid != '' && resource.data.mechanic_uid == request.auth.uid)));
       allow update: if isAdmin() || (
@@ -76,10 +94,29 @@ service cloud.firestore {
                     && resource.data.status in ['pending', 'confirmed']
                     && request.resource.data.status in ['completed', 'cancelled']
                     && request.resource.data.diff(resource.data).affectedKeys()
-                         .hasOnly(['status', 'completed_at', 'cancelled_at', 'status_by']))
+                         .hasOnly(['status', 'completed_at', 'cancelled_at', 'status_by'])
+                    // with online payments the mechanic marks the work done, not the customer
+                    && (request.resource.data.status == 'cancelled' || resource.data.get('payment_status', 'pay_mechanic') == 'pay_mechanic'))
+        // Customer: pay now, or hold the payment by reporting a problem (only after the work is marked done)
+        || (signedIn() && resource.data.customer_id == request.auth.uid
+            && resource.data.status == 'completed' && resource.data.payment_status == 'card_saved'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['payment_status', 'payment_requested_at', 'dispute_note', 'disputed_at'])
+            && request.resource.data.payment_status in ['charge_now', 'disputed'])
+        // Customer: approve or reject the mechanic's revised price
+        || (signedIn() && resource.data.customer_id == request.auth.uid
+            && resource.data.get('revision', {}).get('status', '') == 'pending'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['final_cents', 'revision'])
+            && request.resource.data.revision.total_cents == resource.data.revision.total_cents
+            && ((request.resource.data.revision.status == 'approved' && request.resource.data.final_cents == resource.data.revision.total_cents)
+                || (request.resource.data.revision.status == 'rejected' && request.resource.data.get('final_cents', 0) == resource.data.get('final_cents', 0))))
         // The booked mechanic may confirm, decline, complete, and attach an inspection report
         || (signedIn() && resource.data.mechanic_uid != '' && resource.data.mechanic_uid == request.auth.uid
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'confirmed_at', 'completed_at', 'cancelled_at', 'status_by', 'report'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'confirmed_at', 'completed_at', 'cancelled_at', 'status_by', 'report', 'revision'])
+            && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['revision'])
+                || (request.resource.data.revision.status == 'pending'
+                    && request.resource.data.revision.total_cents == request.resource.data.revision.labor_cents + request.resource.data.revision.parts_cents
+                    && request.resource.data.revision.total_cents > 0 && request.resource.data.revision.total_cents <= 2000000
+                    && !(resource.data.get('payment_status', '') in ['paid', 'charging', 'charge_now'])))
             && (request.resource.data.status == resource.data.status
                 || (resource.data.status == 'pending' && request.resource.data.status in ['confirmed', 'cancelled'])
                 || (resource.data.status == 'confirmed' && request.resource.data.status in ['completed', 'cancelled'])));
@@ -125,6 +162,75 @@ service cloud.firestore {
       allow delete: if isAdmin() || (signedIn() && (resource.data.customer_id == request.auth.uid
                                                     || (resource.data.mechanic_uid != '' && resource.data.mechanic_uid == request.auth.uid)));
     }
+
+    // ── Quote requests ──
+    // Which mechanic profile a signed-in mechanic runs (used to see open requests and to quote)
+    match /mech_index/{uid} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow write: if signedIn() && request.auth.uid == uid
+                   && get(/databases/$(database)/documents/mechanics/$(request.resource.data.mechanic_doc)).data.owner_uid == uid;
+    }
+
+    // Public part of a request: no address, no phone, no full name
+    match /requests/{rid} {
+      allow read: if isAdmin() || (signedIn() && (resource.data.customer_id == request.auth.uid
+                     || request.auth.uid in resource.data.invited_uids
+                     || (resource.data.mode == 'open' && exists(/databases/$(database)/documents/mech_index/$(request.auth.uid)))));
+      allow create: if signedIn() && request.resource.data.customer_id == request.auth.uid
+                    && request.resource.data.status == 'open'
+                    && request.resource.data.mode in ['open', 'picked']
+                    && request.resource.data.invited_uids is list && request.resource.data.invited_uids.size() <= 3
+                    && request.resource.data.service is string && request.resource.data.service.size() <= 300
+                    && (!('photos' in request.resource.data) || (request.resource.data.photos is list && request.resource.data.photos.size() <= 3))
+                    && !('accepted_mechanic_uid' in request.resource.data)
+                    && request.resource.data.created_at == request.time;
+      allow update: if isAdmin() || (signedIn() && resource.data.customer_id == request.auth.uid
+                    && resource.data.status == 'open'
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'accepted_mechanic_uid', 'accepted_quote_uid', 'booking_id'])
+                    && request.resource.data.status in ['cancelled', 'accepted']);
+      allow delete: if isAdmin();
+
+      match /quotes/{muid} {
+        function req() { return get(/databases/$(database)/documents/requests/$(rid)).data; }
+        function validQuote() {
+          return request.resource.data.mechanic_uid == muid
+            && request.resource.data.mechanic_doc == get(/databases/$(database)/documents/mech_index/$(muid)).data.mechanic_doc
+            && request.resource.data.status in ['sent', 'withdrawn']
+            && request.resource.data.total_cents is int
+            && request.resource.data.total_cents == request.resource.data.labor_cents + request.resource.data.parts_cents
+            && request.resource.data.total_cents >= 500 && request.resource.data.total_cents <= 2000000
+            && (!paymentsOn() || get(/databases/$(database)/documents/mechanics/$(request.resource.data.mechanic_doc)).data.get('payouts_ready', false) == true);
+        }
+        function mayQuote() {
+          return signedIn() && request.auth.uid == muid
+            && exists(/databases/$(database)/documents/mech_index/$(muid))
+            && req().status == 'open'
+            && (req().mode == 'open' || muid in req().invited_uids)
+            && req().customer_id != muid;
+        }
+        allow read: if isAdmin() || (signedIn() && (request.auth.uid == muid || req().customer_id == request.auth.uid));
+        allow create: if mayQuote() && validQuote();
+        allow update: if (mayQuote() && validQuote() && resource.data.status in ['sent', 'withdrawn'])
+                      // the customer accepts or declines
+                      || (signedIn() && req().customer_id == request.auth.uid
+                          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+                          && request.resource.data.status in ['accepted', 'declined']);
+        allow delete: if isAdmin();
+      }
+    }
+
+    // Exact address, phone and full name: the customer, admins, and only the mechanic whose quote was accepted
+    match /request_private/{rid} {
+      allow create: if signedIn() && request.resource.data.customer_id == request.auth.uid
+                    && getAfter(/databases/$(database)/documents/requests/$(rid)).data.customer_id == request.auth.uid
+                    && request.resource.data.address is string && request.resource.data.address.size() <= 300;
+      allow read: if isAdmin() || (signedIn() && (resource.data.customer_id == request.auth.uid
+                    || get(/databases/$(database)/documents/requests/$(rid)).data.get('accepted_mechanic_uid', '') == request.auth.uid));
+      allow update: if signedIn() && resource.data.customer_id == request.auth.uid
+                    && request.resource.data.customer_id == request.auth.uid;
+    }
+
+    // stripe_customers / booking_payments: server only (no client rule = no access)
 
     match /customer_profiles/{uid} {
       allow read, write: if signedIn() && request.auth.uid == uid;

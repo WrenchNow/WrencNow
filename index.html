@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>WrenchNow — Mobile Mechanics At Your Door</title>
 <meta name="theme-color" content="#0e0e0c"/>
+<link rel="manifest" href="manifest.webmanifest"/>
+<link rel="apple-touch-icon" href="apple-touch-icon.png"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="WrenchNow"/>
 <meta property="og:title" content="WrenchNow — Mobile Mechanics At Your Door"/>
 <meta property="og:description" content="Book a mobile mechanic who comes to your driveway, parking lot or office. Rates posted upfront."/>
 <meta property="og:type" content="website"/>
@@ -2401,6 +2407,50 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
 .gar-note { font-size: 11px; color: var(--muted); line-height: 1.5; margin-top: .75rem; }
 @media (max-width: 600px) { .gar-top { grid-template-columns: 1fr 1fr; } .gar-top > div:first-child { grid-column: 1 / -1; } }
 
+
+/* ── Quote requests, compare list, payments ── */
+.cmp-btn { background: transparent; border: 0.5px solid var(--border-med); color: var(--ink); border-radius: 9px; padding: 8px 10px; font-size: 12px; cursor: pointer; font-family: var(--font-body); white-space: nowrap; }
+.cmp-btn.on { border-color: var(--ore); color: var(--ore); background: var(--ore-dim); }
+.compare-bar { position: fixed; left: 50%; transform: translateX(-50%); bottom: 16px; z-index: 950; display: none; align-items: center; gap: 12px; background: var(--surface); border: 0.5px solid var(--border-med); border-radius: 14px; padding: 10px 12px 10px 16px; box-shadow: 0 10px 40px rgba(0,0,0,.5); max-width: calc(100vw - 24px); }
+.compare-bar.on { display: flex; }
+.compare-bar span { font-size: 13px; color: var(--cream); }
+.pref-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 1rem; }
+.pref-chip { border: 0.5px solid var(--border-med); background: var(--raised); color: var(--ink); border-radius: 10px; padding: 9px 12px; font-size: 13px; cursor: pointer; font-family: var(--font-body); min-height: 40px; }
+.pref-chip.on { border-color: var(--ore); background: var(--ore-dim); color: var(--ore); }
+.who-opt { display: flex; gap: 10px; align-items: flex-start; border: 0.5px solid var(--border-med); border-radius: 12px; padding: 11px 13px; margin-bottom: 8px; cursor: pointer; background: var(--raised); }
+.who-opt input { accent-color: var(--ore); margin-top: 3px; }
+.who-opt b { color: var(--cream); font-size: 14px; display: block; }
+.who-opt span { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.who-list { display: flex; flex-wrap: wrap; gap: 6px; margin: .4rem 0 .2rem; }
+.who-tag { display: inline-flex; gap: 6px; align-items: center; background: var(--surface); border: 0.5px solid var(--border-med); border-radius: 20px; padding: 4px 6px 4px 11px; font-size: 12px; color: var(--cream); }
+.who-tag button { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; line-height: 1; padding: 2px 4px; }
+.privacy-note { display: flex; gap: 8px; font-size: 12px; color: var(--muted); background: var(--raised); border: 0.5px solid var(--border); border-radius: 10px; padding: 9px 12px; margin: .6rem 0 1rem; line-height: 1.5; }
+.photo-strip { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.photo-strip img { width: 58px; height: 58px; object-fit: cover; border-radius: 9px; border: 0.5px solid var(--border-med); }
+.quote-card { background: var(--surface); border: 0.5px solid var(--border-med); border-radius: 12px; padding: .8rem .95rem; margin-top: 8px; }
+.quote-card.best { border-color: rgba(46,199,122,.45); }
+.quote-top { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+@media (max-width: 480px){ .quote-top{ flex-direction: column; align-items: flex-start; gap: 4px; } .quote-top > div:last-child{ text-align: left !important; } }
+#bookingHeader .step-progress{ padding-right: 40px; }
+.quote-price { font-family: var(--font-display); font-size: 26px; font-weight: 800; color: var(--cream); }
+.quote-meta { font-size: 12px; color: #8a867c; line-height: 1.55; margin-top: 2px; }
+.pay-line { font-size: 12.5px; color: var(--ink); background: var(--surface); border: 0.5px solid var(--border); border-radius: 10px; padding: 8px 11px; margin-top: .6rem; line-height: 1.5; }
+.pay-line.warn { border-color: rgba(245,184,0,.35); }
+.pay-line.ok { border-color: rgba(46,199,122,.35); }
+.toast { position: fixed; top: 84px; left: 50%; transform: translateX(-50%); z-index: 2000; background: var(--surface); border: 0.5px solid var(--border-med); color: var(--cream); padding: 11px 16px; border-radius: 12px; font-size: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.5); max-width: calc(100vw - 32px); }
+.rev-form { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: .6rem; }
+.rev-form input { background: var(--surface); border: 0.5px solid var(--border-med); border-radius: 8px; padding: 8px 10px; color: var(--cream); font-family: var(--font-body); font-size: 13px; min-width: 0; }
+.rev-form .full { grid-column: 1 / -1; }
+
+
+/* ── Installable app ── */
+.install-banner { position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 960; display: none; align-items: center; gap: 12px; background: var(--surface); border: 0.5px solid var(--border-med); border-radius: 14px; padding: 12px 14px; box-shadow: 0 10px 40px rgba(0,0,0,.5); max-width: 520px; margin: 0 auto; }
+.install-banner.on { display: flex; }
+.install-banner img { width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0; }
+.install-banner .ib-text { flex: 1; font-size: 13px; color: var(--ink); line-height: 1.45; }
+.install-banner .ib-text b { color: var(--cream); display: block; font-size: 14px; }
+@media (display-mode: standalone) { .nav { padding-top: env(safe-area-inset-top) !important; } }
+
 </style>
 
 
@@ -2996,10 +3046,10 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
           <div class="sp-line" id="spLine1"></div>
         </div>
         <div class="sp-item">
-          <div class="sp-col"><div class="sp-dot" id="spDot2">2</div><div class="sp-label">Schedule</div></div>
+          <div class="sp-col"><div class="sp-dot" id="spDot2">2</div><div class="sp-label">When</div></div>
           <div class="sp-line" id="spLine2"></div>
         </div>
-        <div class="sp-col"><div class="sp-dot" id="spDot3">3</div><div class="sp-label">Confirm</div></div>
+        <div class="sp-col"><div class="sp-dot" id="spDot3">3</div><div class="sp-label">Get quotes</div></div>
       </div>
     </div>
 
@@ -3024,7 +3074,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
       <!-- STEP 1: Service Details -->
       <div class="booking-step on" id="step1">
         <div class="modal-title">What does your car need?</div>
-        <div class="modal-sub">Step 1 of 3 — plain English is totally fine</div>
+        <div class="modal-sub">Step 1 of 3 — plain English is totally fine. Mechanics reply with a price; you pick.</div>
 
         <div class="basic-note" id="basicNote"></div>
         <div class="field">
@@ -3050,7 +3100,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
           <input class="field-input" type="text" id="modalVehicle" placeholder="Year, make, model — e.g. 2019 Toyota Camry"/>
         </div>
         <div class="field">
-          <label class="field-label" for="modalAddress">📍 Where is your car right now?</label>
+          <label class="field-label" for="modalAddress">📍 Where is your car right now? <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)">(only shared with the mechanic you choose)</span></label>
           <input class="field-input" type="text" id="modalAddress" value="" placeholder="Address, driveway, parking lot…"/>
         </div>
         <div class="field">
@@ -3070,6 +3120,11 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
           <label class="field-label" for="modalNotes">Any other details? (optional)</label>
           <textarea class="field-input" id="modalNotes" placeholder="Sounds, symptoms, warning lights, recent work done…" style="resize:none;height:60px;line-height:1.5"></textarea>
         </div>
+        <div class="field">
+          <label class="field-label" for="reqPhotos">📷 Photos (optional, up to 3)</label>
+          <input type="file" id="reqPhotos" accept="image/*" multiple onchange="pickReqPhotos(this)" style="font-size:12px;color:var(--muted);max-width:100%"/>
+          <div class="photo-strip" id="reqPhotoStrip"></div>
+        </div>
         <div class="form-err" id="step1Err" role="alert"></div>
         <div class="modal-nav">
           <button class="btn-next" onclick="goStep(2)">Next: Pick a time <i class="ti ti-arrow-right" aria-hidden="true"></i></button>
@@ -3079,57 +3134,40 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
       <!-- STEP 2: Schedule -->
       <div class="booking-step" id="step2">
         <div class="modal-title">When works for you?</div>
-        <div class="modal-sub">Step 2 of 3 — Pick a date and time</div>
-        <label class="field-label" style="margin-bottom:8px;display:block">Date</label>
-        <div class="date-row" id="dateRow">
-          <!-- dates built dynamically by buildDateTabs() -->
+        <div class="modal-sub">Step 2 of 3 — pick up to 3 days and any times of day. Each mechanic offers a time that fits.</div>
+        <label class="field-label" style="margin-bottom:8px;display:block">Days</label>
+        <div class="pref-row" id="prefDays"></div>
+        <label class="field-label" style="margin-bottom:8px;display:block">Times of day</label>
+        <div class="pref-row" id="prefParts">
+          <button type="button" class="pref-chip" data-part="morning" onclick="togglePart(this)">Morning · 8–12</button>
+          <button type="button" class="pref-chip" data-part="afternoon" onclick="togglePart(this)">Afternoon · 12–5</button>
+          <button type="button" class="pref-chip" data-part="evening" onclick="togglePart(this)">Evening · 5–8</button>
         </div>
-        <label class="field-label" style="margin-bottom:8px;display:block">Preferred time</label>
-        <div class="time-slots" id="timeSlots">
-          <div class="slot" onclick="selectSlot(this)"><div class="slot-time">9:00 AM</div><div class="slot-avail"></div></div>
-          <div class="slot" onclick="selectSlot(this)"><div class="slot-time">10:00 AM</div><div class="slot-avail"></div></div>
-          <div class="slot" onclick="selectSlot(this)"><div class="slot-time">11:00 AM</div><div class="slot-avail"></div></div>
-          <div class="slot" onclick="selectSlot(this)"><div class="slot-time">1:00 PM</div><div class="slot-avail"></div></div>
-          <div class="slot on" onclick="selectSlot(this)"><div class="slot-time">2:00 PM</div><div class="slot-avail"></div></div>
-          <div class="slot" onclick="selectSlot(this)"><div class="slot-time">3:00 PM</div><div class="slot-avail"></div></div>
-          <div class="slot" onclick="selectSlot(this)"><div class="slot-time">4:30 PM</div><div class="slot-avail"></div></div>
-          <div class="slot" onclick="selectSlot(this)"><div class="slot-time">5:30 PM</div><div class="slot-avail"></div></div>
-          <div class="slot" onclick="selectSlot(this)"><div class="slot-time">7:00 PM</div><div class="slot-avail"></div></div>
-        </div>
-        <div style="background:var(--raised);border-radius:10px;padding:10px 14px;font-size:12px;color:var(--muted);border:0.5px solid var(--border);display:flex;align-items:center;gap:8px;margin-bottom:.25rem">
-          <i class="ti ti-info-circle" style="color:var(--ore);font-size:15px;flex-shrink:0" aria-hidden="true"></i>
-          This is the time you're requesting. Your mechanic confirms it, or suggests the closest time they can do.
-        </div>
+        <div class="form-err" id="step2Err" role="alert"></div>
         <div class="modal-nav">
           <button class="btn-back" onclick="goStep(1)"><i class="ti ti-arrow-left" aria-hidden="true"></i></button>
-          <button class="btn-next" onclick="goStep(3)">Next: Review booking <i class="ti ti-arrow-right" aria-hidden="true"></i></button>
+          <button class="btn-next" onclick="goStep(3)">Next: Who should quote? <i class="ti ti-arrow-right" aria-hidden="true"></i></button>
         </div>
       </div>
 
       <!-- STEP 3: Review -->
       <div class="booking-step" id="step3">
-        <div class="modal-title">Review your booking</div>
-        <div class="modal-sub">Step 3 of 3 — Review and confirm your booking</div>
+        <div class="modal-title">Who should quote?</div>
+        <div class="modal-sub">Step 3 of 3 — compare prices before you choose. No card needed yet.</div>
+        <label class="who-opt"><input type="radio" name="whoMode" value="picked" onchange="setWhoMode('picked')"/><div><b>Mechanics I pick (up to 3)</b><span>Only they see your request.</span><div class="who-list" id="whoList"></div><select id="whoAdd" class="field-input" style="margin-top:6px;padding:8px 10px;font-size:13px" onchange="addWho(this)"></select></div></label>
+        <label class="who-opt"><input type="radio" name="whoMode" value="open" onchange="setWhoMode('open')"/><div><b>Everyone nearby who does this work</b><span>Any verified mechanic within their travel distance can send a quote.</span></div></label>
+        <div class="privacy-note"><i class="ti ti-lock" style="color:var(--green);font-size:15px" aria-hidden="true"></i><div>Mechanics see your ZIP, car and the problem, not your address or phone. Those go only to the mechanic whose quote you accept.</div></div>
         <div class="price-breakdown">
           <div class="summary-row"><span class="summary-label">Service</span><span class="summary-val" id="reviewService">—</span></div>
           <div class="summary-row"><span class="summary-label">Vehicle</span><span class="summary-val" id="reviewVehicle">—</span></div>
+          <div class="summary-row"><span class="summary-label">When</span><span class="summary-val" id="reviewDateTime">—</span></div>
           <div class="summary-row"><span class="summary-label">Location</span><span class="summary-val" id="reviewLocation">—</span></div>
           <div class="summary-row"><span class="summary-label">Your phone</span><span class="summary-val" id="reviewPhone">—</span></div>
-          <div class="summary-row"><span class="summary-label">Date & time</span><span class="summary-val" id="reviewDateTime">Today · 2:00 PM</span></div>
-          <div class="summary-row"><span class="summary-label">Mechanic</span><span class="summary-val" id="reviewMech">Marcus Rivera</span></div>
-          <div class="price-total-row">
-            <span style="font-size:13px;font-weight:600">Typical labor range<br><span style="font-weight:400;color:var(--muted);font-size:11px">1–2 hours at this rate · parts extra · final price agreed before work</span></span>
-            <div class="price-total" id="reviewTotal">$85–$170</div>
-          </div>
-        </div>
-        <div style="background:var(--raised);border-radius:10px;padding:10px 14px;font-size:12px;color:var(--muted);border:0.5px solid var(--border);display:flex;gap:8px">
-          <i class="ti ti-shield-check" style="color:var(--green);font-size:15px;flex-shrink:0;margin-top:1px" aria-hidden="true"></i>
-          No booking fee during our launch period. You pay your mechanic only after you've approved their estimate and the work is done.
         </div>
         <div class="form-err" id="step3Err" role="alert"></div>
         <div class="modal-nav">
           <button class="btn-back" onclick="goStep(2)"><i class="ti ti-arrow-left" aria-hidden="true"></i></button>
-          <button class="btn-next" onclick="confirmBooking()" style="background:var(--green)"><i class="ti ti-circle-check" aria-hidden="true"></i> Send Booking Request — No Fee</button>
+          <button class="btn-next" id="sendReqBtn" onclick="sendRequest()" style="background:var(--green)"><i class="ti ti-send" aria-hidden="true"></i> Send quote request</button>
         </div>
       </div>
 
@@ -3142,15 +3180,16 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
       <div class="success-title">Request sent!</div>
       <p class="success-sub" id="successSub"></p>
       <div class="tracking-box">
-        <div class="tracking-label">Booking status</div>
+        <div class="tracking-label">What happens next</div>
         <div class="tracking-steps">
           <div class="ts-item"><div class="ts-dot done"></div><span>Request sent</span></div>
-          <div class="ts-item"><div class="ts-dot active"></div><span style="color:var(--ore);font-weight:600">Waiting for your mechanic to confirm</span></div>
-          <div class="ts-item"><div class="ts-dot"></div><span style="color:var(--muted)">Mechanic on the way</span></div>
-          <div class="ts-item"><div class="ts-dot"></div><span style="color:var(--muted)">Estimate approved, work begins</span></div>
-          <div class="ts-item"><div class="ts-dot"></div><span style="color:var(--muted)">Job complete — pay and leave a review</span></div>
+          <div class="ts-item"><div class="ts-dot active"></div><span style="color:var(--ore);font-weight:600">Mechanics send you quotes</span></div>
+          <div class="ts-item"><div class="ts-dot"></div><span style="color:var(--muted)">You compare and accept one</span></div>
+          <div class="ts-item"><div class="ts-dot"></div><span style="color:var(--muted)">They come to you and do the work</span></div>
+          <div class="ts-item"><div class="ts-dot"></div><span style="color:var(--muted)">You confirm, pay, and leave a review</span></div>
         </div>
       </div>
+      <button class="btn-next" style="width:100%;justify-content:center;margin-bottom:.6rem" onclick="closeModal();openMyBookings()">See my requests</button>
       <button class="btn-next" style="width:100%;justify-content:center;margin-bottom:.6rem;background:transparent;border:0.5px solid var(--border-med);color:var(--cream)" onclick="closeModal();openGarage()">🔔 Get reminders when this car is due</button>
       <button class="btn-next" style="width:100%;justify-content:center" onclick="closeModal()">Back to search</button>
     </div>
@@ -3231,6 +3270,15 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
   </div>
 </div>
 
+<div class="install-banner" id="installBanner" role="dialog" aria-label="Install the WrenchNow app">
+  <img src="icon-192.png" alt=""/>
+  <div class="ib-text" id="installText"><b>Get the WrenchNow app</b>Install it on your home screen for one-tap access.</div>
+  <button class="btn-ore" id="installBtn" style="padding:9px 14px;font-size:13px;border-radius:10px" onclick="installApp()">Install</button>
+  <button class="meta-clear" onclick="dismissInstall()" aria-label="Not now">✕</button>
+</div>
+
+<div class="compare-bar" id="compareBar" role="region" aria-label="Quote list"><span id="compareTxt"></span><button class="btn-ore" style="padding:9px 14px;font-size:13px;border-radius:10px" onclick="openRequestFromCompare()">Get quotes</button><button class="meta-clear" onclick="clearCompare()">Clear</button></div>
+
 <!-- FOOTER -->
 <footer>
   <div class="footer-inner">
@@ -3263,6 +3311,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
           <a href="#" onclick="openLegal('tosOverlay');return false">Terms of Service</a>
           <a href="#" onclick="openLegal('mechAgreementOverlay');return false">Mechanic Agreement</a>
           <a href="#" onclick="openContact();return false">Contact Us</a>
+          <a href="#" onclick="showInstallHelp();return false">Get the app</a>
         </div>
       </div>
     </div>
@@ -3308,7 +3357,9 @@ const STRIPE_PAYMENT_LINK = '';   // optional customer booking-fee link; leave e
 const VERIFY_FEE = 49;
 // Address → map position for distance matching (OpenStreetMap's free service; fine for a small site,
 // swap for a paid geocoder if traffic grows)
-const GEOCODER_URL = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=us&q=';
+const GEOCODER_URL = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=us&addressdetails=1&q=';
+// Server functions (payments, payouts). Online payments themselves are switched on/off in the Admin tab.
+const FUNCTIONS_BASE = 'https://us-central1-wrench-now.cloudfunctions.net';
 // Optional bot protection: paste a reCAPTCHA v3 site key here after turning on App Check in Firebase
 const RECAPTCHA_SITE_KEY = '';
 const VERIFY_PAYMENT_LINK = '';    // ← paste your LIVE Stripe Payment Link for the verification fee
@@ -3459,12 +3510,17 @@ function renderMechCard(m) {
   // Book button
   const bookBtn = document.createElement('button');
   bookBtn.className = m.available_now ? 'book-btn' : 'book-btn-ghost';
-  bookBtn.textContent = m.available_now ? 'Book Now' : 'Request';
+  bookBtn.textContent = 'Get quote';
+  const cmpBtn = document.createElement('button');
+  cmpBtn.className = 'cmp-btn' + (COMPARE.has(m.slug) ? ' on' : '');
+  cmpBtn.textContent = COMPARE.has(m.slug) ? '✓ Compare' : '+ Compare';
+  cmpBtn.setAttribute('aria-pressed', COMPARE.has(m.slug) ? 'true' : 'false');
+  cmpBtn.addEventListener('click', e => { e.stopPropagation(); toggleCompare(m.slug); });
   bookBtn.dataset.name = m.name;
 
   const actions = document.createElement('div');
   actions.className = 'mcard-actions';
-  actions.appendChild(profileBtn); actions.appendChild(bookBtn);
+  actions.appendChild(profileBtn); actions.appendChild(cmpBtn); actions.appendChild(bookBtn);
 
   // Footer
   const foot = document.createElement('div');
@@ -3666,7 +3722,7 @@ function normalizeMech(m){
     specialties: specs, badge_type: str(m.badge_type, 12),
     is_featured: m.is_featured === true, verified: m.verified === true,
     available_now: m.available_now === true,
-    service_level: m.service_level === 'basic' ? 'basic' : 'full', photo: safePhoto(m.photo),
+    service_level: m.service_level === 'basic' ? 'basic' : 'full', photo: safePhoto(m.photo), payouts_ready: m.payouts_ready === true,
     owner_uid: str(m.owner_uid, 128), zip: str(m.zip, 10),
     radius_mi: [10, 15, 25, 40].includes(Number(m.radius_mi)) ? Number(m.radius_mi) : 25,
     geo_lat: Math.abs(Number(m.geo_lat)) <= 90 && m.geo_lat !== null && m.geo_lat !== '' && !isNaN(Number(m.geo_lat)) ? Number(m.geo_lat) : null,
@@ -3704,7 +3760,7 @@ async function geocode(q){
     const res = await fetch(GEOCODER_URL + encodeURIComponent(q), { headers: { 'Accept-Language': 'en' } });
     const rows = await res.json();
     if(!Array.isArray(rows) || !rows.length) return null;
-    const hit = { lat: Number(rows[0].lat), lng: Number(rows[0].lon) };
+    const hit = { lat: Number(rows[0].lat), lng: Number(rows[0].lon), zip: (rows[0].address && /^\d{5}/.test(rows[0].address.postcode || '')) ? rows[0].address.postcode.slice(0, 5) : '' };
     if(isNaN(hit.lat) || isNaN(hit.lng)) return null;
     cache[q.toLowerCase()] = hit; try { sessionStorage.setItem('ww_geo_cache', JSON.stringify(cache)); } catch(e){}
     return hit;
@@ -4043,7 +4099,9 @@ function openBooking(mechName){
   pendingBooking = null;
   currentStep = 1;
   ['step1Err', 'step3Err'].forEach(id => document.getElementById(id).classList.remove('on'));
-  buildDateTabs();
+  buildPrefDays();
+  REQ.photos = []; document.getElementById('reqPhotoStrip').innerHTML = ''; document.getElementById('reqPhotos').value = '';
+  ['step2Err'].forEach(id => document.getElementById(id).classList.remove('on'));
   // Carry over whatever was typed in the search card (only into fields still empty)
   const carry = (fromId, toId, fallback) => {
     const from = document.getElementById(fromId), to = document.getElementById(toId);
@@ -4075,6 +4133,8 @@ function openBooking(mechName){
 
   // Basic-maintenance mechanics: only their kind of job can be requested
   const mk = Object.keys(MECHANICS).find(k => MECHANICS[k].name === selectedMechName);
+  REQ.mechs = mechName && mk ? [mk] : [];
+  REQ.mode = REQ.mechs.length ? 'picked' : 'open';
   selectedMechLevel = mechName && mk ? MECHANICS[mk].level : 'full';
   if(!mechName) av.classList.remove('has-photo');
   document.querySelectorAll('#serviceChips .vehicle-chip').forEach(c => { c.style.display = (selectedMechLevel === 'basic' && !c.dataset.basic) ? 'none' : ''; });
@@ -4101,6 +4161,12 @@ function closeModalOutside(e){
 }
 
 function goStep(n){
+  if(n === 3 && currentStep === 2){
+    const e2 = document.getElementById('step2Err');
+    const problem = !REQ.days.size ? 'Pick at least one day that works.' : !REQ.parts.size ? 'Pick at least one time of day.' : '';
+    e2.textContent = problem; e2.classList.toggle('on', !!problem);
+    if(problem) return;
+  }
   if(n === 2 && currentStep === 1){
     const v = id => (document.getElementById(id).value || '').trim();
     const e1 = document.getElementById('step1Err');
@@ -4145,18 +4211,15 @@ function updateStepUI(active){
 
 function populateReview(){
   const svc = document.getElementById('modalService').value||'Not specified';
-  const veh = document.getElementById('modalVehicle').value||'Not specified';
-  const loc = document.getElementById('modalAddress').value||'—';
   const urgency = document.getElementById('modalUrgency');
   const urgMap = {soon:' · Within 2–3 days',today:' · Today',stranded:' · URGENT — stranded'};
   const urgSuffix = urgency && urgency.value !== 'flexible' ? (urgMap[urgency.value]||'') : '';
   document.getElementById('reviewService').textContent = svc + urgSuffix;
-  document.getElementById('reviewVehicle').textContent = veh;
-  document.getElementById('reviewLocation').textContent = loc;
-  document.getElementById('reviewPhone').textContent = document.getElementById('modalPhone').value.trim() || '—';
-  document.getElementById('reviewDateTime').textContent = selectedDate + ' · ' + selectedTime;
-  document.getElementById('reviewMech').textContent = selectedMechName;
-  document.getElementById('reviewTotal').textContent = selectedMechRate ? '$'+selectedMechRate+'–$'+(selectedMechRate*2) : 'Quoted by your mechanic';
+  document.getElementById('reviewVehicle').textContent = document.getElementById('modalVehicle').value||'Not specified';
+  document.getElementById('reviewLocation').textContent = (document.getElementById('modalAddress').value||'—') + ' (private until you accept)';
+  document.getElementById('reviewPhone').textContent = (document.getElementById('modalPhone').value.trim() || '—') + ' (private until you accept)';
+  document.getElementById('reviewDateTime').textContent = prefSummary();
+  setWhoMode(REQ.mode);
 }
 
 let selectedDateISO = '';
@@ -4178,162 +4241,6 @@ function selectSlot(el){
 
 
 let bookingBusy = false;
-async function confirmBooking(agreedToTerms=false){
-  // Show agreement modal first if not yet agreed
-  if(!agreedToTerms) {
-    showAgreementModal();
-    return;
-  }
-
-  if(bookingBusy) return;
-  bookingBusy = true;
-  const e3 = document.getElementById('step3Err'); e3.classList.remove('on');
-  const btn = document.querySelector('#step3 .btn-next');
-  if(btn){ btn.disabled=true; btn.innerHTML='<i class="ti ti-loader" style="animation:spin .7s linear infinite"></i> Sending request…'; }
-  const phone = (document.getElementById('modalPhone').value || '').trim().slice(0, 30);
-
-  // Gather all booking data
-  const service = document.getElementById('modalService').value || 'Not specified';
-  const vehicle = document.getElementById('modalVehicle').value || 'Not specified';
-  const address = document.getElementById('modalAddress').value || '';
-  const notes   = document.getElementById('modalNotes') ? document.getElementById('modalNotes').value : '';
-  const urgency = document.getElementById('modalUrgency') ? document.getElementById('modalUrgency').value : 'flexible';
-  const mechKey = Object.keys(MECHANICS).find(k => MECHANICS[k].name === selectedMechName);
-
-  let bookingId = null, slotId = '';
-
-  try {
-    // The booking and its time slot are saved together: if someone else holds that slot, nothing is saved
-    const mkKey = Object.keys(MECHANICS).find(k => MECHANICS[k].name === selectedMechName);
-    const mechDoc = mkKey ? MECHANICS[mkKey].id : '', mechUid = mkKey ? MECHANICS[mkKey].ownerUid : '';
-    slotId = mechDoc && selectedDateISO ? mechDoc + '_' + selectedDateISO + '_' + slotHHMM(selectedTime) : '';
-    const bookingRef = db.collection('bookings').doc();
-    const batch = db.batch();
-    batch.set(bookingRef, {
-      customer_id:    currentUser?.uid || null,
-      customer_email: currentUser?.email || '',
-      customer_name:  currentUser?.displayName || '',
-      customer_phone: phone,
-      booking_date_iso: selectedDateISO,
-      mechanic_slug:  mechKey || '',
-      mechanic_name:  selectedMechName,
-      mechanic_doc:   mechDoc,
-      mechanic_uid:   mechUid || '',
-      slot_id:        slotId,
-      service,
-      vehicle,
-      address,
-      notes,
-      booking_date:   selectedDate,
-      booking_time:   selectedTime,
-      rate_num:       selectedMechRate,
-      urgency,
-      agreed_to_terms: true,
-      agreed_at:      new Date().toISOString(),
-      status:         'pending',
-      created_at:     firebase.firestore.FieldValue.serverTimestamp()
-    });
-    if(slotId) batch.set(db.collection('slots').doc(slotId), {
-      mechanic_doc: mechDoc, mechanic_uid: mechUid || '', date_iso: selectedDateISO, time: selectedTime,
-      customer_id: currentUser?.uid || '', booking_id: bookingRef.id,
-      created_at: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    await batch.commit();
-    bookingId = bookingRef.id;
-    // Save vehicle, address, mechanic to customer profile
-    const mechKey2 = Object.keys(MECHANICS).find(k => MECHANICS[k].name === selectedMechName);
-    saveCustomerProfile(vehicle, address, mechKey2 || '', service);
-    if(phone && currentUser){ db.collection('customer_profiles').doc(currentUser.uid).set({ phone }, { merge: true }).catch(() => {}); customerProfile = Object.assign({}, customerProfile, { phone }); }
-
-  } catch(err) {
-    // Nothing was saved, so say so instead of showing a success screen
-    console.error('Booking save error:', err);
-    let clash = false;
-    if(slotId){ try { const sd = await db.collection('slots').doc(slotId).get(); clash = sd.exists; } catch(e){} }
-    e3.textContent = clash ? selectedTime + ' on that day was just booked by someone else, so nothing was saved. Go back and pick another time.'
-                           : "We couldn't send your request, so nothing was booked. Check your connection and try again.";
-    if(clash) loadTakenSlots();
-    e3.classList.add('on');
-    if(btn){ btn.disabled=false; btn.innerHTML='<i class="ti ti-circle-check" aria-hidden="true"></i> Send Booking Request — No Fee'; }
-    bookingBusy = false;
-    return;
-  }
-  bookingBusy = false;
-  // Start the next booking from a clean form (car, address and phone are kept)
-  ['modalService', 'modalNotes'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
-  document.getElementById('modalUrgency').value = 'flexible';
-  document.getElementById('urgencyBanner').classList.remove('on');
-  document.querySelectorAll('#serviceChips .vehicle-chip').forEach(c => c.classList.remove('on'));
-
-  // 2. Show success state
-  document.getElementById('modalBody').style.display='none';
-  document.getElementById('bookingHeader').style.display='none';
-  const ss = document.getElementById('successState');
-  ss.style.display='block';
-  const when = selectedDate.startsWith('Today') ? 'today' : selectedDate;
-
-  // 3. Build success message with payment prompt
-  const mechFirst = selectedMechName ? selectedMechName.split(' ')[0] : 'Your mechanic';
-  const successSubEl = document.getElementById('successSub');
-  const toWhom = selectedMechName && selectedMechName !== 'Available Mechanic' ? ' to ' + esc(mechFirst) : '';
-  successSubEl.innerHTML = 'Your request' + toWhom + ' for <strong>' + esc(selectedTime + ' ' + when) + '</strong> is in.<br>We\'ll email ' + esc(currentUser?.email || 'you') + ' as soon as it\'s confirmed.';
-
-  // 4. Add Stripe payment button to success state
-  const existingPayBtn = document.getElementById('stripePayBtn');
-  if(existingPayBtn) existingPayBtn.remove();
-
-  // Hidden while the Stripe link is still a test-mode link (real cards can't pay a test link)
-  if(STRIPE_PAYMENT_LINK && !STRIPE_PAYMENT_LINK.includes('/test_')){
-  const payWrap = document.createElement('div');
-  payWrap.id = 'stripePayBtn';
-  payWrap.style.cssText = 'margin:1rem 0;padding:1rem;background:rgba(242,90,0,0.06);border:0.5px solid rgba(242,90,0,0.2);border-radius:14px;text-align:center';
-
-  const payTitle = document.createElement('div');
-  payTitle.style.cssText = 'font-size:13px;font-weight:600;color:var(--cream);margin-bottom:4px';
-  payTitle.textContent = 'Secure your booking';
-
-  const paySub = document.createElement('div');
-  paySub.style.cssText = 'font-size:12px;color:var(--muted);margin-bottom:12px';
-  paySub.textContent = 'Pay the booking fee now — you only pay the mechanic after the job is done.';
-
-  // Build Stripe URL with booking context as params
-  const stripeUrl = new URL(STRIPE_PAYMENT_LINK);
-  stripeUrl.searchParams.set('prefilled_email', currentUser?.email || '');
-  stripeUrl.searchParams.set('client_reference_id', bookingId || 'ww-' + Date.now());
-
-  const payBtn = document.createElement('a');
-  payBtn.href = stripeUrl.toString();
-  payBtn.target = '_blank';
-  payBtn.rel = 'noopener noreferrer';
-  payBtn.style.cssText = 'display:inline-flex;align-items:center;gap:8px;background:var(--ore);color:#fff;border-radius:10px;padding:12px 24px;font-size:14px;font-weight:700;text-decoration:none;transition:background .15s';
-  payBtn.innerHTML = '<i class="ti ti-lock" aria-hidden="true"></i> Pay booking fee — $' + (selectedMechRate || 65);
-
-  const skipBtn = document.createElement('button');
-  skipBtn.style.cssText = 'display:block;margin:8px auto 0;background:none;border:none;font-size:12px;color:var(--muted);cursor:pointer;font-family:var(--font-body);text-decoration:underline;text-underline-offset:3px';
-  skipBtn.textContent = 'Skip for now — pay after the job';
-  skipBtn.addEventListener('click', () => payWrap.style.display = 'none');
-
-  payWrap.appendChild(payTitle);
-  payWrap.appendChild(paySub);
-  payWrap.appendChild(payBtn);
-  payWrap.appendChild(skipBtn);
-  ss.insertBefore(payWrap, ss.querySelector('.tracking-box'));
-  }
-
-  if(btn){ btn.disabled=false; btn.innerHTML='<i class="ti ti-circle-check" aria-hidden="true"></i> Send Booking Request — No Fee'; }
-
-  sendBookingConfirmationEmail({
-    customerEmail: currentUser?.email || '',
-    customerName:  currentUser?.displayName || 'there',
-    mechName:      selectedMechName,
-    service,
-    vehicle,
-    address,
-    date:          selectedDate,
-    time:          selectedTime,
-    bookingId:     bookingId
-  });
-}
 
 // ─── DASHBOARD ─────────────────────────────────────────
 function toggleStatus(btn){
@@ -4714,8 +4621,7 @@ function closeAgreement() {
   document.body.style.overflow = '';
   agreementPending = false;
   // Re-enable the confirm button
-  const btn = document.querySelector('#step3 .btn-next');
-  if(btn){ btn.disabled=false; btn.innerHTML='<i class="ti ti-circle-check" aria-hidden="true"></i> Send Booking Request — No Fee'; }
+  PENDING_ACCEPT = null;
 }
 
 function toggleAgreementBtn() {
@@ -4725,13 +4631,12 @@ function toggleAgreementBtn() {
 }
 
 async function proceedWithBooking() {
-  if(bookingBusy) return;
+  if(acceptBusy) return;
   // Close agreement modal
   document.getElementById('agreementOverlay').classList.remove('on');
   document.body.style.overflow = '';
   agreementPending = false;
-  // Now run the actual booking confirmation
-  await confirmBooking(true); // pass true = already agreed
+  await acceptQuote();
 }
 
 
@@ -4808,8 +4713,12 @@ async function loadAdmin(){
       }
     }
 
+    let reqs = [];
+    try { reqs = (await db.collection('requests').get()).docs.map(d => ({ id: d.id, ...d.data() })).filter(r => r.status === 'open').sort((a, b) => tsMillis(b.created_at) - tsMillis(a.created_at)); } catch(e){}
     root.innerHTML = '';
+    root.appendChild(adminPayments(mechs));
     root.appendChild(adminApplications(apps.filter(a => (a.status || 'pending') === 'pending'), mechs));
+    root.appendChild(await adminRequests(reqs));
     root.appendChild(adminBookings(books.slice(0, 40), priv, mechs));
     root.appendChild(adminMessages(msgs));
     root.appendChild(adminMechanics(mechs, priv, done));
@@ -4952,6 +4861,341 @@ function updateCalc(){
 updateCalc();
 
 
+
+// ═══════════════════════════════════════════════════════════
+// QUOTE REQUESTS (customer side)
+// The customer describes the job; chosen mechanics (or everyone nearby) send prices;
+// the customer accepts one. The exact address and phone live in request_private and only
+// the accepted mechanic can read them.
+// ═══════════════════════════════════════════════════════════
+const REQ = { mechs: [], mode: 'open', photos: [], days: new Set(), parts: new Set() };
+const COMPARE = new Set();
+let SITE_CONFIG = { payments_on: false };
+function paymentsOn(){ return SITE_CONFIG.payments_on === true && !!FUNCTIONS_BASE; }
+(async () => { try { const d = await db.collection('config').doc('site').get(); if(d.exists) SITE_CONFIG = Object.assign({ payments_on: false }, d.data()); } catch(e){} })();
+function money(c){ c = Math.round(Number(c) || 0); return '$' + (c % 100 ? (c / 100).toFixed(2) : (c / 100).toLocaleString()); }
+function dayLabel(iso){ const ms = isoMs(iso); if(!ms) return iso || ''; const d = new Date(ms), t = new Date(); t.setHours(0,0,0,0); const diff = Math.round((ms - t.getTime()) / DAY); return diff === 0 ? 'Today' : diff === 1 ? 'Tomorrow' : d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }); }
+function toast(msg, ms){ const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), ms || 4500); }
+function goTo(url){ window.location.assign(url); }
+async function callFn(name, body){
+  const token = await currentUser.getIdToken();
+  const r = await fetch(FUNCTIONS_BASE + '/' + name, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify(body || {}) });
+  const j = await r.json().catch(() => ({}));
+  if(!r.ok) throw new Error(j.error || ('server error ' + r.status));
+  return j;
+}
+
+// compare list on the cards
+function toggleCompare(slug){
+  if(COMPARE.has(slug)) COMPARE.delete(slug);
+  else { if(COMPARE.size >= 3){ toast('You can compare up to 3 mechanics at a time.'); return; } COMPARE.add(slug); }
+  renderCompareBar(); renderGrid();
+}
+function clearCompare(){ COMPARE.clear(); renderCompareBar(); renderGrid(); }
+function renderCompareBar(){
+  const bar = document.getElementById('compareBar'); if(!bar) return;
+  bar.classList.toggle('on', COMPARE.size > 0);
+  document.getElementById('compareTxt').textContent = COMPARE.size + ' mechanic' + (COMPARE.size === 1 ? '' : 's') + ' on your quote list';
+}
+function openRequestFromCompare(){
+  const keys = Array.from(COMPARE).filter(k => MECHANICS[k]);
+  if(!keys.length) return;
+  openBooking(MECHANICS[keys[0]].name);
+  if(!currentUser) { pendingBooking = { mech: MECHANICS[keys[0]].name, compare: keys }; return; }
+  REQ.mechs = keys; REQ.mode = 'picked';
+  applyRequestHeader();
+}
+function applyRequestHeader(){
+  const nameEl = document.getElementById('modalMechName'), av = document.getElementById('modalAvatar'), rateEl = document.getElementById('modalMechRate');
+  if(REQ.mechs.length > 1){ nameEl.textContent = 'Asking ' + REQ.mechs.map(k => MECHANICS[k].name.split(' ')[0]).join(', '); av.classList.remove('has-photo'); av.textContent = '+' + REQ.mechs.length; rateEl.innerHTML = ''; }
+  const basic = REQ.mechs.some(k => MECHANICS[k] && MECHANICS[k].level === 'basic');
+  selectedMechLevel = basic ? 'basic' : 'full';
+  document.querySelectorAll('#serviceChips .vehicle-chip').forEach(c => { c.style.display = (basic && !c.dataset.basic) ? 'none' : ''; });
+  const bn = document.getElementById('basicNote');
+  bn.classList.toggle('on', basic);
+  if(basic) bn.textContent = 'One of these mechanics does basic maintenance only, so this request is limited to basic jobs. For repairs or "not sure", pick full-service mechanics or post to everyone nearby.';
+}
+
+// photos: shrunk in the browser, max 3
+function pickReqPhotos(input){
+  const files = Array.from(input.files || []).slice(0, 3 - REQ.photos.length);
+  files.forEach(file => {
+    const img = new Image();
+    img.onload = () => {
+      const M = 640, sc = Math.min(1, M / Math.max(img.width, img.height));
+      const c = document.createElement('canvas'); c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      const data = c.toDataURL('image/jpeg', 0.7);
+      if(data.length < 150000 && REQ.photos.length < 3){ REQ.photos.push(data); renderReqPhotos(); }
+      URL.revokeObjectURL(img.src);
+    };
+    img.onerror = () => toast("One of those files isn't an image we can read.");
+    img.src = URL.createObjectURL(file);
+  });
+  input.value = '';
+}
+function renderReqPhotos(){
+  const strip = document.getElementById('reqPhotoStrip'); strip.innerHTML = '';
+  REQ.photos.forEach((p, i) => { const im = document.createElement('img'); im.src = p; im.alt = 'Photo ' + (i + 1); im.title = 'Tap to remove'; im.style.cursor = 'pointer'; im.addEventListener('click', () => { REQ.photos.splice(i, 1); renderReqPhotos(); }); strip.appendChild(im); });
+}
+
+// preferred days / times
+function buildPrefDays(){
+  REQ.days = new Set(); REQ.parts = new Set();
+  document.querySelectorAll('#prefParts .pref-chip').forEach(c => c.classList.remove('on'));
+  const row = document.getElementById('prefDays'); row.innerHTML = '';
+  const now = new Date(); const start = now.getHours() >= 16 ? 1 : 0;
+  for(let i = start; i < start + 7; i++){
+    const d = new Date(now); d.setDate(now.getDate() + i);
+    const iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'pref-chip'; b.dataset.iso = iso; b.textContent = dayLabel(iso);
+    b.addEventListener('click', () => {
+      if(REQ.days.has(iso)){ REQ.days.delete(iso); b.classList.remove('on'); }
+      else if(REQ.days.size < 3){ REQ.days.add(iso); b.classList.add('on'); }
+      else toast('Pick up to 3 days.');
+    });
+    row.appendChild(b);
+  }
+}
+function togglePart(el){ const p = el.dataset.part; if(REQ.parts.has(p)){ REQ.parts.delete(p); el.classList.remove('on'); } else { REQ.parts.add(p); el.classList.add('on'); } }
+function prefSummary(){
+  const days = Array.from(REQ.days).sort().map(dayLabel).join(', ');
+  const parts = ['morning', 'afternoon', 'evening'].filter(p => REQ.parts.has(p)).join(' / ');
+  return (days || '—') + (parts ? ' · ' + parts : '');
+}
+
+// who quotes
+function levelNeeded(text){
+  const keys = SYMPTOM_KEYS.filter(([re]) => re.test(text)).map(([, k]) => k);
+  if(!keys.length) return 'full';
+  return keys.every(k => BASIC_KEYS.includes(k)) ? 'basic' : 'full';
+}
+function qualifiedMechs(){
+  const text = ((document.getElementById('modalService').value || '') + ' ' + (document.getElementById('modalNotes').value || '')).toLowerCase();
+  const need = levelNeeded(text);
+  return ALL_MECHS.filter(m => m.available_now && (need === 'basic' || mechLevel(m) === 'full') && (m._dist == null || m._dist <= m.radius_mi));
+}
+function setWhoMode(mode){
+  REQ.mode = mode === 'picked' ? 'picked' : 'open';
+  document.querySelectorAll('input[name=whoMode]').forEach(r => { r.checked = r.value === REQ.mode; });
+  renderWho();
+}
+function renderWho(){
+  const list = document.getElementById('whoList'), sel = document.getElementById('whoAdd');
+  list.innerHTML = '';
+  REQ.mechs.filter(k => MECHANICS[k]).forEach(k => {
+    const t = document.createElement('span'); t.className = 'who-tag'; t.textContent = MECHANICS[k].name;
+    const x = document.createElement('button'); x.type = 'button'; x.textContent = '×'; x.setAttribute('aria-label', 'Remove ' + MECHANICS[k].name);
+    x.addEventListener('click', e => { e.preventDefault(); REQ.mechs = REQ.mechs.filter(y => y !== k); renderWho(); });
+    t.appendChild(x); list.appendChild(t);
+  });
+  sel.innerHTML = '';
+  const o0 = document.createElement('option'); o0.value = ''; o0.textContent = REQ.mechs.length >= 3 ? 'You have 3 — the most you can ask' : '+ Add a mechanic…'; sel.appendChild(o0);
+  if(REQ.mechs.length < 3) qualifiedMechs().filter(m => !REQ.mechs.includes(m.slug)).forEach(m => {
+    const o = document.createElement('option'); o.value = m.slug;
+    o.textContent = m.name + (m.rate_display ? ' · ' + m.rate_display + '/hr' : '') + (hasRating(m) ? ' · ' + m.rating.toFixed(1) + '★' : '') + (m._dist != null ? ' · ' + Math.round(m._dist) + ' mi' : '');
+    sel.appendChild(o);
+  });
+  sel.disabled = REQ.mechs.length >= 3;
+}
+function addWho(sel){ if(sel.value && REQ.mechs.length < 3 && MECHANICS[sel.value]){ REQ.mechs.push(sel.value); setWhoMode('picked'); } sel.value = ''; }
+
+let requestBusy = false;
+async function sendRequest(){
+  if(requestBusy || !currentUser) return;
+  const e3 = document.getElementById('step3Err'); e3.classList.remove('on');
+  const v = id => (document.getElementById(id).value || '').trim();
+  if(REQ.mode === 'picked' && !REQ.mechs.length){ e3.textContent = 'Pick at least one mechanic, or choose "Everyone nearby".'; e3.classList.add('on'); return; }
+  if(REQ.mode === 'picked' && selectedMechLevel === 'basic' && levelNeeded((v('modalService') + ' ' + v('modalNotes')).toLowerCase()) === 'full'){ e3.textContent = 'A basic-maintenance mechanic is on your list, but this sounds like repair work. Remove them or post to everyone nearby.'; e3.classList.add('on'); return; }
+  requestBusy = true;
+  const btn = document.getElementById('sendReqBtn'); btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader" style="animation:spin .7s linear infinite"></i> Sending…';
+  const address = v('modalAddress'), phone = v('modalPhone').slice(0, 30);
+  const g = await geocode(address);
+  const zip = (address.match(/\b\d{5}\b/) || [])[0] || (g && g.zip) || '';
+  const service = v('modalService').slice(0, 300), vehicle = v('modalVehicle').slice(0, 80), notes = v('modalNotes').slice(0, 2000);
+  const picked = REQ.mode === 'picked' ? REQ.mechs.filter(k => MECHANICS[k]) : [];
+  try {
+    const ref = db.collection('requests').doc();
+    const expires = new Date(Date.now() + 72 * 3600 * 1000).toISOString();
+    const batch = db.batch();
+    batch.set(ref, {
+      customer_id: currentUser.uid,
+      customer_first: ((currentUser.displayName || '').trim().split(/\s+/)[0] || 'Customer').slice(0, 30),
+      service, vehicle, notes, urgency: document.getElementById('modalUrgency').value,
+      level_needed: levelNeeded((service + ' ' + notes).toLowerCase()),
+      photos: REQ.photos.slice(0, 3),
+      zip, approx_lat: g ? Math.round(g.lat * 100) / 100 : null, approx_lng: g ? Math.round(g.lng * 100) / 100 : null,
+      pref_dates: Array.from(REQ.days).sort(), pref_parts: ['morning', 'afternoon', 'evening'].filter(p => REQ.parts.has(p)),
+      mode: REQ.mode,
+      invited_uids: picked.map(k => MECHANICS[k].ownerUid).filter(Boolean),
+      invited_docs: picked.map(k => MECHANICS[k].id), invited_names: picked.map(k => MECHANICS[k].name),
+      status: 'open', expires_at: expires,
+      created_at: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    batch.set(db.collection('request_private').doc(ref.id), {
+      customer_id: currentUser.uid, address: address.slice(0, 300), phone,
+      customer_name: (currentUser.displayName || '').slice(0, 80), customer_email: currentUser.email || ''
+    });
+    await batch.commit();
+    saveCustomerProfile(vehicle, address, '', service);
+    if(phone){ db.collection('customer_profiles').doc(currentUser.uid).set({ phone }, { merge: true }).catch(() => {}); customerProfile = Object.assign({}, customerProfile, { phone }); }
+  } catch(err){
+    console.error('Request save error:', err);
+    e3.textContent = "We couldn't send your request. Check your connection and try again."; e3.classList.add('on');
+    btn.disabled = false; btn.innerHTML = '<i class="ti ti-send" aria-hidden="true"></i> Send quote request'; requestBusy = false;
+    return;
+  }
+  requestBusy = false; btn.disabled = false; btn.innerHTML = '<i class="ti ti-send" aria-hidden="true"></i> Send quote request';
+  document.getElementById('modalBody').style.display = 'none';
+  document.getElementById('bookingHeader').style.display = 'none';
+  document.getElementById('successState').style.display = 'block';
+  document.getElementById('successSub').textContent = (picked.length ? 'Sent to ' + picked.map(k => MECHANICS[k].name.split(' ')[0]).join(', ') + '.' : 'Sent to verified mechanics near you who do this work.')
+    + " Quotes show up in My requests as they arrive, and we'll email you. Requests stay open for 3 days.";
+  ['modalService', 'modalNotes'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('modalUrgency').value = 'flexible';
+  REQ.photos = []; COMPARE.clear(); renderCompareBar(); renderGrid();
+}
+
+// customer: open requests and their quotes (inside My bookings)
+async function renderMyRequests(container, reqs){
+  if(!reqs.length) return;
+  const h = document.createElement('div'); h.className = 'admin-sec-title'; h.style.cssText = 'font-size:15px;margin:.2rem 0 .6rem'; h.textContent = 'Quote requests'; container.appendChild(h);
+  for(const r of reqs){
+    const item = document.createElement('div'); item.className = 'mybooking-item';
+    const head = document.createElement('div'); head.className = 'mbi-head';
+    const t = document.createElement('div'); t.className = 'mbi-mech'; t.textContent = r.service || 'Request';
+    const stEl = document.createElement('div'); stEl.className = 'mbi-status status-pending'; head.appendChild(t); head.appendChild(stEl);
+    const meta = document.createElement('div'); meta.className = 'mbi-detail';
+    meta.textContent = (r.mode === 'open' ? 'Posted to mechanics nearby' : 'Sent to ' + (r.invited_names || []).join(', ')) + ' · ' + (r.pref_dates || []).map(dayLabel).join(', ') + ' · open until ' + new Date(Date.parse(r.expires_at) || Date.now()).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    item.appendChild(head); item.appendChild(meta);
+    let quotes = [];
+    try { quotes = (await db.collection('requests').doc(r.id).collection('quotes').get()).docs.map(d => ({ id: d.id, ...d.data() })); } catch(e){}
+    const now = Date.now();
+    quotes = quotes.filter(q => q.status === 'sent' && Number(q.total_cents) > 0 && (!q.valid_until || Date.parse(q.valid_until) > now)).sort((a, b) => a.total_cents - b.total_cents);
+    stEl.textContent = quotes.length ? quotes.length + ' quote' + (quotes.length === 1 ? '' : 's') : 'Waiting for quotes';
+    quotes.forEach((q, i) => {
+      const m = Object.values(MECHANICS).find(x => x.id === q.mechanic_doc) || {};
+      const raw = ALL_MECHS.find(x => x.id === q.mechanic_doc) || {};
+      const dist = (r.approx_lat != null && raw.geo_lat != null) ? milesBetween({ lat: r.approx_lat, lng: r.approx_lng }, { lat: raw.geo_lat, lng: raw.geo_lng }) : null;
+      const card = document.createElement('div'); card.className = 'quote-card' + (i === 0 && quotes.length > 1 ? ' best' : '');
+      const top = document.createElement('div'); top.className = 'quote-top';
+      const nm = document.createElement('div'); nm.innerHTML = '<div style="font-weight:600;color:var(--cream)"></div><div class="quote-meta"></div>';
+      nm.firstChild.textContent = q.mechanic_name || 'Mechanic';
+      nm.lastChild.textContent = [m.verified ? '✓ Verified' : 'Not yet verified', raw && hasRating(raw) ? raw.rating.toFixed(1) + '★ (' + raw.review_count + ')' : 'No ratings yet', dist != null ? '≈ ' + Math.round(dist) + ' mi away' : ''].filter(Boolean).join(' · ');
+      const pr = document.createElement('div'); pr.style.textAlign = 'right';
+      pr.innerHTML = '<div class="quote-price"></div><div class="quote-meta"></div>';
+      pr.firstChild.textContent = money(q.total_cents);
+      pr.lastChild.textContent = 'labor ' + money(q.labor_cents) + ' + parts ' + money(q.parts_cents) + (i === 0 && quotes.length > 1 ? ' · lowest' : '');
+      top.appendChild(nm); top.appendChild(pr); card.appendChild(top);
+      const when = document.createElement('div'); when.className = 'quote-meta'; when.style.marginTop = '.4rem';
+      when.textContent = 'Can come ' + dayLabel(q.date_iso) + ' at ' + (q.time || '') + (q.valid_until ? ' · quote good until ' + new Date(Date.parse(q.valid_until)).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '');
+      card.appendChild(when);
+      if(q.note){ const n = document.createElement('div'); n.className = 'rev-text'; n.style.fontSize = '13px'; n.textContent = '“' + q.note + '”'; card.appendChild(n); }
+      const acts = document.createElement('div'); acts.className = 'mbi-actions';
+      const acc = document.createElement('button'); acc.className = 'admin-btn primary'; acc.textContent = 'Accept ' + money(q.total_cents);
+      acc.addEventListener('click', () => showAcceptAgreement(r, q));
+      const dec = document.createElement('button'); dec.className = 'admin-btn'; dec.textContent = 'Decline';
+      dec.addEventListener('click', async () => { dec.disabled = true; try { await db.collection('requests').doc(r.id).collection('quotes').doc(q.id).update({ status: 'declined' }); } catch(e){} openMyBookings(); });
+      acts.appendChild(acc); acts.appendChild(dec); card.appendChild(acts);
+      item.appendChild(card);
+    });
+    const ra = document.createElement('div'); ra.className = 'mbi-actions';
+    const cancel = document.createElement('button'); cancel.className = 'admin-btn'; cancel.textContent = 'Cancel request';
+    cancel.addEventListener('click', async () => { if(!confirm('Cancel this request? Mechanics will no longer see it.')) return; try { await db.collection('requests').doc(r.id).update({ status: 'cancelled' }); } catch(e){} openMyBookings(); });
+    ra.appendChild(cancel); item.appendChild(ra);
+    container.appendChild(item);
+  }
+  const h2 = document.createElement('div'); h2.className = 'admin-sec-title'; h2.style.cssText = 'font-size:15px;margin:1.2rem 0 .6rem'; h2.textContent = 'Bookings'; container.appendChild(h2);
+}
+
+// accept → agreement → booking (address + phone shared with that mechanic only)
+let PENDING_ACCEPT = null;
+async function showAcceptAgreement(r, q){
+  PENDING_ACCEPT = { r, q };
+  let priv = {}; try { const d = await db.collection('request_private').doc(r.id).get(); priv = d.exists ? d.data() : {}; } catch(e){}
+  PENDING_ACCEPT.priv = priv;
+  const set = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = v; };
+  set('agMechName', q.mechanic_name || '—'); set('agService', r.service || '—'); set('agVehicle', r.vehicle || '—');
+  set('agAddress', (priv.address || '—') + ' (shared with ' + (q.mechanic_name || 'them').split(' ')[0] + ' when you accept)');
+  set('agDateTime', dayLabel(q.date_iso) + ' · ' + (q.time || ''));
+  set('agRate', money(q.total_cents) + ' total (labor ' + money(q.labor_cents) + ' + parts ' + money(q.parts_cents) + ')' + (paymentsOn() ? ' · card saved now, charged when the job is done' : ' · pay your mechanic when the job is done'));
+  const cb = document.getElementById('agreementCheck'); if(cb) cb.checked = false;
+  toggleAgreementBtn();
+  document.getElementById('agreementOverlay').classList.add('on');
+  document.body.style.overflow = 'hidden';
+}
+let acceptBusy = false;
+async function acceptQuote(){
+  if(acceptBusy || !PENDING_ACCEPT) return;
+  acceptBusy = true;
+  const { r, q } = PENDING_ACCEPT; let priv = PENDING_ACCEPT.priv || {};
+  const slotId = q.mechanic_doc + '_' + q.date_iso + '_' + slotHHMM(q.time);
+  const bookingRef = db.collection('bookings').doc();
+  const raw = ALL_MECHS.find(x => x.id === q.mechanic_doc) || {};
+  try {
+    const batch = db.batch();
+    batch.set(bookingRef, {
+      customer_id: currentUser.uid, customer_email: currentUser.email || '', customer_name: currentUser.displayName || '',
+      customer_phone: priv.phone || '', address: priv.address || '',
+      service: r.service || '', vehicle: r.vehicle || '', notes: r.notes || '', urgency: r.urgency || 'flexible',
+      booking_date_iso: q.date_iso, booking_date: dayLabel(q.date_iso) === 'Today' || dayLabel(q.date_iso) === 'Tomorrow' ? new Date(isoMs(q.date_iso)).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : dayLabel(q.date_iso),
+      booking_time: q.time,
+      mechanic_slug: q.mechanic_slug || raw.slug || '', mechanic_name: q.mechanic_name || '', mechanic_doc: q.mechanic_doc, mechanic_uid: q.mechanic_uid,
+      slot_id: slotId, request_id: r.id, quote_uid: q.mechanic_uid,
+      price_cents: q.total_cents, labor_cents: q.labor_cents, parts_cents: q.parts_cents, quote_note: q.note || '',
+      rate_num: raw.rate_num || 0,
+      agreed_to_terms: true, agreed_at: new Date().toISOString(),
+      status: 'confirmed', payment_status: paymentsOn() ? 'needs_card' : 'pay_mechanic',
+      created_at: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    batch.set(db.collection('slots').doc(slotId), { mechanic_doc: q.mechanic_doc, mechanic_uid: q.mechanic_uid, date_iso: q.date_iso, time: q.time, customer_id: currentUser.uid, booking_id: bookingRef.id, created_at: firebase.firestore.FieldValue.serverTimestamp() });
+    batch.update(db.collection('requests').doc(r.id), { status: 'accepted', accepted_mechanic_uid: q.mechanic_uid, accepted_quote_uid: q.id, booking_id: bookingRef.id });
+    batch.update(db.collection('requests').doc(r.id).collection('quotes').doc(q.id), { status: 'accepted' });
+    await batch.commit();
+  } catch(err){
+    console.error('Accept error:', err);
+    let clash = false; try { clash = (await db.collection('slots').doc(slotId).get()).exists; } catch(e){}
+    toast(clash ? (q.mechanic_name || 'That mechanic') + ' just got booked for that time. Ask them for another time, or accept a different quote.' : "We couldn't book that. Check your connection and try again.", 7000);
+    acceptBusy = false; return;
+  }
+  // everyone else's quote is declined (best effort; the request is already closed)
+  try { const others = await db.collection('requests').doc(r.id).collection('quotes').get(); for(const d of others.docs){ if(d.id !== q.id && d.data().status === 'sent') await d.ref.update({ status: 'declined' }); } } catch(e){}
+  acceptBusy = false; PENDING_ACCEPT = null;
+  toast('Booked with ' + (q.mechanic_name || 'your mechanic') + ' for ' + dayLabel(q.date_iso) + ' at ' + q.time + '.');
+  if(paymentsOn()) startCardSetup(bookingRef.id);
+  else openMyBookings();
+}
+
+// Stripe: card saved at acceptance (Stripe's own page), mechanic payouts setup
+async function startCardSetup(bookingId, btn){
+  try {
+    if(btn){ btn.disabled = true; btn.textContent = 'Opening Stripe…'; }
+    const { url } = await callFn('createCardSetup', { bookingId });
+    goTo(url);
+  } catch(e){
+    toast("Couldn't open the secure card page: " + e.message, 7000);
+    if(btn){ btn.disabled = false; btn.textContent = 'Add a card'; }
+  }
+}
+async function setupPayouts(btn){
+  try {
+    if(btn){ btn.disabled = true; btn.textContent = 'Opening Stripe…'; }
+    const { url } = await callFn('connectOnboard', {});
+    goTo(url);
+  } catch(e){
+    toast("Couldn't open Stripe payout setup: " + e.message, 7000);
+    if(btn){ btn.disabled = false; btn.textContent = 'Set up payouts'; }
+  }
+}
+// coming back from Stripe
+setTimeout(() => {
+  const h = location.hash || '';
+  const clear = () => { try { history.replaceState(null, '', location.href.split('#')[0]); } catch(e){} };
+  if(h.indexOf('#card-saved=') === 0){ clear(); toast("Card saved. You'll be charged after the job is done.", 6000); if(currentUser) openMyBookings(); }
+  else if(h.indexOf('#card-cancelled=') === 0){ clear(); toast('No card added yet. You can add it any time from My bookings.', 6000); if(currentUser) openMyBookings(); }
+  else if(h === '#payouts-done' || h === '#payouts-retry'){ clear(); showPanel('dashboard'); toast(h === '#payouts-done' ? 'Payout setup saved. Stripe may take a few minutes to confirm it.' : 'Payout setup not finished yet. Press "Set up payouts" to continue.', 7000); }
+}, 1600);
+
 // ═══════════════════════════════════════════════════════════
 // MECHANIC DASHBOARD
 // A mechanic signs up / logs in with the email they applied with. Once that email is
@@ -5041,10 +5285,45 @@ async function loadMechPortal(){
   if(!m.is_featured){ const f = document.createElement('button'); f.className = 'admin-btn'; f.textContent = 'Get Featured — $29/mo'; f.addEventListener('click', () => openProUpgrade(f)); head.appendChild(f); }
   root.appendChild(head);
 
-  // requests
+  // keep the quote-matching index current (level, location, travel distance)
+  try { await db.collection('mech_index').doc(currentUser.uid).set({ mechanic_doc: m.id, level: mechLevel(m), geo_lat: m.geo_lat, geo_lng: m.geo_lng, radius_mi: m.radius_mi, updated_at: new Date().toISOString() }); } catch(e){}
+
+  // payouts (required before quoting once online payments are on)
+  if(paymentsOn()){
+    const pay = adminSection('Payouts', m.payouts_ready ? 'ready' : 'needed to send quotes');
+    const pc = document.createElement('div'); pc.className = 'admin-card';
+    const ptxt = document.createElement('div'); ptxt.className = 'admin-meta';
+    ptxt.textContent = m.payouts_ready ? 'Stripe payouts are set up. Customers pay through WrenchNow and Stripe sends your share to your bank automatically.'
+                                       : "Customers pay through WrenchNow and Stripe sends your share straight to your bank. Set this up once (name, date of birth, last 4 of SSN, bank account — entered on Stripe's own page) and you can start sending quotes.";
+    pc.appendChild(ptxt);
+    if(!m.payouts_ready){ const pa = document.createElement('div'); pa.className = 'admin-actions'; pa.style.marginTop = '.7rem'; const pb = document.createElement('button'); pb.className = 'admin-btn primary'; pb.textContent = 'Set up payouts'; pb.addEventListener('click', () => setupPayouts(pb)); pa.appendChild(pb); pc.appendChild(pa); }
+    pay.appendChild(pc); root.appendChild(pay);
+  }
+
+  // quote requests: sent to me directly, or open to mechanics near me
+  const qs = adminSection('Quote requests', '');
+  root.appendChild(qs);
+  try {
+    const now = Date.now();
+    const direct = (await db.collection('requests').where('invited_uids', 'array-contains', currentUser.uid).get()).docs.map(d => ({ id: d.id, ...d.data(), _direct: true }));
+    const open = (await db.collection('requests').where('mode', '==', 'open').get()).docs.map(d => ({ id: d.id, ...d.data() }));
+    const seen = new Set(); const reqs = [];
+    direct.concat(open).forEach(r => { if(seen.has(r.id)) return; seen.add(r.id); reqs.push(r); });
+    const live = reqs.filter(r => r.status === 'open' && (!r.expires_at || Date.parse(r.expires_at) > now) && r.customer_id !== currentUser.uid).filter(r => {
+      if(r._direct) return true;
+      if(r.level_needed === 'full' && mechLevel(m) === 'basic') return false;
+      if(r.approx_lat != null && m.geo_lat != null) return milesBetween({ lat: r.approx_lat, lng: r.approx_lng }, { lat: m.geo_lat, lng: m.geo_lng }) <= m.radius_mi;
+      return true;
+    }).sort((a, b) => tsMillis(b.created_at) - tsMillis(a.created_at));
+    qs.querySelector('.admin-count').textContent = live.length + ' open';
+    if(!live.length){ const e = document.createElement('div'); e.className = 'admin-empty'; e.textContent = 'No open requests right now. Requests sent to you, or posted near you for work you do, show up here.'; qs.appendChild(e); }
+    for(const r of live){ qs.appendChild(await quoteRequestCard(r, m)); }
+  } catch(e){ const er = document.createElement('div'); er.className = 'admin-empty'; er.textContent = 'Could not load quote requests.'; qs.appendChild(er); }
+
+  // bookings
   const open = books.filter(b => b.status === 'pending' || b.status === 'confirmed');
-  const sec = adminSection('Your booking requests', open.length + ' open');
-  if(!books.length){ const e = document.createElement('div'); e.className = 'admin-empty'; e.textContent = 'No requests yet. They show up here (and by email) as soon as a customer books you.'; sec.appendChild(e); }
+  const sec = adminSection('Your jobs', open.length + ' upcoming');
+  if(!books.length){ const e = document.createElement('div'); e.className = 'admin-empty'; e.textContent = 'No jobs yet. When a customer accepts your quote, the job shows up here with their address and phone.'; sec.appendChild(e); }
   books.forEach(b => sec.appendChild(mechBookingCard(b)));
   root.appendChild(sec);
 
@@ -5084,6 +5363,66 @@ async function loadMechPortal(){
   root.appendChild(rs);
 }
 
+
+// mechanic: one quote request card with the quote form
+const QUOTE_TIMES = ['8:00 AM','9:00 AM','10:00 AM','11:00 AM','12:00 PM','1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM','6:00 PM','7:00 PM'];
+async function quoteRequestCard(r, m){
+  const card = document.createElement('div'); card.className = 'admin-card';
+  const row = document.createElement('div'); row.className = 'admin-row';
+  const left = document.createElement('div');
+  const nm = document.createElement('div'); nm.className = 'admin-name'; nm.textContent = r.service || 'Request';
+  const meta = document.createElement('div'); meta.className = 'admin-meta';
+  const dist = (r.approx_lat != null && m.geo_lat != null) ? milesBetween({ lat: r.approx_lat, lng: r.approx_lng }, { lat: m.geo_lat, lng: m.geo_lng }) : null;
+  meta.textContent = [(r.customer_first || 'Customer') + (r.vehicle ? ' · ' + r.vehicle : ''), (r.zip ? 'ZIP ' + r.zip : 'Area not given') + (dist != null ? ' · ≈ ' + Math.round(dist) + ' mi from you' : ''), 'Prefers ' + (r.pref_dates || []).map(dayLabel).join(', ') + ((r.pref_parts || []).length ? ' · ' + r.pref_parts.join(' / ') : ''), r.urgency && r.urgency !== 'flexible' ? 'Urgency: ' + r.urgency : '', r.notes].filter(Boolean).join('\n');
+  meta.style.whiteSpace = 'pre-line';
+  left.appendChild(nm); left.appendChild(meta);
+  if(Array.isArray(r.photos) && r.photos.length){ const ps = document.createElement('div'); ps.className = 'photo-strip'; r.photos.slice(0, 3).forEach(p => { if(typeof p === 'string' && p.indexOf('data:image/jpeg;base64,') === 0){ const a = document.createElement('a'); a.href = p; a.target = '_blank'; const im = document.createElement('img'); im.src = p; im.alt = 'Customer photo'; a.appendChild(im); ps.appendChild(a); } }); left.appendChild(ps); }
+  row.appendChild(left); row.appendChild(adminTag(r._direct ? 'Asked you' : 'Open nearby', r._direct ? 'due' : ''));
+  card.appendChild(row);
+  let mine = null;
+  try { const d = await db.collection('requests').doc(r.id).collection('quotes').doc(currentUser.uid).get(); if(d.exists) mine = d.data(); } catch(e){}
+  if(paymentsOn() && !m.payouts_ready){ const n = document.createElement('div'); n.className = 'pay-line warn'; n.textContent = 'Set up payouts above to send a quote.'; card.appendChild(n); return card; }
+  const f = document.createElement('div'); f.className = 'rev-form'; f.style.gridTemplateColumns = 'repeat(auto-fit, minmax(125px, 1fr))';
+  const lab = document.createElement('input'); lab.type = 'number'; lab.min = 0; lab.placeholder = 'Labor $'; lab.setAttribute('aria-label', 'Labor in dollars');
+  const par = document.createElement('input'); par.type = 'number'; par.min = 0; par.placeholder = 'Parts $'; par.setAttribute('aria-label', 'Parts in dollars');
+  const day = document.createElement('select'); day.setAttribute('aria-label', 'Day'); day.style.cssText = lab.style.cssText;
+  const days = new Set(r.pref_dates || []); for(let i = 0; i < 10; i++){ const d = new Date(); d.setDate(d.getDate() + i); days.add(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')); }
+  Array.from(days).sort().forEach(iso => { const o = document.createElement('option'); o.value = iso; o.textContent = dayLabel(iso) + ((r.pref_dates || []).includes(iso) ? ' ★' : ''); day.appendChild(o); });
+  const tm = document.createElement('select'); tm.setAttribute('aria-label', 'Time');
+  QUOTE_TIMES.forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t; tm.appendChild(o); });
+  [day, tm].forEach(x => { x.style.background = 'var(--surface)'; x.style.border = '0.5px solid var(--border-med)'; x.style.borderRadius = '8px'; x.style.padding = '8px 10px'; x.style.color = 'var(--cream)'; x.style.fontFamily = 'var(--font-body)'; x.style.fontSize = '13px'; x.style.minWidth = '0'; });
+  const note = document.createElement('input'); note.type = 'text'; note.maxLength = 300; note.className = 'full'; note.placeholder = "Note to the customer (what's included, parts brand, anything to check)"; note.style.gridColumn = '1 / -1';
+  if(mine && mine.status === 'sent'){ lab.value = mine.labor_cents / 100; par.value = mine.parts_cents / 100; day.value = mine.date_iso; tm.value = mine.time; note.value = mine.note || ''; }
+  else if((r.pref_dates || []).length) day.value = r.pref_dates[0];
+  const acts = document.createElement('div'); acts.className = 'admin-actions'; acts.style.gridColumn = '1 / -1';
+  const send = document.createElement('button'); send.className = 'admin-btn primary'; send.textContent = mine && mine.status === 'sent' ? 'Update quote' : 'Send quote';
+  const msg = document.createElement('div'); msg.className = 'admin-meta'; msg.style.gridColumn = '1 / -1';
+  if(mine && mine.status === 'sent') msg.textContent = 'Your quote of ' + money(mine.total_cents) + ' was sent. You can change it until the customer decides.';
+  if(mine && mine.status === 'declined') msg.textContent = 'The customer went with someone else.';
+  send.addEventListener('click', async () => {
+    const lc = Math.round(Number(lab.value || 0) * 100), pc = Math.round(Number(par.value || 0) * 100);
+    if(!(lc >= 0 && pc >= 0 && lc + pc >= 500 && lc + pc <= 2000000)){ msg.textContent = 'Enter labor and parts in dollars (at least $5 total).'; return; }
+    send.disabled = true;
+    try {
+      const slot = await db.collection('slots').doc(m.id + '_' + day.value + '_' + slotHHMM(tm.value)).get();
+      if(slot.exists){ msg.textContent = 'You already have a job at ' + tm.value + ' on ' + dayLabel(day.value) + '. Pick another time.'; send.disabled = false; return; }
+      await db.collection('requests').doc(r.id).collection('quotes').doc(currentUser.uid).set({
+        mechanic_uid: currentUser.uid, mechanic_doc: m.id, mechanic_slug: m.slug, mechanic_name: m.name,
+        labor_cents: lc, parts_cents: pc, total_cents: lc + pc, date_iso: day.value, time: tm.value,
+        note: note.value.trim().slice(0, 300), status: 'sent',
+        valid_until: new Date(Date.now() + 48 * 3600 * 1000).toISOString(), updated_at: new Date().toISOString()
+      });
+      msg.textContent = 'Quote of ' + money(lc + pc) + ' sent. The customer is notified.'; send.textContent = 'Update quote';
+    } catch(e){ msg.textContent = "Couldn't send the quote. " + (e.code === 'permission-denied' ? 'This request may have closed.' : 'Try again.'); }
+    send.disabled = false;
+  });
+  acts.appendChild(send);
+  if(mine && mine.status === 'sent'){ const wd = document.createElement('button'); wd.className = 'admin-btn'; wd.textContent = 'Withdraw'; wd.addEventListener('click', async () => { wd.disabled = true; try { await db.collection('requests').doc(r.id).collection('quotes').doc(currentUser.uid).update({ status: 'withdrawn', updated_at: new Date().toISOString() }); loadMechPortal(); } catch(e){ wd.disabled = false; } }); acts.appendChild(wd); }
+  f.appendChild(lab); f.appendChild(par); f.appendChild(day); f.appendChild(tm); f.appendChild(note); f.appendChild(acts); f.appendChild(msg);
+  card.appendChild(f);
+  return card;
+}
+
 function mechBookingCard(b){
   const st = b.status || 'pending';
   const card = document.createElement('div'); card.className = 'admin-card';
@@ -5095,6 +5434,7 @@ function mechBookingCard(b){
   meta.appendChild(document.createElement('br'));
   if(b.address){ const a = document.createElement('a'); a.href = mapsLink(b.address); a.target = '_blank'; a.rel = 'noopener'; a.textContent = b.address; meta.appendChild(a); meta.appendChild(document.createElement('br')); }
   meta.appendChild(document.createTextNode([b.vehicle, b.urgency && b.urgency !== 'flexible' ? 'Urgency: ' + b.urgency : '', b.notes].filter(Boolean).join(' · ')));
+  if(b.price_cents){ meta.appendChild(document.createElement('br')); meta.appendChild(document.createTextNode('Agreed: ' + money(b.final_cents || b.price_cents) + (b.revision && b.revision.status === 'pending' ? ' · revised price ' + money(b.revision.total_cents) + ' waiting for the customer' : '') + (b.revision && b.revision.status === 'rejected' ? ' · revision rejected' : '') + ' · ' + ({ pay_mechanic: 'customer pays you directly', needs_card: 'customer has not added a card yet', card_saved: 'card on file', charge_now: 'payment processing', charging: 'payment processing', paid: 'paid', payment_failed: 'customer payment failed', disputed: 'customer reported a problem' }[b.payment_status] || ''))); }
   left.appendChild(nm); left.appendChild(meta); row.appendChild(left);
   row.appendChild(adminTag(st, st === 'completed' ? 'ok' : st === 'confirmed' ? 'warn' : st === 'cancelled' ? '' : 'due'));
   card.appendChild(row);
@@ -5109,6 +5449,24 @@ function mechBookingCard(b){
   if(st === 'pending'){ btn('Confirm this time', 'primary', set('confirmed')); btn("Can't make it", '', async () => { if(confirm('Decline this request? The customer will see it as cancelled.')) await set('cancelled')(); }); }
   if(st === 'confirmed'){ btn('Job done — mark complete', 'good', set('completed')); btn('Cancel', '', async () => { if(confirm('Cancel this confirmed job? Please also call the customer.')) await set('cancelled')(); }); }
   if(st === 'confirmed' || st === 'completed') btn(b.report ? 'Edit inspection report' : 'Add inspection report', '', async () => openInspection(b, true));
+  if((st === 'confirmed' || st === 'completed') && b.price_cents && !['paid', 'charging', 'charge_now'].includes(b.payment_status) && !(b.revision && b.revision.status === 'pending')){
+    btn('Revise final price', '', async () => {
+      const f = document.createElement('div'); f.className = 'rev-form';
+      const lab = document.createElement('input'); lab.type = 'number'; lab.min = 0; lab.placeholder = 'Labor $'; lab.value = (b.labor_cents || 0) / 100;
+      const par = document.createElement('input'); par.type = 'number'; par.min = 0; par.placeholder = 'Parts $'; par.value = (b.parts_cents || 0) / 100;
+      const why = document.createElement('input'); why.type = 'text'; why.maxLength = 300; why.className = 'full'; why.placeholder = 'Why? e.g. rotors were also worn, needed replacing';
+      const go = document.createElement('button'); go.className = 'admin-btn primary full'; go.textContent = 'Send revised price to the customer';
+      go.addEventListener('click', async () => {
+        const lc = Math.round(Number(lab.value) * 100), pc = Math.round(Number(par.value) * 100);
+        if(!(lc >= 0 && pc >= 0 && lc + pc > 0 && lc + pc <= 2000000)) return alert('Enter labor and parts in dollars.');
+        if(!why.value.trim()) return alert('Tell the customer why the price changed.');
+        go.disabled = true;
+        try { await db.collection('bookings').doc(b.id).update({ revision: { labor_cents: lc, parts_cents: pc, total_cents: lc + pc, reason: why.value.trim().slice(0, 300), status: 'pending', at: new Date().toISOString() } }); loadMechPortal(); }
+        catch(e){ go.disabled = false; alert("Couldn't send — try again."); }
+      });
+      f.appendChild(lab); f.appendChild(par); f.appendChild(why); f.appendChild(go); card.appendChild(f);
+    });
+  }
   if(acts.children.length) card.appendChild(acts);
   return card;
 }
@@ -5320,6 +5678,44 @@ function renderGarage(p, bookings){
   body.appendChild(el('div', 'gar-note', "These are typical intervals for most cars. Your owner's manual and your mechanic's advice come first — some cars need oil every 3,000 miles, others go 10,000. Reminders are emailed at most once a month per item."));
 }
 
+
+// ─── INSTALLABLE APP ───────────────────────────────────
+// Android/Chrome: the browser offers an install prompt we can trigger from our own button.
+// iPhone/iPad: Safari has no prompt, so we show the two taps (Share → Add to Home Screen).
+let deferredInstall = null;
+const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+function installDismissed(){ try { return Date.now() - (+localStorage.getItem('ww_install_dismissed') || 0) < 14 * DAY; } catch(e){ return false; } }
+function dismissInstall(){ document.getElementById('installBanner').classList.remove('on'); try { localStorage.setItem('ww_install_dismissed', Date.now()); } catch(e){} }
+function showInstallHelp(force){
+  if(isStandalone()){ toast("You're already using the app."); return; }
+  const banner = document.getElementById('installBanner'), txt = document.getElementById('installText'), btn = document.getElementById('installBtn');
+  if(deferredInstall){ txt.innerHTML = '<b>Get the WrenchNow app</b>Install it on your home screen for one-tap access.'; btn.style.display = ''; }
+  else if(isIOS()){ txt.innerHTML = '<b>Add WrenchNow to your home screen</b>Tap the Share button <span aria-hidden="true">⬆︎</span> at the bottom of Safari, then <strong>Add to Home Screen</strong>.'; btn.style.display = 'none'; }
+  else { txt.innerHTML = '<b>Add WrenchNow to your home screen</b>Open your browser menu (⋮) and choose <strong>Install app</strong> or <strong>Add to Home screen</strong>.'; btn.style.display = 'none'; }
+  banner.classList.add('on');
+}
+async function installApp(){
+  if(!deferredInstall){ showInstallHelp(); return; }
+  deferredInstall.prompt();
+  try { await deferredInstall.userChoice; } catch(e){}
+  deferredInstall = null; dismissInstall();
+}
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); deferredInstall = e;
+  if(!installDismissed() && !isStandalone()) setTimeout(() => showInstallHelp(), 20000);
+});
+window.addEventListener('appinstalled', () => { dismissInstall(); toast('WrenchNow is on your home screen.'); });
+if(isIOS() && !isStandalone() && !installDismissed() && window.innerWidth < 800) setTimeout(() => showInstallHelp(), 25000);
+if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
+  window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+}
+// app shortcuts (long-press the icon)
+setTimeout(() => {
+  if(location.hash === '#quote'){ try { history.replaceState(null, '', location.href.split('#')[0]); } catch(e){} openBooking(null); }
+  if(location.hash === '#jobs'){ try { history.replaceState(null, '', location.href.split('#')[0]); } catch(e){} showPanel('dashboard'); }
+}, 1500);
+
 // ─── CONTACT FORM ──────────────────────────────────────
 function openContact(){
   contactOpenedAt = Date.now();
@@ -5381,6 +5777,49 @@ function adminMessages(msgs){
     card.appendChild(row); card.appendChild(body); card.appendChild(acts);
     sec.appendChild(card);
   });
+  return sec;
+}
+
+// Online payments switch. Off: customers pay mechanics directly. On: cards are saved at acceptance
+// and charged through Stripe; mechanics must finish Stripe payouts before they can quote.
+function adminPayments(mechs){
+  const sec = adminSection('Online payments', paymentsOn() ? 'ON' : 'OFF');
+  const card = document.createElement('div'); card.className = 'admin-card';
+  const t = document.createElement('div'); t.className = 'admin-meta';
+  const ready = mechs.filter(m => m.payouts_ready).length;
+  t.textContent = paymentsOn()
+    ? 'Customers save a card when they accept a quote and are charged after the job. Mechanics must finish Stripe payouts before quoting (' + ready + ' of ' + mechs.length + ' have).'
+    : "Off: customers pay mechanics directly. Turn on only after the payment functions are deployed, your Stripe account is live with Connect switched on, and the Stripe webhook is added (see SETUP.md). Once on, mechanics without Stripe payouts can't quote.";
+  card.appendChild(t);
+  const acts = document.createElement('div'); acts.className = 'admin-actions'; acts.style.marginTop = '.7rem';
+  acts.appendChild(adminBtn(paymentsOn() ? 'Turn online payments off' : 'Turn online payments on', paymentsOn() ? '' : 'primary', async () => {
+    const on = !paymentsOn();
+    if(on && !confirm('Turn on online payments? Mechanics without Stripe payouts set up will stop being able to quote.')) return;
+    await db.collection('config').doc('site').set({ payments_on: on, updated_at: new Date().toISOString() }, { merge: true });
+    SITE_CONFIG.payments_on = on;
+  }));
+  card.appendChild(acts); sec.appendChild(card);
+  return sec;
+}
+async function adminRequests(reqs){
+  const sec = adminSection('Open quote requests', reqs.length + ' open');
+  if(!reqs.length){ const e = document.createElement('div'); e.className = 'admin-empty'; e.textContent = 'No open requests.'; sec.appendChild(e); return sec; }
+  for(const r of reqs.slice(0, 25)){
+    let quotes = [];
+    try { quotes = (await db.collection('requests').doc(r.id).collection('quotes').get()).docs.map(d => d.data()).filter(q => q.status === 'sent'); } catch(e){}
+    const card = document.createElement('div'); card.className = 'admin-card';
+    const row = document.createElement('div'); row.className = 'admin-row';
+    const left = document.createElement('div');
+    const nm = document.createElement('div'); nm.className = 'admin-name'; nm.textContent = r.service || 'Request';
+    const meta = document.createElement('div'); meta.className = 'admin-meta';
+    meta.textContent = [(r.customer_first || '') + ' · ' + (r.vehicle || ''), (r.mode === 'open' ? 'Open to nearby' : 'Sent to ' + (r.invited_names || []).join(', ')) + (r.zip ? ' · ZIP ' + r.zip : ''), quotes.length ? 'Quotes: ' + quotes.map(q => (q.mechanic_name || '').split(' ')[0] + ' ' + money(q.total_cents)).join(', ') : 'No quotes yet'].join('\n');
+    meta.style.whiteSpace = 'pre-line';
+    left.appendChild(nm); left.appendChild(meta); row.appendChild(left); row.appendChild(adminTag(fmtDate(r.created_at) || 'open'));
+    card.appendChild(row);
+    const acts = document.createElement('div'); acts.className = 'admin-actions'; acts.style.marginTop = '.6rem';
+    acts.appendChild(adminBtn('Close request', '', async () => { if(confirm('Close this request? Mechanics will no longer see it.')) await db.collection('requests').doc(r.id).update({ status: 'cancelled', closed_by: 'admin' }); }));
+    card.appendChild(acts); sec.appendChild(card);
+  }
   return sec;
 }
 
@@ -5506,12 +5945,17 @@ function adminBookings(books, priv, mechs){
     const p = priv[b.mechanic_slug]; if(p) meta.appendChild(contactLine(p.email, p.phone));
     meta.appendChild(document.createElement('br'));
     meta.appendChild(document.createTextNode([b.vehicle, b.address, b.urgency && b.urgency !== 'flexible' ? 'Urgency: ' + b.urgency : '', b.notes].filter(Boolean).join(' · ')));
+    if(b.price_cents){ meta.appendChild(document.createElement('br')); meta.appendChild(document.createTextNode('Price ' + money(b.final_cents || b.price_cents) + ' · payment: ' + (b.payment_status || 'n/a') + (b.dispute_note ? ' · problem: ' + b.dispute_note : '') + (b.payment_error ? ' · ' + b.payment_error : ''))); }
     left.appendChild(nm); left.appendChild(meta);
     row.appendChild(left);
     row.appendChild(adminTag(st, st === 'completed' ? 'ok' : st === 'confirmed' ? 'warn' : st === 'cancelled' ? '' : 'due'));
     card.appendChild(row);
     const setStatus = s => async () => { await db.collection('bookings').doc(b.id).update({ status: s, [s + '_at']: new Date().toISOString(), status_by: 'admin' }); if(s === 'cancelled') await freeSlot(b); };
     const acts = document.createElement('div'); acts.className = 'admin-actions'; acts.style.marginTop = '.7rem';
+    if(b.payment_status === 'disputed' || b.payment_status === 'payment_failed'){
+      acts.appendChild(adminBtn('Charge now', 'primary', () => db.collection('bookings').doc(b.id).update({ payment_status: 'charge_now', payment_requested_at: new Date().toISOString(), resolved_by: 'admin' })));
+      acts.appendChild(adminBtn('Settled outside Stripe', '', () => db.collection('bookings').doc(b.id).update({ payment_status: 'settled', resolved_by: 'admin', resolved_at: new Date().toISOString() })));
+    }
     // "Let us match you" bookings arrive with no mechanic — pick one here
     if(!b.mechanic_slug && (st === 'pending' || st === 'confirmed')){
       const sel = document.createElement('select'); sel.className = 'admin-btn'; sel.style.maxWidth = '220px';
@@ -5898,7 +6342,9 @@ async function openMyBookings() {
     // Sort by created_at descending client-side
     data.sort((a,b) => { const ta = a.created_at?.seconds||0; const tb = b.created_at?.seconds||0; return tb-ta; });
 
-    if(!data.length) {
+    let openReqs = [];
+    try { openReqs = (await db.collection('requests').where('customer_id', '==', userId).get()).docs.map(d => ({ id: d.id, ...d.data() })).filter(r => r.status === 'open' && (!r.expires_at || Date.parse(r.expires_at) > Date.now())); } catch(e){}
+    if(!data.length && !openReqs.length) {
       document.getElementById('myBookingsSub').textContent = 'No bookings yet.';
       const body = document.getElementById('myBookingsBody');
       body.innerHTML = '';
@@ -5914,9 +6360,10 @@ async function openMyBookings() {
       return;
     }
 
-    document.getElementById('myBookingsSub').textContent = data.length + ' booking' + (data.length !== 1 ? 's' : '');
+    document.getElementById('myBookingsSub').textContent = (openReqs.length ? openReqs.length + ' open request' + (openReqs.length !== 1 ? 's' : '') + ' · ' : '') + data.length + ' booking' + (data.length !== 1 ? 's' : '');
     const bBody = document.getElementById('myBookingsBody');
     bBody.innerHTML = '';
+    await renderMyRequests(bBody, openReqs);
     data.forEach(b => {
       const statusRaw = b.status || 'pending';
       const statusClass = 'status-' + statusRaw;
@@ -5958,10 +6405,47 @@ async function openMyBookings() {
       addRow('Service', b.service);
       addRow('Vehicle', b.vehicle);
       addRow('Location', b.address);
+      if(b.price_cents) addRow('Agreed price', money(b.final_cents || b.price_cents) + (b.final_cents && b.final_cents !== b.price_cents ? ' (revised from ' + money(b.price_cents) + ')' : ' (labor ' + money(b.labor_cents) + ' + parts ' + money(b.parts_cents) + ')'));
 
       item.appendChild(bHead);
       item.appendChild(detail);
-      if(statusRaw === 'pending' || statusRaw === 'confirmed'){
+      // revised price from the mechanic: nothing changes until the customer approves
+      if(b.revision && b.revision.status === 'pending'){
+        const rv = document.createElement('div'); rv.className = 'pay-line warn';
+        rv.textContent = (b.mechanic_name || 'Your mechanic').split(' ')[0] + ' revised the price to ' + money(b.revision.total_cents) + ' (was ' + money(b.final_cents || b.price_cents) + '): ' + (b.revision.reason || 'no reason given');
+        const ra = document.createElement('div'); ra.className = 'mbi-actions';
+        const ap = document.createElement('button'); ap.className = 'admin-btn primary'; ap.textContent = 'Approve ' + money(b.revision.total_cents);
+        ap.addEventListener('click', async () => { ap.disabled = true; try { await db.collection('bookings').doc(b.id).update({ final_cents: b.revision.total_cents, 'revision.status': 'approved', 'revision.decided_at': new Date().toISOString() }); } catch(e){ alert('Could not save — try again.'); } openMyBookings(); });
+        const rj = document.createElement('button'); rj.className = 'admin-btn'; rj.textContent = 'Reject (keep ' + money(b.final_cents || b.price_cents) + ')';
+        rj.addEventListener('click', async () => { rj.disabled = true; try { await db.collection('bookings').doc(b.id).update({ 'revision.status': 'rejected', 'revision.decided_at': new Date().toISOString() }); } catch(e){ alert('Could not save — try again.'); } openMyBookings(); });
+        ra.appendChild(ap); ra.appendChild(rj); rv.appendChild(ra); item.appendChild(rv);
+      }
+      // payment status
+      const ps = b.payment_status, due = b.final_cents || b.price_cents;
+      if(ps && ps !== 'pay_mechanic'){
+        const pl = document.createElement('div'); pl.className = 'pay-line';
+        const txt = { needs_card: 'Add a card to secure this booking. Nothing is charged until the job is done.',
+                      card_saved: 'Card on file' + (b.card_last4 ? ' (' + (b.card_brand || 'card') + ' •••• ' + b.card_last4 + ')' : '') + '. Charged ' + money(due) + ' after the job is done.',
+                      charge_now: 'Payment processing…', charging: 'Payment processing…',
+                      paid: 'Paid ' + money(b.paid_cents || due) + ' ✓',
+                      payment_failed: "Your card couldn't be charged. Please pay to finish this booking.",
+                      disputed: "Problem reported. We'll be in touch before anything is charged.",
+                      refunded: 'Refunded.' }[ps] || '';
+        pl.textContent = txt; pl.classList.add(ps === 'paid' ? 'ok' : (ps === 'needs_card' || ps === 'payment_failed' || ps === 'disputed') ? 'warn' : 'x');
+        const pa = document.createElement('div'); pa.className = 'mbi-actions';
+        if(ps === 'needs_card' && statusRaw !== 'cancelled'){ const c = document.createElement('button'); c.className = 'admin-btn primary'; c.textContent = 'Add a card'; c.addEventListener('click', () => startCardSetup(b.id, c)); pa.appendChild(c); }
+        if(ps === 'payment_failed' && b.pay_url){ const c = document.createElement('a'); c.className = 'admin-btn primary'; c.style.textDecoration = 'none'; c.href = b.pay_url; c.textContent = 'Pay ' + money(due); pa.appendChild(c); }
+        if(statusRaw === 'completed' && ps === 'card_saved' && !(b.revision && b.revision.status === 'pending')){
+          const c = document.createElement('button'); c.className = 'admin-btn primary'; c.textContent = 'Confirm & pay ' + money(due);
+          c.addEventListener('click', async () => { if(!confirm('Pay ' + money(due) + ' to ' + (b.mechanic_name || 'your mechanic') + ' now?')) return; c.disabled = true; try { await db.collection('bookings').doc(b.id).update({ payment_status: 'charge_now', payment_requested_at: new Date().toISOString() }); } catch(e){ alert('Could not start the payment — try again.'); } openMyBookings(); });
+          const d = document.createElement('button'); d.className = 'admin-btn'; d.textContent = 'Report a problem';
+          d.addEventListener('click', async () => { const note = prompt("What went wrong? We'll hold the payment and contact you both."); if(!note) return; try { await db.collection('bookings').doc(b.id).update({ payment_status: 'disputed', dispute_note: note.slice(0, 1000), disputed_at: new Date().toISOString() }); } catch(e){ alert('Could not save — try again.'); } openMyBookings(); });
+          pa.appendChild(c); pa.appendChild(d);
+        }
+        if(pa.children.length) pl.appendChild(pa);
+        if(txt) item.appendChild(pl);
+      }
+      if((statusRaw === 'pending' || statusRaw === 'confirmed') && (!ps || ps === 'pay_mechanic' || ps === 'needs_card' || ps === 'card_saved')){
         const acts = document.createElement('div'); acts.className = 'mbi-actions';
         const mk = (label, cls, status, ask) => {
           const bt = document.createElement('button'); bt.className = cls; bt.textContent = label;
@@ -5975,8 +6459,9 @@ async function openMyBookings() {
           });
           return bt;
         };
-        acts.appendChild(mk("Job's done — mark complete", 'admin-btn good', 'completed', 'Confirm the work is finished? This goes on your mechanic\'s record.'));
-        acts.appendChild(mk('Cancel request', 'admin-btn', 'cancelled', 'Cancel this booking request?'));
+        // card jobs: the mechanic marks them done, then the customer confirms & pays (or reports a problem)
+        if(!ps || ps === 'pay_mechanic') acts.appendChild(mk("Job's done — mark complete", 'admin-btn good', 'completed', 'Confirm the work is finished? This goes on your mechanic\'s record.'));
+        acts.appendChild(mk('Cancel booking', 'admin-btn', 'cancelled', 'Cancel this booking? ' + (ps === 'card_saved' ? 'Your card will not be charged.' : 'Your mechanic will be told.')));
         item.appendChild(acts);
       }
       if(b.report && Array.isArray(b.report.items) && b.report.items.length){
@@ -6797,8 +7282,8 @@ auth.onAuthStateChanged((user) => {
 <div class="agreement-overlay" id="agreementOverlay">
   <div class="agreement-box">
     <div class="agreement-head">
-      <div class="agreement-title">Confirm Your Booking</div>
-      <div class="agreement-sub">Please review and accept before we confirm</div>
+      <div class="agreement-title">Accept this quote</div>
+      <div class="agreement-sub">Accepting books this mechanic and shares your address and phone with them</div>
     </div>
     <div class="agreement-body">
 
@@ -6838,7 +7323,7 @@ auth.onAuthStateChanged((user) => {
         <div class="agreement-section-title">Service terms</div>
         <div class="agreement-terms">
           <strong style="color:var(--cream)">Before work begins:</strong> Your mechanic will provide a written estimate before starting any work. You must approve the final price before work begins. You may cancel at no charge before work starts.<br><br>
-          <strong style="color:var(--cream)">Payment:</strong> Payment is due upon completion of the service. You will not be charged until you confirm the work is complete.<br><br>
+          <strong style="color:var(--cream)">Payment:</strong> You agree to the quoted price. If online payment is on, your card is saved securely by Stripe now and charged the final approved price after your mechanic marks the job done: you can confirm and pay straight away or report a problem within 48 hours, otherwise it is charged automatically. If your mechanic finds more work, they must send a revised price for you to approve first. If online payment is not on yet, you pay your mechanic directly when the job is done.<br><br>
           <strong style="color:var(--cream)">Disputes:</strong> If you're unhappy with the work, contact the mechanic directly first. WrenchNow offers a mediation process if needed but does not guarantee any specific outcome or remedy.<br><br>
           <strong style="color:var(--cream)">Independent contractor:</strong> The mechanic performing this service is an independent contractor, not an employee of WrenchNow. WrenchNow is a marketplace platform and is not liable for the quality of work performed.<br><br>
           <strong style="color:var(--cream)">Cancellation:</strong> Cancel any time before the mechanic arrives at no charge. Cancellations after arrival may incur a call-out fee.<br><br>
@@ -6859,7 +7344,7 @@ auth.onAuthStateChanged((user) => {
     <div class="agreement-footer">
       <button class="agreement-cancel-btn" onclick="closeAgreement()">Cancel</button>
       <button class="agreement-confirm-btn" id="agreementConfirmBtn" onclick="proceedWithBooking()" disabled>
-        <i class="ti ti-circle-check" aria-hidden="true"></i> Confirm & Book
+        <i class="ti ti-circle-check" aria-hidden="true"></i> Accept & book
       </button>
     </div>
   </div>

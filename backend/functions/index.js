@@ -12,6 +12,14 @@
  *   onBookingCreated      – new booking → email the mechanic, the customer and you
  *   onBookingUpdated      – confirmed → email the customer; completed → update the mechanic's job count
  *                           cancelled → tell the mechanic the job is off
+ *   Quotes & payments:
+ *   onRequestCreated      – a customer asks specific mechanics for quotes → those mechanics are emailed
+ *   onQuoteWritten        – a mechanic sends a quote → the customer is emailed
+ *   createCardSetup       – customer accepted a quote → Stripe page to save their card (nothing charged)
+ *   connectOnboard        – mechanic's one-time Stripe payout setup (Stripe Connect Express)
+ *   chargeJob / autoCharge – charge the final approved price when the customer confirms, or 48 hours
+ *                           after the mechanic marks the work done; the money goes straight to the
+ *                           mechanic's Stripe account minus PLATFORM_FEE_PCT
  *   serviceReminders      – every morning, customers who opted in get one email listing what's
  *                           due on their car (each item at most once a month)
  *   onReviewWritten       – a review is posted or deleted → the mechanic's star rating and review
@@ -26,7 +34,8 @@ const { onSchedule } = require('firebase-functions/v2/scheduler');
 const crypto = require('crypto');
 const { defineSecret, defineString } = require('firebase-functions/params');
 const { initializeApp } = require('firebase-admin/app');
-const { getFirestore } = require('firebase-admin/firestore');
+const { getFirestore, FieldValue } = require('firebase-admin/firestore');
+const { getAuth } = require('firebase-admin/auth');
 
 initializeApp();
 const db = getFirestore();
@@ -41,6 +50,8 @@ const ADMIN_EMAIL           = defineString('ADMIN_EMAIL');                      
 const EMAIL_FROM            = defineString('EMAIL_FROM', { default: 'WrenchNow <onboarding@resend.dev>' });
 const SITE_URL              = defineString('SITE_URL', { default: 'https://wondrous-granita-ea4a9e.netlify.app' });
 const VERIFY_PAYMENT_LINK   = defineString('VERIFY_PAYMENT_LINK', { default: '' }); // same live link as in the site file
+const PLATFORM_FEE_PCT      = defineString('PLATFORM_FEE_PCT', { default: '0' });    // your cut of each job, e.g. 15 — taken from the mechanic's share
+const CUSTOMER_FEE_CENTS    = defineString('CUSTOMER_FEE_CENTS', { default: '0' });  // optional flat service fee added to the customer's charge, in cents
 
 const VERIFY_FEE = 49;   // keep in step with the constant at the top of the site script
 
@@ -135,6 +146,33 @@ exports.stripeWebhook = onRequest(
             layout('Fee paid — send the background check invite', rows([['Name', a.name], ['Email', a.email], ['Phone', a.phone]])
               + '<p>Next: send their background-check invite from your check provider, then tick the boxes in the Admin tab as each check clears.</p>'));
         }
+      }
+    }
+    // Card saved for a booking (setup mode) / pay-link paid (payment mode)
+    if (event.type === 'checkout.session.completed' && event.data.object.metadata && event.data.object.metadata.booking_id) {
+      const session = event.data.object, bid = session.metadata.booking_id, ref = db.collection('bookings').doc(bid);
+      const stripe = require('stripe')(STRIPE_SECRET_KEY.value());
+      if (session.mode === 'setup' && session.setup_intent) {
+        const si = await stripe.setupIntents.retrieve(session.setup_intent);
+        const pm = await stripe.paymentMethods.retrieve(si.payment_method);
+        await db.collection('booking_payments').doc(bid).set({ customer: session.customer, payment_method: pm.id, saved_at: new Date().toISOString() });
+        await ref.update({ payment_status: 'card_saved', card_last4: (pm.card && pm.card.last4) || '', card_brand: (pm.card && pm.card.brand) || 'card', payment_error: '' });
+        const b = (await ref.get()).data();
+        if (b && b.status === 'completed' && !b.charge_after) await ref.update({ charge_after: new Date(Date.now() + 48 * 3600 * 1000).toISOString() });
+      } else if (session.mode === 'payment' && session.payment_status === 'paid') {
+        await ref.update({ payment_status: 'paid', paid_cents: session.amount_total, payment_intent: session.payment_intent || '', paid_at: new Date().toISOString() });
+      }
+    }
+    // Mechanic finished (or lost) Stripe payout setup
+    if (event.type === 'account.updated') {
+      const a = event.data.object;
+      const ready = !!(a.capabilities && a.capabilities.transfers === 'active' && a.details_submitted);
+      const priv = await db.collection('mechanic_private').where('stripe_account', '==', a.id).limit(1).get();
+      if (!priv.empty) {
+        const slug = priv.docs[0].id;
+        await priv.docs[0].ref.update({ payouts_ready: ready });
+        const mech = await db.collection('mechanics').where('slug', '==', slug).get();
+        await Promise.all(mech.docs.map(d => d.ref.update({ payouts_ready: ready })));
       }
     }
     // Featured subscription ($29/mo): match the payer's email to a mechanic and pin them
@@ -299,7 +337,7 @@ exports.onMessageCreated = onDocumentCreated(
 
 // ── 5. Booking confirmed / completed → job count ──
 exports.onBookingUpdated = onDocumentUpdated(
-  { document: 'bookings/{id}', secrets: [RESEND_API_KEY] },
+  { document: 'bookings/{id}', secrets: [RESEND_API_KEY, STRIPE_SECRET_KEY] },
   async (event) => {
     const before = event.data.before.data(), after = event.data.after.data();
 
@@ -315,6 +353,25 @@ exports.onBookingUpdated = onDocumentUpdated(
             + '<p><strong>Reply to this email</strong> to confirm the time with the customer.</p>')
         });
       }
+    }
+    // payment steps
+    if (after.payment_status === 'charge_now' && before.payment_status !== 'charge_now') { await chargeJob(event.data.after.ref); return; }
+    if (after.status === 'completed' && before.status !== 'completed' && after.payment_status === 'card_saved' && !after.charge_after) {
+      await event.data.after.ref.update({ charge_after: new Date(Date.now() + 48 * 3600 * 1000).toISOString() });
+      await sendEmail({ to: after.customer_email, replyTo: ADMIN_EMAIL.value(), subject: 'Your job is done — confirm & pay, or report a problem',
+        html: layout((after.mechanic_name || 'Your mechanic') + ' marked the job done', `<p>Your card will be charged <strong>$${(((after.final_cents || after.price_cents) || 0) / 100).toFixed(2)}</strong> in 48 hours. If anything's wrong, open <a href="${esc(SITE_URL.value())}">My bookings</a> and press <strong>Report a problem</strong> before then and we'll hold the payment.</p>`) });
+    }
+    const rb = before.revision || {}, ra = after.revision || {};
+    if (ra.status === 'pending' && (rb.status !== 'pending' || rb.total_cents !== ra.total_cents)) {
+      await sendEmail({ to: after.customer_email, replyTo: ADMIN_EMAIL.value(), subject: 'Approve a price change from ' + (after.mechanic_name || 'your mechanic'),
+        html: layout('Your mechanic revised the price', rows([['New price', '$' + (ra.total_cents / 100).toFixed(2)], ['Was', '$' + (((after.final_cents || after.price_cents) || 0) / 100).toFixed(2)], ['Reason', ra.reason]]) + `<p>Nothing changes unless you approve it in <a href="${esc(SITE_URL.value())}">My bookings</a>. If you reject it, the original price stands.</p>`) });
+    }
+    if (rb.status === 'pending' && (ra.status === 'approved' || ra.status === 'rejected')) {
+      const mp = await mechanicPrivate(after.mechanic_slug);
+      if (mp && mp.email) await sendEmail({ to: mp.email, subject: 'Revised price ' + ra.status + ' — ' + (after.service || ''), html: layout('The customer ' + ra.status + ' your revised price', rows([['Revised price', '$' + (ra.total_cents / 100).toFixed(2)], ['Now charging', '$' + (((after.final_cents || after.price_cents) || 0) / 100).toFixed(2)]])) });
+    }
+    if (after.payment_status === 'disputed' && before.payment_status !== 'disputed') {
+      await toAdmin('Problem reported — payment on hold', layout('A customer reported a problem', rows([['Booking', event.params.id], ['Customer', after.customer_email], ['Mechanic', after.mechanic_name], ['Problem', after.dispute_note]]) + '<p>Sort it out with both of them, then use Charge now or Settled outside Stripe in the Admin tab.</p>'));
     }
     if (before.status === after.status) return;
 
@@ -365,6 +422,189 @@ exports.onReviewWritten = onDocumentWritten(
     const avg = count ? Math.round(ratings.reduce((a, b) => a + b, 0) / count * 10) / 10 : 0;
     const mech = await db.collection('mechanics').where('slug', '==', slug).get();
     await Promise.all(mech.docs.map(d => d.ref.update({ rating: avg, review_count: count })));
+  });
+
+
+
+// ═══════════════════════════════════════════════════════════
+// QUOTES & PAYMENTS
+// ═══════════════════════════════════════════════════════════
+const stripeClient = () => require('stripe')(STRIPE_SECRET_KEY.value());
+const site = () => SITE_URL.value().replace(/\/$/, '');
+function cors(req, res) {
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+  res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  if (req.method === 'OPTIONS') { res.status(204).send(''); return true; }
+  return false;
+}
+async function userFrom(req) {
+  const m = /^Bearer (.+)$/.exec(req.headers.authorization || '');
+  if (!m) throw Object.assign(new Error('Please log in again.'), { status: 401 });
+  return getAuth().verifyIdToken(m[1]);
+}
+const fail = (res, err) => res.status(err.status || 400).json({ error: err.message || 'Something went wrong' });
+
+async function mechanicSlugByDoc(docId) {
+  if (!docId) return '';
+  const d = await db.collection('mechanics').doc(docId).get();
+  return d.exists ? (d.data().slug || docId) : docId;
+}
+
+// Customer asked specific mechanics → email each of them (address is NOT included)
+exports.onRequestCreated = onDocumentCreated(
+  { document: 'requests/{id}', secrets: [RESEND_API_KEY] },
+  async (event) => {
+    const r = event.data.data();
+    const details = rows([['Job', r.service], ['Car', r.vehicle], ['Area', r.zip ? 'ZIP ' + r.zip : ''], ['Preferred days', (r.pref_dates || []).join(', ') + ((r.pref_parts || []).length ? ' · ' + r.pref_parts.join(' / ') : '')], ['Notes', r.notes]]);
+    for (const docId of (r.invited_docs || [])) {
+      const p = await mechanicPrivate(await mechanicSlugByDoc(docId));
+      if (p && p.email) await sendEmail({ to: p.email, subject: 'Quote request — ' + (r.service || 'a job'),
+        html: layout(r.customer_first + ' asked you for a quote', details + `<p>Log in at <a href="${esc(site())}">${esc(site())}</a> and open <strong>My jobs</strong> to send your price. The customer's address is shared only if they accept your quote.</p>`) });
+    }
+    await toAdmin('New quote request — ' + (r.service || ''), layout('New quote request', details + `<p>${r.mode === 'open' ? 'Open to all nearby mechanics.' : 'Sent to ' + esc((r.invited_names || []).join(', '))}</p>`));
+  });
+
+// Mechanic sent (or changed) a quote → email the customer
+exports.onQuoteWritten = onDocumentWritten(
+  { document: 'requests/{rid}/quotes/{muid}', secrets: [RESEND_API_KEY] },
+  async (event) => {
+    const before = event.data.before.exists ? event.data.before.data() : null;
+    const q = event.data.after.exists ? event.data.after.data() : null;
+    if (!q || q.status !== 'sent' || (before && before.status === 'sent' && before.total_cents === q.total_cents)) return;
+    const priv = await db.collection('request_private').doc(event.params.rid).get();
+    const email = priv.exists ? priv.data().customer_email : '';
+    if (!email) return;
+    await sendEmail({ to: email, subject: (before ? 'Updated quote: ' : 'New quote: ') + '$' + (q.total_cents / 100).toFixed(2) + ' from ' + (q.mechanic_name || 'a mechanic'),
+      html: layout('You have a quote', rows([['Mechanic', q.mechanic_name], ['Price', '$' + (q.total_cents / 100).toFixed(2) + ' (labor $' + (q.labor_cents / 100).toFixed(2) + ' + parts $' + (q.parts_cents / 100).toFixed(2) + ')'], ['Can come', q.date_iso + ' at ' + q.time], ['Note', q.note]])
+        + `<p>Compare and accept in <a href="${esc(site())}">WrenchNow</a> → tap your initials → My bookings.</p>`) });
+  });
+
+// Accepted quote → Stripe-hosted page to save the customer's card (nothing is charged here)
+exports.createCardSetup = onRequest(
+  { secrets: [STRIPE_SECRET_KEY] },
+  async (req, res) => {
+    if (cors(req, res)) return;
+    try {
+      const user = await userFrom(req);
+      const bookingId = String((req.body || {}).bookingId || '');
+      const snap = await db.collection('bookings').doc(bookingId).get();
+      if (!snap.exists || snap.data().customer_id !== user.uid) throw Object.assign(new Error('Booking not found.'), { status: 404 });
+      const b = snap.data();
+      if (!['needs_card', 'payment_failed'].includes(b.payment_status)) throw new Error('This booking does not need a card.');
+      const stripe = stripeClient();
+      const custRef = db.collection('stripe_customers').doc(user.uid);
+      let cust = (await custRef.get()).data();
+      if (!cust) { const c = await stripe.customers.create({ email: user.email, metadata: { uid: user.uid } }); cust = { id: c.id }; await custRef.set(cust); }
+      const session = await stripe.checkout.sessions.create({
+        mode: 'setup', customer: cust.id, currency: 'usd', payment_method_types: ['card'],
+        success_url: site() + '/#card-saved=' + bookingId, cancel_url: site() + '/#card-cancelled=' + bookingId,
+        metadata: { booking_id: bookingId, uid: user.uid }
+      });
+      res.json({ url: session.url });
+    } catch (err) { console.error('createCardSetup', err); fail(res, err); }
+  });
+
+// Mechanic's one-time payout setup (Stripe Connect Express). Required before quoting when payments are on.
+exports.connectOnboard = onRequest(
+  { secrets: [STRIPE_SECRET_KEY] },
+  async (req, res) => {
+    if (cors(req, res)) return;
+    try {
+      const user = await userFrom(req);
+      const mech = await db.collection('mechanics').where('owner_uid', '==', user.uid).limit(1).get();
+      if (mech.empty) throw Object.assign(new Error('No mechanic profile is linked to this login.'), { status: 403 });
+      const slug = mech.docs[0].data().slug || mech.docs[0].id;
+      const privRef = db.collection('mechanic_private').doc(slug);
+      const priv = (await privRef.get()).data() || {};
+      const stripe = stripeClient();
+      let acct = priv.stripe_account;
+      if (!acct) {
+        const a = await stripe.accounts.create({ type: 'express', country: 'US', email: user.email, business_type: 'individual',
+          capabilities: { transfers: { requested: true }, card_payments: { requested: true } }, metadata: { slug, uid: user.uid } });
+        acct = a.id;
+        await privRef.set({ stripe_account: acct }, { merge: true });
+      }
+      const link = await stripe.accountLinks.create({ account: acct, type: 'account_onboarding', refresh_url: site() + '/#payouts-retry', return_url: site() + '/#payouts-done' });
+      res.json({ url: link.url });
+    } catch (err) { console.error('connectOnboard', err); fail(res, err); }
+  });
+
+// Charge the final approved price. Money goes straight to the mechanic's Stripe account minus your fee;
+// if the mechanic has no finished payout setup, nothing is charged and you're told.
+async function chargeJob(ref) {
+  const stripe = stripeClient();
+  // lock so two triggers can't both charge
+  const b = await db.runTransaction(async t => {
+    const s = await t.get(ref); const d = s.data();
+    if (!d || !['charge_now', 'card_saved'].includes(d.payment_status)) return null;
+    if (d.revision && d.revision.status === 'pending') { if (d.payment_status === 'charge_now') t.update(ref, { payment_status: 'card_saved' }); return null; }   // wait for the customer's answer
+    t.update(ref, { payment_status: 'charging' }); return d;
+  });
+  if (!b) return;
+  const id = ref.id;
+  const amount = Math.round(b.final_cents || b.price_cents || 0);
+  const custFee = Math.max(0, parseInt(CUSTOMER_FEE_CENTS.value()) || 0);
+  const pct = Math.min(50, Math.max(0, Number(PLATFORM_FEE_PCT.value()) || 0));
+  const appFee = Math.round(amount * pct / 100) + custFee;
+  const total = amount + custFee;
+  const pay = (await db.collection('booking_payments').doc(id).get()).data();
+  const slug = b.mechanic_slug || await mechanicSlugByDoc(b.mechanic_doc);
+  const p = await mechanicPrivate(slug);
+  const acct = p && p.stripe_account;
+  const mechDoc = b.mechanic_doc ? (await db.collection('mechanics').doc(b.mechanic_doc).get()).data() : null;
+  if (!amount || !pay || !acct || !(mechDoc && mechDoc.payouts_ready)) {
+    const why = !amount ? 'no price on the booking' : !pay ? 'no saved card' : 'mechanic payouts are not set up';
+    await ref.update({ payment_status: 'payment_failed', payment_error: why });
+    await toAdmin('Payment NOT taken — ' + id, layout('A job could not be charged', rows([['Booking', id], ['Reason', why], ['Customer', b.customer_email], ['Mechanic', b.mechanic_name]])));
+    return;
+  }
+  const transfer = { transfer_data: { destination: acct }, ...(appFee > 0 ? { application_fee_amount: appFee } : {}) };
+  try {
+    const pi = await stripe.paymentIntents.create({
+      amount: total, currency: 'usd', customer: pay.customer, payment_method: pay.payment_method, off_session: true, confirm: true,
+      description: 'WrenchNow: ' + (b.service || 'mobile mechanic') + ' with ' + (b.mechanic_name || ''),
+      metadata: { booking_id: id }, ...transfer
+    }, { idempotencyKey: 'charge_' + id + '_' + total });
+    await ref.update({ payment_status: 'paid', paid_cents: total, fee_cents: appFee, payment_intent: pi.id, paid_at: new Date().toISOString() });
+    await sendEmail({ to: b.customer_email, replyTo: ADMIN_EMAIL.value(), subject: 'Receipt: $' + (total / 100).toFixed(2) + ' paid to ' + (b.mechanic_name || 'your mechanic'),
+      html: layout('Payment received', rows([['Job', b.service], ['Mechanic', b.mechanic_name], ['Paid', '$' + (total / 100).toFixed(2)]]) + '<p>Thanks for using WrenchNow. A quick review helps other drivers choose.</p>') });
+  } catch (err) {
+    console.error('charge failed', id, err.message);
+    // card declined or needs the customer present → send them a secure pay link instead
+    let url = '';
+    try {
+      const sess = await stripe.checkout.sessions.create({ mode: 'payment', customer: pay.customer,
+        line_items: [{ quantity: 1, price_data: { currency: 'usd', unit_amount: total, product_data: { name: 'WrenchNow: ' + (b.service || 'mobile mechanic') } } }],
+        payment_intent_data: { ...transfer, metadata: { booking_id: id } }, metadata: { booking_id: id },
+        success_url: site() + '/#card-saved=' + id, cancel_url: site() + '/#card-cancelled=' + id });
+      url = sess.url;
+    } catch (e) { console.error('pay link failed', e.message); }
+    await ref.update({ payment_status: 'payment_failed', payment_error: String(err.message || 'card declined').slice(0, 200), pay_url: url });
+    if (url) await sendEmail({ to: b.customer_email, subject: 'Action needed: payment for your WrenchNow job', html: layout("We couldn't charge your card", `<p>Please finish paying $${(total / 100).toFixed(2)} for ${esc(b.service || 'your job')}:</p><p><a href="${esc(url)}">Pay securely with Stripe</a></p>`) });
+    await toAdmin('Payment failed — ' + id, layout('Card charge failed', rows([['Booking', id], ['Error', err.message], ['Customer', b.customer_email]])));
+  }
+}
+
+// A mechanic logs in for the first time (profile claimed) → requests already sent to them by name
+// become visible in their dashboard
+exports.onMechanicClaimed = onDocumentUpdated('mechanics/{id}', async (event) => {
+  const before = event.data.before.data(), after = event.data.after.data();
+  if (!after.owner_uid || before.owner_uid === after.owner_uid) return;
+  const reqs = await db.collection('requests').where('invited_docs', 'array-contains', event.params.id).get();   // single filter: no extra index needed
+  await Promise.all(reqs.docs.filter(d => d.data().status === 'open').map(d => d.ref.update({ invited_uids: FieldValue.arrayUnion(after.owner_uid) })));
+});
+
+// Every hour: jobs marked done 48+ hours ago with a saved card and no problem reported get charged
+exports.autoCharge = onSchedule(
+  { schedule: 'every 60 minutes', secrets: [STRIPE_SECRET_KEY, RESEND_API_KEY] },
+  async () => {
+    const snap = await db.collection('bookings').where('payment_status', '==', 'card_saved').get();
+    const now = Date.now();
+    for (const d of snap.docs) {
+      const b = d.data();
+      if (b.status === 'completed' && b.charge_after && Date.parse(b.charge_after) <= now && !(b.revision && b.revision.status === 'pending')) await chargeJob(d.ref);
+    }
   });
 
 // ── 7. Service reminders ───────────────────────────────────

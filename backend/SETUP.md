@@ -38,7 +38,7 @@ If the CLI offers to delete an older `sendEmail` function, say yes. The site no 
 ## 4. Stripe
 1. Create a **live** Payment Link for the $49 verification fee. Paste it into `VERIFY_PAYMENT_LINK` near the top of the site's script.
 2. Create a **live** $29/month subscription Payment Link for Featured. Paste it into `FEATURED_PAYMENT_LINK` near the top of the site's script.
-3. Developers → Webhooks → add endpoint: the `stripeWebhook` URL printed by the deploy, events `checkout.session.completed` and `customer.subscription.deleted`.
+3. Developers → Webhooks → add endpoint: the `stripeWebhook` URL printed by the deploy, events `checkout.session.completed`, `customer.subscription.deleted` and `account.updated`. Tick **"Listen to events on Connected accounts"** as well, so `account.updated` arrives when mechanics finish payout setup.
 4. Copy the signing secret into `STRIPE_WEBHOOK_SECRET` (step 3 command) and deploy functions again.
 
 ## How the flow runs afterwards
@@ -76,3 +76,41 @@ Addresses are turned into map positions with OpenStreetMap's free Nominatim serv
 1. Firebase console → App Check → register the web app with **reCAPTCHA v3** and copy the site key.
 2. Paste it into `RECAPTCHA_SITE_KEY` at the top of the site script and redeploy the site.
 3. After a day of normal traffic shows as verified in App Check, press **Enforce** for Firestore.
+
+
+## 10. Quotes and online payments (v18)
+Quotes work as soon as the new rules are published. Customers request, mechanics quote, and the customer accepts. The address is shared only with the accepted mechanic. **Online payments stay OFF until you finish these steps.** Until then, customers pay the mechanic directly.
+
+1. Stripe dashboard → **Connect** → Get started → choose **Platform / marketplace** and **Express** accounts. Fill in your platform profile.
+2. Make sure the webhook from step 4 includes `account.updated` with "connected accounts" ticked.
+3. Deploy functions: `firebase deploy --only functions`. It asks for two new values:
+   - `PLATFORM_FEE_PCT`: your cut of each job, taken from the mechanic's side. Use `0` at launch; `10` means 10%.
+   - `CUSTOMER_FEE_CENTS`: an optional flat fee added to the customer's charge. `0` means none; `299` means $2.99.
+   You can change either later with another deploy.
+4. On your site → **Admin** → **Online payments** → turn **On**.
+
+Once payments are on:
+- Mechanics must press **Set up payouts** in My jobs before they can quote. Stripe pays them directly, and you never hold their money.
+- When a customer accepts a quote, Stripe saves their card. Nothing is charged yet.
+- The mechanic can revise the price, and the customer must approve the change.
+- The card is charged the final approved price when the customer presses **Confirm & pay**, or automatically 48 hours after the mechanic marks the job done.
+- **Report a problem** puts the payment on hold. You settle it from the Admin tab with **Charge now** or **Settled outside Stripe**.
+- If a card fails, the customer is emailed a secure Stripe pay link and you're emailed too.
+
+## 11. The installable app
+The upload folder includes `manifest.webmanifest`, `sw.js` and the icons. **Upload the whole folder (or zip), not just index.html**, or the app won't install.
+- **Android/Chrome:** visitors get an "Install app" banner.
+- **iPhone:** Safari → Share → **Add to Home Screen**. The site shows these steps.
+
+## 12. Updating safely without losing anything
+Your customers, accounts, bookings and reviews live in **Firebase**, not in the site file. Uploading a new site to Netlify never touches them.
+1. **Rules first.** When an update comes with a new `firestore.rules`, publish the rules before uploading the site.
+2. **Back up before big changes.** This uses the Blaze plan you already have:
+   ```
+   gsutil mb gs://wrench-now-backups            # once
+   gcloud firestore export gs://wrench-now-backups/$(date +%F) --project wrench-now
+   ```
+   Alternatively, Firebase console → Firestore → **Disaster recovery** lets you turn on daily scheduled backups with a few clicks.
+3. **Preview, then publish.** On Netlify, open **Deploys**, drag the new folder in, and check it. If you have auto-publishing on, lock it first: **Deploys → Lock to stop auto publishing**. Then click the new deploy and choose **Publish deploy**.
+4. **Undo.** If something's wrong, go to Netlify → Deploys, pick the previous deploy and choose **Publish deploy**. That's an instant rollback, and your data is unaffected.
+5. **Installed apps update themselves.** Each version uses a new cache name in `sw.js`, so phones pick up the update the next time the app opens.
