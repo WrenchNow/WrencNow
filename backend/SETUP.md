@@ -139,3 +139,10 @@ Mechanics upload their liability insurance certificate in My jobs → Insurance.
 
 ## 17. Dealer price comparison
 Quotes and finished jobs show "Typical dealer ≈ $X · you save about $Y": labor hours × a dealer's hourly rate, plus parts with a dealer's markup. The home page shows the running total saved. Set the rate and markup in Admin → Online payments. They start at $185/hr and +30%. Call two or three Denver dealer service departments, ask their hourly labor rate, and use the real number so the claim holds up.
+
+
+## 18. Fees mechanics pay (all disclosed in the Mechanic Agreement §6)
+- **Joining is free** while the founding offer is on (Admin → Payments). Each such mechanic repays their background check through a **$50 onboarding fee** taken from their first paid jobs: at most **$10 per job** and never more than **15% of a job**, until $50 is collected. Fully refunded jobs are credited back. Mechanics who paid the upfront $49 verification fee never pay it.
+- Every job: **5% platform fee** (`PLATFORM_FEE_PCT`) + processing pass-through (`PROCESSING_FEE_PCT` 3.2 + `PROCESSING_FEE_CENTS` 55) that covers Stripe's card and payout fees.
+- Change the onboarding amounts with `ONBOARDING_TOTAL_CENTS` (5000), `ONBOARDING_PER_JOB_CENTS` (1000) and `ONBOARDING_MAX_PCT` (15) at deploy time. If you change them, update §6 of the Mechanic Agreement to match.
+- **Admin → Earnings** shows each month's jobs, your 5% fees, onboarding fees, estimated Stripe costs and your net. Checkr bills your card separately for background checks.

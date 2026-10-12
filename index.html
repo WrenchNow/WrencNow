@@ -2781,7 +2781,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
     <div>
       <div class="launch-tag">🎉 Founding Mechanic — 0% Platform Fee During Launch</div>
       <div class="mhero-title">STOP<br>SPLITTING WITH<br><span class="ore">THE SHOP.</span></div>
-      <p class="hero-sub"><strong style="color:var(--green)">Just 5% per job.</strong> Set your own prices. On jobs paid through WrenchNow we keep 5%, card processing (about 3%) comes out, and the rest goes straight to your bank. No monthly fee. One <span data-fee>$49</span> verification fee covers your background check.</p>
+      <p class="hero-sub"><strong style="color:var(--green)">Free to join. Just 5% per job.</strong> Set your own prices. We keep 5% of each job, card processing (about 3%) comes out, and the rest goes straight to your bank. Your first jobs also include a small onboarding fee (up to $10 a job, $50 total) that covers your background check. No monthly fee. One <span data-fee>$49</span> verification fee covers your background check.</p>
       <div class="hero-actions" style="margin-bottom:2rem">
         <button class="btn-ore" onclick="openApply()" style="box-shadow:0 4px 20px rgba(46,199,122,0.25)"><i class="ti ti-clipboard-check" aria-hidden="true"></i> Apply — Founding Mechanic Spot</button>
         <button class="btn-ghost" onclick="showPanel('dashboard')">View mechanic dashboard →</button>
@@ -2817,7 +2817,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
       <div class="launch-banner-icon">🚀</div>
       <div>
         <div class="launch-banner-title">Founding mechanics — 5% flat, no monthly fee</div>
-        <div class="launch-banner-sub">A shop takes a big cut of every job. We take <strong style="color:var(--green)">5%</strong>, plus card processing (about 3%) on card-paid jobs. The only other cost is a one-time <span data-fee>$49</span> verification fee for your background check. Want more jobs? Go Featured for $29/month and get pinned to the top of search results.</div>
+        <div class="launch-banner-sub">A shop takes a big cut of every job. We take <strong style="color:var(--green)">5%</strong>, plus card processing (about 3%). Your background check is paid back from your first jobs (up to $10 a job, $50 total). The only other cost is a one-time <span data-fee>$49</span> verification fee for your background check. Want more jobs? Go Featured for $29/month and get pinned to the top of search results.</div>
       </div>
     </div>
   </div>
@@ -2827,7 +2827,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
     <div class="tag">Why mechanics choose us</div>
     <div style="font-family:var(--font-display);font-size:44px;font-weight:900;margin-bottom:1.5rem">BUILT FOR<br>WORKING MECHANICS</div>
     <div class="perks">
-      <div class="perk" style="border-color:rgba(46,199,122,0.3);background:linear-gradient(160deg,rgba(46,199,122,0.05),transparent)"><div class="perk-icon" style="color:var(--green)"><i class="ti ti-gift" aria-hidden="true"></i></div><div class="perk-title">5% platform fee <span class="free-badge">flat</span></div><div class="perk-desc">Keep about 92% of every job after our 5% and card processing. No monthly fee, no lead fees, no paying to quote.</div></div>
+      <div class="perk" style="border-color:rgba(46,199,122,0.3);background:linear-gradient(160deg,rgba(46,199,122,0.05),transparent)"><div class="perk-icon" style="color:var(--green)"><i class="ti ti-gift" aria-hidden="true"></i></div><div class="perk-title">5% platform fee <span class="free-badge">flat</span></div><div class="perk-desc">Keep about 92% of every job after our 5% and card processing. Free to join: your background check is repaid from your first jobs (up to $10 each, $50 total). No monthly fee, no lead fees, no paying to quote.</div></div>
       <div class="perk"><div class="perk-icon" style="color:var(--amber)"><i class="ti ti-star" aria-hidden="true"></i></div><div class="perk-title">Go Featured — $29/mo</div><div class="perk-desc">Optional. Featured mechanics are pinned to the top of search results with a gold badge, so customers see you first. Cancel anytime.<br><button class="btn-ghost" style="margin-top:.75rem;padding:8px 14px;font-size:13px" onclick="openProUpgrade(this)">Get Featured</button></div></div>
       <div class="perk"><div class="perk-icon"><i class="ti ti-shield-check" aria-hidden="true"></i></div><div class="perk-title">A badge customers trust</div><div class="perk-desc">Pass verification and your profile carries the Verified badge — the first thing customers look for before letting someone work on their car.</div></div>
       <div class="perk"><div class="perk-icon"><i class="ti ti-calendar-stats" aria-hidden="true"></i></div><div class="perk-title">You set the schedule</div><div class="perk-desc">Take the requests that suit you and pass on the ones that don't. No quotas, no penalties.</div></div>
@@ -4827,6 +4827,7 @@ async function loadAdmin(){
     root.appendChild(adminBookings(books.slice(0, 40), priv, mechs));
     root.appendChild(adminMessages(msgs));
     root.appendChild(adminMechanics(mechs, priv, done, insDocs));
+    root.appendChild(adminEarnings(books));
     root.appendChild(adminSavings(books));
     root.appendChild(adminReviews(reviews));
     if(broken.length) root.appendChild(adminBroken(broken));
@@ -4989,8 +4990,9 @@ function applyFeeCopy(){
     if(feeWaived()){ el.innerHTML = ''; const st = document.createElement('s'); st.textContent = '$' + VERIFY_FEE; st.style.opacity = '.6'; el.appendChild(st); el.appendChild(document.createTextNode(' FREE')); }
     else el.textContent = '$' + VERIFY_FEE;
   });
+  const onb = document.getElementById('applyOnbNote'); if(onb) onb.style.display = feeWaived() ? '' : 'none';
   const step1 = document.getElementById('applyStep1');
-  if(step1) step1.textContent = feeWaived() ? 'Verification is free for founding mechanics. No payment needed.' : 'Pay the one-time $' + VERIFY_FEE + ' verification fee. It covers your background and driving-record check.';
+  if(step1) step1.textContent = feeWaived() ? 'Joining is free. Your $50 background-check cost is repaid from your first paid jobs: up to $10 a job, never more than 15% of a job.' : 'Pay the one-time $' + VERIFY_FEE + ' verification fee. It covers your background and driving-record check.';
 }
 function applyPaymentCopy(){
   const on = SITE_CONFIG.payments_on === true;
@@ -5490,6 +5492,8 @@ async function loadMechPortal(){
   const sec = adminSection('Your jobs', open.length + ' upcoming');
   if(!books.length){ const e = document.createElement('div'); e.className = 'admin-empty'; e.textContent = 'No jobs yet. When a customer accepts your quote, the job shows up here with their address and phone.'; sec.appendChild(e); }
   else { const rm = document.createElement('div'); rm.className = 'admin-meta'; rm.style.margin = '-.3rem 0 .8rem'; rm.textContent = 'Only jobs booked and paid through WrenchNow count toward your job total, reviews and search ranking. Missed appointments and last-minute cancellations show on your profile.'; sec.appendChild(rm); }
+  const onbPaid = books.filter(b => b.onboarding_counted && b.onboarding_cents > 0).reduce((t, b) => t + b.onboarding_cents, 0);
+  if(onbPaid > 0){ const ob = document.createElement('div'); ob.className = 'pay-line'; ob.style.margin = '0 0 .8rem'; ob.textContent = onbPaid >= 5000 ? 'Onboarding fee fully paid ($50 of $50). You now pay just the 5% platform fee.' : 'Onboarding fee: ' + money(onbPaid) + ' of $50 collected from your paid jobs (up to $10 a job).'; sec.appendChild(ob); }
   books.forEach(b => sec.appendChild(mechBookingCard(b)));
   root.appendChild(sec);
 
@@ -5626,6 +5630,7 @@ function mechBookingCard(b){
   meta.appendChild(document.createElement('br'));
   if(b.address){ const a = document.createElement('a'); a.href = mapsLink(b.address); a.target = '_blank'; a.rel = 'noopener'; a.textContent = b.address; meta.appendChild(a); meta.appendChild(document.createElement('br')); }
   meta.appendChild(document.createTextNode([b.vehicle, b.urgency && b.urgency !== 'flexible' ? 'Urgency: ' + b.urgency : '', b.notes].filter(Boolean).join(' · ')));
+  if(b.payment_status === 'paid' && b.mechanic_net_cents){ meta.appendChild(document.createElement('br')); meta.appendChild(document.createTextNode('Paid ' + money(b.paid_cents) + ' · you receive ' + money(b.mechanic_net_cents) + ' (5% platform ' + money(b.platform_fee_cents || 0) + ', processing ' + money(b.processing_cents || 0) + (b.onboarding_cents ? ', onboarding ' + money(b.onboarding_cents) : '') + ')')); }
   if(b.price_cents || b.booking_kind === 'diagnosis'){ meta.appendChild(document.createElement('br')); meta.appendChild(document.createTextNode('Agreed: ' + priceLabel(b) + (b.revision && b.revision.status === 'pending' ? ' · revised price ' + money(b.revision.total_cents) + ' waiting for the customer' : '') + (b.revision && b.revision.status === 'rejected' ? ' · revision rejected' : '') + ' · ' + ({ pay_mechanic: 'customer pays you directly', needs_card: 'customer has not added a card yet', card_saved: 'card on file', charge_now: 'payment processing', charging: 'payment processing', paid: 'paid', payment_failed: 'customer payment failed', disputed: 'customer reported a problem' }[b.payment_status] || ''))); }
   left.appendChild(nm); left.appendChild(meta); row.appendChild(left);
   row.appendChild(adminTag(st, st === 'completed' ? 'ok' : st === 'confirmed' ? 'warn' : st === 'cancelled' ? '' : 'due'));
@@ -5981,7 +5986,7 @@ function adminPayments(mechs){
   const card = document.createElement('div'); card.className = 'admin-card';
   const t = document.createElement('div'); t.className = 'admin-meta';
   const ready = mechs.filter(m => m.payouts_ready).length;
-  t.textContent = 'Every job is paid through WrenchNow: customers save a card when they accept a quote and are charged the final approved price after the job. You keep 5% (PLATFORM_FEE_PCT); card processing comes out of the mechanic\'s share. Mechanics must finish Stripe payout setup before they can quote — ' + ready + ' of ' + mechs.length + ' have. Bookings need the payment functions deployed, Stripe Connect on and the Stripe webhook added (SETUP.md §10).';
+  t.textContent = 'Every job is paid through WrenchNow: customers save a card when they accept a quote and are charged the final approved price after the job. You keep 5% (PLATFORM_FEE_PCT); card processing comes out of the mechanic\'s share. Mechanics who joined free also pay a $50 onboarding fee from their first jobs ($10 max per job, 15% max of a job). Mechanics must finish Stripe payout setup before they can quote — ' + ready + ' of ' + mechs.length + ' have. Bookings need the payment functions deployed, Stripe Connect on and the Stripe webhook added (SETUP.md §10).';
   card.appendChild(t);
   const acts = document.createElement('div');
   card.appendChild(acts); sec.appendChild(card);
@@ -6135,6 +6140,7 @@ async function approveApplication(a, mechs){
   batch.set(db.collection('mechanic_private').doc(slug), {
     email: a.email || '', phone: a.phone || '', application_id: a.id,
     fee_paid: true, fee_amount: VERIFY_FEE,
+    verification_paid: !!a.fee_paid && !a.fee_waived,   // joined free → $50 onboarding fee comes out of their first jobs
     approved_at: new Date().toISOString()
   });
   batch.update(db.collection('mechanic_applications').doc(a.id), { status: 'approved', mechanic_slug: slug, decided_at: new Date().toISOString() });
@@ -6199,6 +6205,45 @@ function adminBookings(books, priv, mechs){
     if(acts.children.length) card.appendChild(acts);
     sec.appendChild(card);
   });
+  return sec;
+}
+
+// Earnings: what WrenchNow keeps, by month (estimates Stripe's costs; exact figures are in Stripe → Balance → Reports)
+function adminEarnings(books){
+  const paid = books.filter(b => b.payment_status === 'paid' && b.paid_cents > 0);
+  const months = {};
+  paid.forEach(b => {
+    const k = String(b.paid_at || b.booking_date_iso || '').slice(0, 7) || 'unknown';
+    const m = months[k] || (months[k] = { jobs: 0, gross: 0, platform: 0, onboarding: 0, processing: 0, stripe: 0, mechs: new Set() });
+    const net = b.mechanic_net_cents || 0;
+    m.jobs++; m.gross += b.paid_cents; m.platform += b.platform_fee_cents || 0; m.onboarding += b.onboarding_cents || 0; m.processing += b.processing_cents || 0;
+    m.stripe += Math.round(b.paid_cents * 0.029 + 30) + Math.round(net * 0.0025 + 25);   // card fee + payout fee (estimate)
+    if(b.mechanic_slug) m.mechs.add(b.mechanic_slug);
+  });
+  const keys = Object.keys(months).sort().reverse();
+  const tot = keys.reduce((t, k) => { const m = months[k]; t.net += m.platform + m.onboarding + m.processing - m.stripe - m.mechs.size * 200; t.gross += m.gross; t.jobs += m.jobs; return t; }, { net: 0, gross: 0, jobs: 0 });
+  const sec = adminSection('Earnings', paid.length ? money(tot.net) + ' net' : 'no paid jobs yet');
+  const card = document.createElement('div'); card.className = 'admin-card';
+  const head = document.createElement('div'); head.className = 'admin-meta';
+  head.textContent = paid.length ? tot.jobs + ' paid job' + (tot.jobs === 1 ? '' : 's') + ' · ' + money(tot.gross) + ' processed · about ' + money(tot.net) + ' kept by WrenchNow after Stripe costs (estimate; exact numbers in Stripe → Balance → Reports). Background checks are billed by Checkr separately.'
+                                 : 'Earnings appear here once customers start paying for jobs.';
+  card.appendChild(head);
+  if(keys.length){
+    const t = document.createElement('div'); t.style.cssText = 'overflow-x:auto;margin-top:.8rem';
+    const tbl = document.createElement('table'); tbl.style.cssText = 'width:100%;border-collapse:collapse;font-size:12.5px;color:var(--cream)';
+    const hdr = ['Month', 'Jobs', 'Processed', '5% fees', 'Onboarding', 'Stripe costs*', 'Net to you'];
+    const tr0 = document.createElement('tr'); hdr.forEach(h => { const th = document.createElement('th'); th.textContent = h; th.style.cssText = 'text-align:right;padding:6px 8px;color:var(--muted);font-weight:600;border-bottom:0.5px solid var(--border-med)'; tr0.appendChild(th); }); tr0.firstChild.style.textAlign = 'left'; tbl.appendChild(tr0);
+    keys.forEach(k => {
+      const m = months[k], stripeAll = m.stripe + m.mechs.size * 200, net = m.platform + m.onboarding + m.processing - stripeAll;
+      const cells = [k === 'unknown' ? '—' : new Date(k + '-15').toLocaleDateString(undefined, { month: 'short', year: 'numeric' }), String(m.jobs), money(m.gross), money(m.platform), money(m.onboarding), '−' + money(stripeAll), money(net)];
+      const tr = document.createElement('tr'); cells.forEach((c, i) => { const td = document.createElement('td'); td.textContent = c; td.style.cssText = 'padding:6px 8px;text-align:' + (i ? 'right' : 'left') + ';border-bottom:0.5px solid var(--border)'; tr.appendChild(td); }); tbl.appendChild(tr);
+    });
+    t.appendChild(tbl); card.appendChild(t);
+    const fn = document.createElement('div'); fn.className = 'admin-meta'; fn.style.marginTop = '.5rem';
+    fn.textContent = '*Stripe costs: card fee (2.9% + 30¢), payout fee (0.25% + 25¢) and $2 per mechanic paid that month. Mechanics already cover these through the processing pass-through, so net ≈ your 5% + onboarding fees.';
+    card.appendChild(fn);
+  }
+  sec.appendChild(card);
   return sec;
 }
 
@@ -6568,7 +6613,7 @@ async function submitApplication() {
     const payBtn = document.getElementById('applyPayBtn'), payLater = document.getElementById('applyPayLater');
     if(feeWaived()){
       payBtn.style.display = 'none'; payLater.style.display = 'block';
-      payLater.textContent = "No fee for founding mechanics. Watch your email for the background-check invite.";
+      payLater.textContent = "Nothing to pay now. Watch your email for the background-check invite.";
     } else if(VERIFY_PAYMENT_LINK){
       const u = new URL(VERIFY_PAYMENT_LINK);
       u.searchParams.set('client_reference_id', ref.id);
@@ -7125,7 +7170,7 @@ auth.onAuthStateChanged((user) => {
             <div style="padding:.5rem 1.75rem">
         <label style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--muted);line-height:1.6;cursor:pointer">
           <input type="checkbox" id="applyAgreeTerms" class="apply-checkbox" style="margin-top:3px;flex-shrink:0"/>
-          <span>I have read and agree to the <button type="button" class="legal-footer-link" onclick="openLegal('tosOverlay')">Terms of Service</button>, <button type="button" class="legal-footer-link" onclick="openLegal('privacyOverlay')">Privacy Policy</button>, and <button type="button" class="legal-footer-link" onclick="openLegal('mechAgreementOverlay')">Mechanic Agreement</button>. I confirm I am an independent contractor and will maintain my own insurance.</span>
+          <span><span id="applyOnbNote">I understand joining is free and a $50 onboarding fee (up to $10 per paid job, max 15% of a job) is taken from my first jobs to cover my background check. </span>I have read and agree to the <button type="button" class="legal-footer-link" onclick="openLegal('tosOverlay')">Terms of Service</button>, <button type="button" class="legal-footer-link" onclick="openLegal('privacyOverlay')">Privacy Policy</button>, and <button type="button" class="legal-footer-link" onclick="openLegal('mechAgreementOverlay')">Mechanic Agreement</button>. I confirm I am an independent contractor and will maintain my own insurance.</span>
         </label>
       </div>
       <div class="apply-footer">
@@ -7557,10 +7602,11 @@ auth.onAuthStateChanged((user) => {
       </ul>
 
       <h2>6. Platform Fee and Payments</h2>
-      <p><strong>Platform fee and verification fee.</strong> WrenchNow's platform fee is 5% of the job price on jobs paid through WrenchNow. Applicants pay a one-time verification fee of <span data-fee>$49</span>, which covers a third-party background and driving-record check and is not refunded once the check has been ordered.</p>
+      <p><strong>Platform fee.</strong> WrenchNow's platform fee is 5% of the job price on every job paid through WrenchNow.</p>
+      <p><strong>Background check: onboarding fee.</strong> WrenchNow orders a third-party background and driving-record check for each applicant. When joining is free (no upfront verification fee), you agree that WrenchNow recovers the cost of your check through an onboarding fee of $50 in total, deducted from your first paid jobs at no more than $10 per job and no more than 15% of any single job, until $50 has been collected. The onboarding fee is only taken from jobs you are paid for; if a job is fully refunded, the amount taken from it is credited back toward your remaining balance. If you never complete a paid job, you owe nothing. Each deduction is shown with the job. When an upfront verification fee of <span data-fee>$49</span> is charged instead, no onboarding fee applies, and the verification fee is not refunded once the check has been ordered.</p>
       <p>You will get at least 30 days' notice by email before the platform fee changes, and a change never applies to jobs already accepted.</p>
       <p><strong>Quotes and price changes.</strong> You set your price for each job as a quote (labor and parts). If you find more work is needed, send a revised price through WrenchNow before doing the extra work; the customer must approve it, and if they don't, the original price stands.</p>
-      <p><strong>Getting paid.</strong> All jobs are paid through WrenchNow. You must complete Stripe payout setup (Stripe Connect) before sending quotes. The customer's payment goes to your Stripe account, less card processing costs (about 3.2% + 55¢ per job, covering Stripe's card and payout fees) and the 5% platform fee. Payment is taken when the customer confirms the job, or 48 hours after you mark it done unless the customer reports a problem first. If a customer reports a problem or disputes the charge with their bank, payment may be held, and if a refund is issued, the amount paid to you for that job may be reversed.</p>
+      <p><strong>Getting paid.</strong> All jobs are paid through WrenchNow. You must complete Stripe payout setup (Stripe Connect) before sending quotes. The customer's payment goes to your Stripe account, less card processing costs (about 3.2% + 55¢ per job, covering Stripe's card and payout fees), the 5% platform fee, and any onboarding fee still owed. Payment is taken when the customer confirms the job, or 48 hours after you mark it done unless the customer reports a problem first. If a customer reports a problem or disputes the charge with their bank, payment may be held, and if a refund is issued, the amount paid to you for that job may be reversed.</p>
       <p>Payments are processed through Stripe Connect. WrenchNow is not responsible for delays or failures in payment processing caused by Stripe or by errors in your account information.</p>
 
       <h2>7. Liability and Indemnification</h2>

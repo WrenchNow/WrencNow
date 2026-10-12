@@ -55,6 +55,11 @@ const CUSTOMER_FEE_CENTS    = defineString('CUSTOMER_FEE_CENTS', { default: '0' 
 // Stripe bills YOUR account for card processing (~2.9% + 30¢) and Connect payouts (~0.25% + 25¢) on every job.
 // These pass that cost to the mechanic's share so a 0% platform fee doesn't cost you money.
 const PROCESSING_FEE_PCT    = defineString('PROCESSING_FEE_PCT', { default: '3.2' });
+// Onboarding fee: joining is free; mechanics who didn't pay the verification fee repay their background check
+// from their first paid jobs — up to $10 a job and never more than 15% of a job, until $50 is collected.
+const ONBOARDING_TOTAL_CENTS   = defineString('ONBOARDING_TOTAL_CENTS', { default: '5000' });
+const ONBOARDING_PER_JOB_CENTS = defineString('ONBOARDING_PER_JOB_CENTS', { default: '1000' });
+const ONBOARDING_MAX_PCT       = defineString('ONBOARDING_MAX_PCT', { default: '15' });
 const PROCESSING_FEE_CENTS  = defineString('PROCESSING_FEE_CENTS', { default: '55' });
 
 const VERIFY_FEE = 49;   // keep in step with the constant at the top of the site script
@@ -178,13 +183,21 @@ exports.stripeWebhook = onRequest(
         if (b && b.status === 'completed' && !b.charge_after) await ref.update({ charge_after: new Date(Date.now() + 48 * 3600 * 1000).toISOString() });
       } else if (session.mode === 'payment' && session.payment_status === 'paid') {
         await ref.update({ payment_status: 'paid', paid_cents: session.amount_total, payment_intent: session.payment_intent || '', paid_at: new Date().toISOString() });
+        const bk = (await ref.get()).data() || {};
+        await countOnboarding(ref, bk.mechanic_slug);
       }
     }
     // Refund issued in the Stripe dashboard → booking shows Refunded
     if (event.type === 'charge.refunded') {
       const ch = event.data.object;
       const bk = ch.payment_intent ? await db.collection('bookings').where('payment_intent', '==', ch.payment_intent).limit(1).get() : { empty: true };
-      if (!bk.empty) { await bk.docs[0].ref.update({ payment_status: 'refunded', refunded_cents: ch.amount_refunded, refunded_at: new Date().toISOString() }); await recomputeSavings(); }
+      if (!bk.empty) {
+        const bd = bk.docs[0].data();
+        await bk.docs[0].ref.update({ payment_status: 'refunded', refunded_cents: ch.amount_refunded, refunded_at: new Date().toISOString(), onboarding_counted: false });
+        // a fully refunded job doesn't count toward the onboarding fee
+        if (bd.onboarding_counted && bd.onboarding_cents && bd.mechanic_slug && ch.amount_refunded >= ch.amount) await db.collection('mechanic_private').doc(bd.mechanic_slug).set({ onboarding_collected_cents: FieldValue.increment(-bd.onboarding_cents) }, { merge: true });
+        await recomputeSavings();
+      }
     }
     // Customer disputed the charge with their bank → flag it and tell you right away (you have a deadline to respond)
     if (event.type === 'charge.dispute.created') {
@@ -677,10 +690,16 @@ async function chargeJob(ref) {
   const procCents = Math.max(0, parseInt(PROCESSING_FEE_CENTS.value()) || 0);
   const total = amount + custFee;
   const platformCut = Math.round(amount * pct / 100), processing = Math.round(total * procPct / 100) + procCents;
-  const appFee = Math.min(total - 50, platformCut + processing + custFee);   // mechanic always receives something
   const pay = (await db.collection('booking_payments').doc(id).get()).data();
   const slug = b.mechanic_slug || await mechanicSlugByDoc(b.mechanic_doc);
   const p = await mechanicPrivate(slug);
+  // onboarding fee (only for mechanics who joined free)
+  let onboarding = 0;
+  if (p && p.verification_paid !== true) {
+    const left = Math.max(0, (parseInt(ONBOARDING_TOTAL_CENTS.value()) || 0) - (p.onboarding_collected_cents || 0));
+    onboarding = Math.max(0, Math.min(left, parseInt(ONBOARDING_PER_JOB_CENTS.value()) || 0, Math.floor(amount * (Number(ONBOARDING_MAX_PCT.value()) || 0) / 100)));
+  }
+  const appFee = Math.min(total - 50, platformCut + processing + custFee + onboarding);   // mechanic always receives something
   const acct = p && p.stripe_account;
   const mechDoc = b.mechanic_doc ? (await db.collection('mechanics').doc(b.mechanic_doc).get()).data() : null;
   if (!amount && b.booking_kind === 'diagnosis') { await ref.update({ payment_status: 'no_charge' }); return; }   // free diagnosis, no repair approved
@@ -690,6 +709,7 @@ async function chargeJob(ref) {
     await toAdmin('Payment NOT taken — ' + id, layout('A job could not be charged', rows([['Booking', id], ['Reason', why], ['Customer', b.customer_email], ['Mechanic', b.mechanic_name]])));
     return;
   }
+  await ref.update({ onboarding_cents: onboarding, platform_fee_cents: platformCut, processing_cents: processing, fee_cents: appFee });
   const transfer = { transfer_data: { destination: acct }, ...(appFee > 0 ? { application_fee_amount: appFee } : {}) };
   try {
     const pi = await stripe.paymentIntents.create({
@@ -697,7 +717,8 @@ async function chargeJob(ref) {
       description: 'WrenchNow: ' + (b.service || 'mobile mechanic') + ' with ' + (b.mechanic_name || ''),
       metadata: { booking_id: id }, ...transfer
     }, { idempotencyKey: 'charge_' + id + '_' + total });
-    await ref.update({ payment_status: 'paid', paid_cents: total, fee_cents: appFee, platform_fee_cents: platformCut, processing_cents: processing, mechanic_net_cents: total - appFee, payment_intent: pi.id, paid_at: new Date().toISOString() });
+    await ref.update({ payment_status: 'paid', paid_cents: total, fee_cents: appFee, platform_fee_cents: platformCut, processing_cents: processing, onboarding_cents: onboarding, mechanic_net_cents: total - appFee, payment_intent: pi.id, paid_at: new Date().toISOString() });
+    await countOnboarding(ref, slug);
     await sendEmail({ to: b.customer_email, replyTo: ADMIN_EMAIL.value(), subject: 'Receipt: $' + (total / 100).toFixed(2) + ' paid to ' + (b.mechanic_name || 'your mechanic'),
       html: layout('Payment received', rows([['Job', b.service], ['Mechanic', b.mechanic_name], ['Paid', '$' + (total / 100).toFixed(2)]]) + '<p>Thanks for using WrenchNow. A quick review helps other drivers choose.</p>') });
   } catch (err) {
@@ -725,6 +746,16 @@ exports.onMechanicClaimed = onDocumentUpdated('mechanics/{id}', async (event) =>
   const reqs = await db.collection('requests').where('invited_docs', 'array-contains', event.params.id).get();   // single filter: no extra index needed
   await Promise.all(reqs.docs.filter(d => d.data().status === 'open').map(d => d.ref.update({ invited_uids: FieldValue.arrayUnion(after.owner_uid) })));
 });
+
+// Add a paid job's onboarding fee to the mechanic's running total (once per booking)
+async function countOnboarding(ref, slug) {
+  await db.runTransaction(async t => {
+    const b = (await t.get(ref)).data() || {};
+    if (!b.onboarding_cents || b.onboarding_counted || !slug) return;
+    t.set(db.collection('mechanic_private').doc(slug), { onboarding_collected_cents: FieldValue.increment(b.onboarding_cents) }, { merge: true });
+    t.update(ref, { onboarding_counted: true });
+  });
+}
 
 // Every hour: jobs marked done 48+ hours ago with a saved card and no problem reported get charged
 exports.autoCharge = onSchedule(
