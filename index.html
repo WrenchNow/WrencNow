@@ -4742,7 +4742,7 @@ async function proceedWithBooking() {
 // ═══════════════════════════════════════════════════════════
 let isAdmin = false;
 const ADMIN_CHECKS = [
-  ['fee_paid',   'Verification fee paid'],
+  ['fee_paid',   'Verification fee paid (or waived)'],
   ['background', 'Background + driving record clear'],
   ['skills',     'ASE or references checked'],
   ['insurance',  'Insurance certificate on file']
@@ -4981,6 +4981,17 @@ let SITE_CONFIG = { payments_on: false };
 function paymentsOn(){ return !!FUNCTIONS_BASE; }
 (async () => { try { const d = await db.collection('config').doc('site').get(); if(d.exists) SITE_CONFIG = Object.assign({ payments_on: false }, d.data()); } catch(e){} applyPaymentCopy(); })();
 (async () => { try { const d = await db.collection('config').doc('stats').get(); if(d.exists){ const x = d.data(); SAVINGS = { total_cents: Math.max(0, parseInt(x.saved_cents) || 0), jobs: Math.max(0, parseInt(x.saved_jobs) || 0) }; renderSavingsStat(); } } catch(e){} })();
+// Founding offer: free verification for early mechanics (on unless switched off in Admin)
+function feeWaived(){ return SITE_CONFIG.verify_fee_waived !== false; }
+function applyFeeCopy(){
+  document.querySelectorAll('[data-fee]').forEach(el => {
+    if(el.closest('#applyPayBtn')) { el.textContent = '$' + VERIFY_FEE; return; }
+    if(feeWaived()){ el.innerHTML = ''; const st = document.createElement('s'); st.textContent = '$' + VERIFY_FEE; st.style.opacity = '.6'; el.appendChild(st); el.appendChild(document.createTextNode(' FREE')); }
+    else el.textContent = '$' + VERIFY_FEE;
+  });
+  const step1 = document.getElementById('applyStep1');
+  if(step1) step1.textContent = feeWaived() ? 'Verification is free for founding mechanics. No payment needed.' : 'Pay the one-time $' + VERIFY_FEE + ' verification fee. It covers your background and driving-record check.';
+}
 function applyPaymentCopy(){
   const on = SITE_CONFIG.payments_on === true;
   const h = document.getElementById('howPayStep');
@@ -4988,6 +4999,7 @@ function applyPaymentCopy(){
                            : "Your card is saved when you accept a quote and charged only after the job is done. You agreed the price up front, and any change needs your OK first.";
   const l = document.getElementById('heroPayLine');
   if(l) l.textContent = 'Free to browse · Compare quotes · ' + 'Card charged only when the job is done';
+  applyFeeCopy();
 }
 function money(c){ c = Math.round(Number(c) || 0); return '$' + (c % 100 ? (c / 100).toFixed(2) : (c / 100).toLocaleString()); }
 function dayLabel(iso){ const ms = isoMs(iso); if(!ms) return iso || ''; const d = new Date(ms), t = new Date(); t.setHours(0,0,0,0); const diff = Math.round((ms - t.getTime()) / DAY); return diff === 0 ? 'Today' : diff === 1 ? 'Tomorrow' : d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }); }
@@ -5973,6 +5985,19 @@ function adminPayments(mechs){
   card.appendChild(t);
   const acts = document.createElement('div');
   card.appendChild(acts); sec.appendChild(card);
+  // Founding offer switch
+  const fc = document.createElement('div'); fc.className = 'admin-card';
+  const ft = document.createElement('div'); ft.className = 'admin-meta';
+  ft.textContent = feeWaived() ? 'Founding offer is ON: new mechanics apply free and get the background-check invite right away (you pay the check). Turn off to start charging the $' + VERIFY_FEE + ' verification fee.'
+                               : 'Founding offer is OFF: new mechanics pay the $' + VERIFY_FEE + ' verification fee before their background check.';
+  fc.appendChild(ft);
+  const fa = document.createElement('div'); fa.className = 'admin-actions'; fa.style.marginTop = '.7rem';
+  fa.appendChild(adminBtn(feeWaived() ? 'Start charging the verification fee' : 'Make verification free again', feeWaived() ? '' : 'primary', async () => {
+    const waive = !feeWaived();
+    await db.collection('config').doc('site').set({ verify_fee_waived: waive, updated_at: new Date().toISOString() }, { merge: true });
+    SITE_CONFIG.verify_fee_waived = waive; applyFeeCopy();
+  }));
+  fc.appendChild(fa); sec.appendChild(fc);
   // "Typical dealer" comparison shown on quotes
   const sc = document.createElement('div'); sc.className = 'admin-card';
   const st = document.createElement('div'); st.className = 'admin-meta';
@@ -6021,7 +6046,7 @@ function adminApplications(apps, mechs){
   if(!apps.length){ const e = document.createElement('div'); e.className = 'admin-empty'; e.textContent = 'No applications waiting.'; sec.appendChild(e); return sec; }
   apps.forEach(a => {
     const checks = Object.assign({ background:false, skills:false, insurance:false }, a.checks || {});
-    const state = { fee_paid: !!a.fee_paid, background: !!checks.background, skills: !!checks.skills, insurance: !!checks.insurance };
+    const state = { fee_paid: !!a.fee_paid || !!a.fee_waived, background: !!checks.background, skills: !!checks.skills, insurance: !!checks.insurance };
     const card = document.createElement('div'); card.className = 'admin-card';
     const row = document.createElement('div'); row.className = 'admin-row';
     const left = document.createElement('div');
@@ -6320,7 +6345,7 @@ function adminMechanics(mechs, priv, done, insDocs){
 
 // Fill in the fee / job-count numbers wherever the copy mentions them (after the modals below the script exist)
 document.addEventListener('DOMContentLoaded', () => {
-document.querySelectorAll('[data-fee]').forEach(el => { el.textContent = '$' + VERIFY_FEE; });
+applyFeeCopy();
 });
 
 
@@ -6535,12 +6560,16 @@ async function submitApplication() {
       status: 'pending',
       fee_paid: false,
       fee_amount: VERIFY_FEE,
+      fee_waived: feeWaived(),
       created_at: firebase.firestore.FieldValue.serverTimestamp()
     });
 
     // Fee step: straight to Stripe when a live link is configured, otherwise we email the link
     const payBtn = document.getElementById('applyPayBtn'), payLater = document.getElementById('applyPayLater');
-    if(VERIFY_PAYMENT_LINK){
+    if(feeWaived()){
+      payBtn.style.display = 'none'; payLater.style.display = 'block';
+      payLater.textContent = "No fee for founding mechanics. Watch your email for the background-check invite.";
+    } else if(VERIFY_PAYMENT_LINK){
       const u = new URL(VERIFY_PAYMENT_LINK);
       u.searchParams.set('client_reference_id', ref.id);
       u.searchParams.set('prefilled_email', email);
@@ -6991,7 +7020,7 @@ auth.onAuthStateChanged((user) => {
       <div class="apply-success-title" id="applySuccessTitle">Application received</div>
       <div class="apply-success-sub" id="applySuccessSub">Your profile goes live once you're verified. Here's what happens next:</div>
       <div class="apply-steps">
-        <div class="apply-step"><b>1</b><span>Pay the one-time <span data-fee>$49</span> verification fee. It covers your background and driving-record check.</span></div>
+        <div class="apply-step"><b>1</b><span id="applyStep1">Pay the one-time <span data-fee>$49</span> verification fee. It covers your background and driving-record check.</span></div>
         <div class="apply-step"><b>2</b><span>You'll get an email invite to complete the check, and we'll ask for your ASE certificate or two references, plus proof of insurance.</span></div>
         <div class="apply-step"><b>3</b><span>Once everything clears, your profile is published with the Verified badge.</span></div>
       </div>

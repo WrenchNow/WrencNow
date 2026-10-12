@@ -99,6 +99,19 @@ exports.onApplicationCreated = onDocumentCreated(
   { document: 'mechanic_applications/{id}', secrets: [RESEND_API_KEY] },
   async (event) => {
     const a = event.data.data();
+    const cfg = (await db.collection('config').doc('site').get()).data() || {};
+    const waived = cfg.verify_fee_waived !== false;   // founding offer: free verification
+    if (waived) {
+      await event.data.ref.update({ fee_waived: true, checkr_requested: true });   // starts the background check right away
+      await sendEmail({ to: a.email, replyTo: ADMIN_EMAIL.value(), subject: 'We got your WrenchNow application — next steps',
+        html: layout('Thanks, ' + (a.name || '').split(' ')[0] + ' — application received',
+          `<p>Good news: as a founding mechanic, <strong>your verification is free</strong>.</p>
+           <ol><li>You'll get a separate email from our background-check partner. Complete it as soon as you can.</li>
+           <li>Reply to this email with your ASE certificate or two work references (full-service only), and proof of liability insurance if you have it.</li>
+           <li>Once everything clears, your profile goes live with the Verified badge.</li></ol>`) });
+      await toAdmin('New mechanic application (founding, fee waived) — ' + (a.name || ''), layout('New application', rows([['Name', a.name], ['Email', a.email], ['Phone', a.phone], ['ZIP', a.zip], ['Level', a.service_level]]) + '<p>The background-check invite was sent automatically.</p>'));
+      return;
+    }
     let payHtml = '<p>We will email your secure payment link within one business day.</p>';
     if (VERIFY_PAYMENT_LINK.value()) {
       const u = new URL(VERIFY_PAYMENT_LINK.value());
