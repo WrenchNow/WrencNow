@@ -2357,6 +2357,50 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
   .hero-actions .btn-ore, .hero-actions .btn-ghost { width: 100%; justify-content: center; }
 }
 
+
+/* ── Location, bot trap ── */
+.hp { position: absolute !important; left: -9999px !important; width: 1px !important; height: 1px !important; opacity: 0 !important; pointer-events: none !important; }
+.loc-btn { background: none; border: none; color: var(--ore); font-size: 12px; cursor: pointer; font-family: var(--font-body); padding: 6px 0 0; display: inline-flex; align-items: center; gap: 5px; }
+.loc-btn:hover { color: var(--ore-bright); }
+.loc-btn:disabled { color: var(--muted); cursor: wait; }
+
+
+/* ── Mechanic dashboard + inspection report ── */
+.mp-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: .5rem; }
+.mp-head .avatar { width: 56px; height: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 20px; flex-shrink: 0; }
+.mp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+.mp-grid label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 4px; }
+.mp-grid input, .mp-grid select, .mp-grid textarea, .insp-row input, .insp-meta input, .insp-meta textarea { width: 100%; background: var(--surface); border: 0.5px solid var(--border-med); border-radius: 8px; padding: 9px 11px; color: var(--cream); font-family: var(--font-body); font-size: 13px; }
+.mp-grid .full { grid-column: 1 / -1; }
+.mp-gate { background: var(--raised); border: 0.5px solid var(--border-med); border-radius: 14px; padding: 1rem 1.25rem; display: flex; gap: 14px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 1rem; }
+.mp-gate p { font-size: 13px; color: var(--ink); line-height: 1.55; margin: 0; max-width: 560px; }
+.insp-row { display: grid; grid-template-columns: 170px auto 1fr; gap: 8px; align-items: center; padding: 7px 0; border-bottom: 0.5px solid var(--border); }
+.insp-row b { font-size: 13px; color: var(--cream); font-weight: 600; }
+.insp-pick { display: inline-flex; border: 0.5px solid var(--border-med); border-radius: 8px; overflow: hidden; }
+.insp-pick button { background: transparent; border: none; color: var(--muted); font-size: 12px; padding: 7px 10px; cursor: pointer; font-family: var(--font-body); }
+.insp-pick button.on[data-v=good] { background: var(--green-dim); color: var(--green); }
+.insp-pick button.on[data-v=soon] { background: rgba(245,184,0,.12); color: var(--amber); }
+.insp-pick button.on[data-v=now] { background: rgba(255,77,77,.12); color: #ff8c8c; }
+.insp-meta { display: grid; grid-template-columns: 160px 1fr; gap: 8px; margin: .75rem 0; }
+.rep-item { display: flex; gap: 10px; align-items: baseline; padding: 6px 0; border-bottom: 0.5px solid var(--border); font-size: 13px; color: var(--ink); }
+.rep-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; transform: translateY(1px); }
+.rep-dot.good { background: var(--green); } .rep-dot.soon { background: var(--amber); } .rep-dot.now { background: var(--red); }
+@media (max-width: 700px) { .mp-grid, .insp-meta { grid-template-columns: 1fr; } .insp-row { grid-template-columns: 1fr; } }
+
+
+/* ── My car: service schedule ── */
+.gar-top { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 8px; margin-bottom: .75rem; }
+.gar-top label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); display: block; margin-bottom: 4px; }
+.gar-top input, .gar-top select, .gar-did input { width: 100%; background: var(--raised); border: 0.5px solid var(--border-med); border-radius: 9px; padding: 10px 11px; color: var(--cream); font-family: var(--font-body); font-size: 13px; }
+.gar-item { border-top: 0.5px solid var(--border); padding: .8rem 0; }
+.gar-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.gar-name { font-size: 14px; font-weight: 600; color: var(--cream); }
+.gar-detail { font-size: 12px; color: #8a867c; margin-top: 2px; line-height: 1.5; }
+.gar-did { display: none; grid-template-columns: 1fr 1fr auto; gap: 6px; margin-top: .5rem; }
+.gar-did.on { display: grid; }
+.gar-note { font-size: 11px; color: var(--muted); line-height: 1.5; margin-top: .75rem; }
+@media (max-width: 600px) { .gar-top { grid-template-columns: 1fr 1fr; } .gar-top > div:first-child { grid-column: 1 / -1; } }
+
 </style>
 
 
@@ -2452,7 +2496,8 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
           </div>
           <div class="field">
             <label class="field-label" for="searchLocation">Your location</label>
-            <input class="field-input" id="searchLocation" type="text" placeholder="Enter your address, city, or zip code" value=""/>
+            <input class="field-input" id="searchLocation" type="text" placeholder="Enter your address, city, or zip code" value="" autocomplete="street-address"/>
+            <button type="button" class="loc-btn" id="useLocBtn" onclick="useMyLocation()"><i class="ti ti-current-location" aria-hidden="true"></i> Use my current location</button>
           </div>
           <div class="field">
             <label class="field-label" for="searchService">What's going on? (your words are fine)</label>
@@ -2464,6 +2509,8 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
           </div>
           <label class="field-label" style="margin-bottom:9px;display:block">Common services</label>
           <div class="chips" id="chips">
+            <button class="chip" data-key="inspection" data-label="Not sure what's wrong — please diagnose" onclick="toggleChip(this)">❓ Not sure — diagnose it</button>
+            <button class="chip" data-key="inspection" data-label="Full vehicle inspection" onclick="toggleChip(this)">🔎 Full inspection</button>
             <button class="chip" data-key="oil" data-label="Oil change" onclick="toggleChip(this)">🛢 Oil Change</button>
             <button class="chip" data-key="brakes" data-label="Brakes" onclick="toggleChip(this)">🛑 Brakes</button>
             <button class="chip" data-key="battery" data-label="Battery" onclick="toggleChip(this)">🔋 Battery</button>
@@ -2529,6 +2576,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
     <!-- Sort row -->
     <div class="sort-row" style="margin-bottom:1.25rem">
       <button class="sort-pill on" onclick="sortToggle(this,'rating')">Top rated</button>
+      <button class="sort-pill" onclick="sortToggle(this,'near')">Nearest</button>
       <button class="sort-pill" onclick="sortToggle(this,'price')">Lowest price</button>
       <button class="sort-pill" onclick="sortToggle(this,'jobs')">Most jobs done</button>
       <button class="sort-pill" onclick="sortToggle(this,'available')">Taking bookings first</button>
@@ -2765,7 +2813,9 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
 <!-- DASHBOARD PANEL -->
 <!-- ══════════════════════════════════════════════ -->
 <div class="panel" id="panel-dashboard">
-  <div class="dash-wrap">
+  <div id="mechPortal" class="admin-wrap" style="display:none"></div>
+  <div class="admin-wrap" id="mechGate" style="padding-bottom:0"></div>
+  <div class="dash-wrap" id="dashDemo">
     <div class="dash-topbar">
       <div class="dash-greeting">
         <h2>Your dashboard <span style="font-size:12px;font-weight:500;color:var(--green);background:rgba(46,199,122,0.1);border:0.5px solid rgba(46,199,122,0.2);border-radius:6px;padding:2px 8px;margin-left:6px">0% fee · Launch period</span></h2>
@@ -2980,6 +3030,8 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
         <div class="field">
           <label class="field-label" style="margin-bottom:7px;display:block">Common services — tap one to start</label>
           <div class="vehicle-chips" id="serviceChips">
+            <button class="vehicle-chip" onclick="setServiceChip(this,'Not sure what\'s wrong — please diagnose')">❓ Not sure</button>
+            <button class="vehicle-chip" onclick="setServiceChip(this,'Full vehicle inspection')">🔎 Full inspection</button>
             <button class="vehicle-chip" data-basic="1" onclick="setServiceChip(this,'Oil change')">🛢 Oil change</button>
             <button class="vehicle-chip" onclick="setServiceChip(this,'Brake pads')">🛑 Brakes</button>
             <button class="vehicle-chip" data-basic="1" onclick="setServiceChip(this,'Battery replacement')">🔋 Battery</button>
@@ -3099,6 +3151,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
           <div class="ts-item"><div class="ts-dot"></div><span style="color:var(--muted)">Job complete — pay and leave a review</span></div>
         </div>
       </div>
+      <button class="btn-next" style="width:100%;justify-content:center;margin-bottom:.6rem;background:transparent;border:0.5px solid var(--border-med);color:var(--cream)" onclick="closeModal();openGarage()">🔔 Get reminders when this car is due</button>
       <button class="btn-next" style="width:100%;justify-content:center" onclick="closeModal()">Back to search</button>
     </div>
   </div>
@@ -3242,6 +3295,7 @@ let db, auth;
     appId: "1:247147532669:web:152965681aa48b8cc5bc14"
   };
   firebase.initializeApp(firebaseConfig);
+  // App Check is switched on further down once RECAPTCHA_SITE_KEY is set
   db   = firebase.firestore();
   auth = firebase.auth();
 })();
@@ -3252,6 +3306,11 @@ const STRIPE_PAYMENT_LINK = '';   // optional customer booking-fee link; leave e
 // ─── VERIFICATION FEE ───────────────────────────────────
 // One-time fee mechanics pay to cover their background check. Change it here and the page copy follows.
 const VERIFY_FEE = 49;
+// Address → map position for distance matching (OpenStreetMap's free service; fine for a small site,
+// swap for a paid geocoder if traffic grows)
+const GEOCODER_URL = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=us&q=';
+// Optional bot protection: paste a reCAPTCHA v3 site key here after turning on App Check in Firebase
+const RECAPTCHA_SITE_KEY = '';
 const VERIFY_PAYMENT_LINK = '';    // ← paste your LIVE Stripe Payment Link for the verification fee
 const FEATURED_PAYMENT_LINK = '';  // ← LIVE Stripe subscription link for "Go Featured" ($29/mo)
 
@@ -3285,6 +3344,8 @@ function mechToLookup(m) {
     bio: m.bio,
     specs: m.specialties || [],
     level: mechLevel(m),
+    id: m.id || m.slug,
+    ownerUid: m.owner_uid || '',
     photo: safePhoto(m.photo),
     bookBtn: 'Book ' + m.name.split(' ')[0] + ' Now'
   };
@@ -3329,7 +3390,8 @@ function renderMechCard(m) {
   const locEl = document.createElement('div');
   locEl.className = 'mcard-loc';
   locEl.innerHTML = '<i class="ti ti-map-pin" style="font-size:11px" aria-hidden="true"></i> ';
-  locEl.appendChild(document.createTextNode(mechCity(m) ? 'Serves ' + mechCity(m) + ' area' : 'Mobile — comes to you'));
+  const distTxt = m._dist != null ? '≈ ' + (m._dist < 10 ? m._dist.toFixed(1) : Math.round(m._dist)) + ' mi away · ' : '';
+  locEl.appendChild(document.createTextNode(distTxt + (mechCity(m) ? 'Serves ' + mechCity(m) + ' area' : 'Mobile — comes to you')));
   meta.appendChild(nameEl);
   meta.appendChild(locEl);
 
@@ -3551,6 +3613,7 @@ function showPanel(name){
   const tabs = document.querySelectorAll('.npill');
   const idx = {customer:0,mechanic:1,dashboard:2,admin:3}[name];
   if(name === 'admin') loadAdmin();
+  if(name === 'dashboard'){ renderMechGate(); loadMechPortal(); }
   if(tabs[idx]) tabs[idx].classList.add('on');
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -3577,7 +3640,7 @@ document.addEventListener('change', function(e) {
 // Mechanics pick from this fixed list when they apply, so nobody can claim work they
 // weren't approved for. "basic" mechanics only ever see and match the basic list.
 const BASIC_SERVICES = ['Oil change', 'Battery replacement', 'Tire rotation', 'Wiper blades', 'Bulbs & lights', 'Air & cabin filters', 'Fluid top-off', 'Jump start'];
-const FULL_SERVICES  = ['Brakes', 'Check engine diagnostics', 'AC / heating', 'Electrical', 'Suspension & steering', 'Tune-up / spark plugs', 'Belts & hoses', 'Cooling system', 'Transmission service', 'European vehicles'];
+const FULL_SERVICES  = ['Full vehicle inspection', 'Brakes', 'Check engine diagnostics', 'AC / heating', 'Electrical', 'Suspension & steering', 'Tune-up / spark plugs', 'Belts & hoses', 'Cooling system', 'Transmission service', 'European vehicles'];
 const BASIC_KEYS = ['oil', 'battery', 'tires'];
 const COLOR_OK = /^(#[0-9a-f]{3,8}|rgba?\([\d\s.,%]+\)|var\(--[a-z-]+\))$/i;
 function str(v, max){ return typeof v === 'string' ? v.trim().slice(0, max) : ''; }
@@ -3603,8 +3666,16 @@ function normalizeMech(m){
     specialties: specs, badge_type: str(m.badge_type, 12),
     is_featured: m.is_featured === true, verified: m.verified === true,
     available_now: m.available_now === true,
-    service_level: m.service_level === 'basic' ? 'basic' : 'full', photo: safePhoto(m.photo)
+    service_level: m.service_level === 'basic' ? 'basic' : 'full', photo: safePhoto(m.photo),
+    owner_uid: str(m.owner_uid, 128), zip: str(m.zip, 10),
+    radius_mi: [10, 15, 25, 40].includes(Number(m.radius_mi)) ? Number(m.radius_mi) : 25,
+    geo_lat: Math.abs(Number(m.geo_lat)) <= 90 && m.geo_lat !== null && m.geo_lat !== '' && !isNaN(Number(m.geo_lat)) ? Number(m.geo_lat) : null,
+    geo_lng: Math.abs(Number(m.geo_lng)) <= 180 && m.geo_lng !== null && m.geo_lng !== '' && !isNaN(Number(m.geo_lng)) ? Number(m.geo_lng) : null
   };
+}
+async function sha256(text){
+  try { const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)); return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join(''); }
+  catch(e){ return ''; }
 }
 function mechLevel(m){ return m && m.service_level === 'basic' ? 'basic' : 'full'; }
 function safePhoto(p){ return typeof p === 'string' && p.indexOf('data:image/jpeg;base64,') === 0 && p.length < 120000 ? p : ''; }
@@ -3614,6 +3685,46 @@ function setAvatar(el, initials, photo){
   el.classList.toggle('has-photo', !!src);
   if(src){ const img = document.createElement('img'); img.src = src; img.alt = ''; el.appendChild(img); }
   else el.textContent = initials || '';
+}
+
+// ─── LOCATION ───────────────────────────────────────────
+let CUSTOMER_GEO = null;   // { lat, lng, label } once the customer gives an address or shares their location
+try { const g = JSON.parse(sessionStorage.getItem('ww_customer_geo') || 'null'); if(g && typeof g.lat === 'number') CUSTOMER_GEO = g; } catch(e){}
+function milesBetween(a, b){
+  const R = 3958.8, toR = x => x * Math.PI / 180;
+  const dLat = toR(b.lat - a.lat), dLng = toR(b.lng - a.lng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toR(a.lat)) * Math.cos(toR(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+async function geocode(q){
+  q = (q || '').trim(); if(q.length < 3) return null;
+  let cache = {}; try { cache = JSON.parse(sessionStorage.getItem('ww_geo_cache') || '{}'); } catch(e){}
+  if(cache[q.toLowerCase()]) return cache[q.toLowerCase()];
+  try {
+    const res = await fetch(GEOCODER_URL + encodeURIComponent(q), { headers: { 'Accept-Language': 'en' } });
+    const rows = await res.json();
+    if(!Array.isArray(rows) || !rows.length) return null;
+    const hit = { lat: Number(rows[0].lat), lng: Number(rows[0].lon) };
+    if(isNaN(hit.lat) || isNaN(hit.lng)) return null;
+    cache[q.toLowerCase()] = hit; try { sessionStorage.setItem('ww_geo_cache', JSON.stringify(cache)); } catch(e){}
+    return hit;
+  } catch(e){ return null; }
+}
+function setCustomerGeo(g){
+  CUSTOMER_GEO = g;
+  try { if(g) sessionStorage.setItem('ww_customer_geo', JSON.stringify(g)); else sessionStorage.removeItem('ww_customer_geo'); } catch(e){}
+}
+function useMyLocation(){
+  const btn = document.getElementById('useLocBtn');
+  if(!navigator.geolocation){ btn.textContent = 'Location not available on this device'; return; }
+  btn.disabled = true; btn.textContent = 'Finding you…';
+  navigator.geolocation.getCurrentPosition(pos => {
+    setCustomerGeo({ lat: pos.coords.latitude, lng: pos.coords.longitude, label: 'your current location' });
+    btn.disabled = false; btn.innerHTML = '<i class="ti ti-current-location" aria-hidden="true"></i> Using your current location';
+    runSearch();
+  }, () => {
+    btn.disabled = false; btn.innerHTML = '<i class="ti ti-current-location" aria-hidden="true"></i> Location blocked — type your address instead';
+  }, { timeout: 10000, maximumAge: 600000 });
 }
 
 // ─── SEARCH / FILTER / SORT ────────────────────────────
@@ -3632,7 +3743,8 @@ const SERVICE_KEYS = {
   diagnostic:   { label: 'diagnostics',   re: /diagnos|engine|\bobd/ },
   transmission: { label: 'transmission',  re: /transmi|clutch|gearbox/ },
   electrical:   { label: 'electrical',    re: /electric|wiring|starter|alternator/ },
-  european:     { label: 'European cars', re: /europe|bmw|audi|mercedes|volkswagen|\bvw\b|volvo|porsche/ }
+  european:     { label: 'European cars', re: /europe|bmw|audi|mercedes|volkswagen|\bvw\b|volvo|porsche/ },
+  inspection:   { label: 'full inspection', re: /inspect|diagnos|check.?up|general|full.?service/ }
 };
 // What a customer types in plain English → which service it probably is
 const SYMPTOM_KEYS = [
@@ -3643,6 +3755,7 @@ const SYMPTOM_KEYS = [
   [/\ba\/?c\b|air.?con|heat|not cool|blow/, 'ac'],
   [/check engine|engine light|warning light|light on|code|diagnos|noise|smell|leak|shak|vibrat|stall/, 'diagnostic'],
   [/transmi|gear|shift|clutch/, 'transmission'],
+  [/inspect|check.?up|look.?over|overlook|what.*need|not sure|don'?t know|no idea/, 'inspection'],
   [/electric|wiring|fuse|starter|alternator/, 'electrical']
 ];
 
@@ -3664,6 +3777,7 @@ function mechMatches(m, key){
 const SORTS = {
   rating:    (a,b) => ((b.verified === true ? 1 : 0) - (a.verified === true ? 1 : 0)) || (hasRating(b) - hasRating(a)) || (hasRating(a) ? Number(b.rating) - Number(a.rating) : 0) || ((b.jobs_completed||0) - (a.jobs_completed||0)),
   price:     (a,b) => (a.rate_num || 1e9) - (b.rate_num || 1e9),
+  near:      (a,b) => ((a._dist == null ? 1e9 : a._dist) - (b._dist == null ? 1e9 : b._dist)) || SORTS.rating(a,b),
   jobs:      (a,b) => (b.jobs_completed||0) - (a.jobs_completed||0),
   available: (a,b) => ((b.available_now ? 1 : 0) - (a.available_now ? 1 : 0)) || SORTS.rating(a,b)
 };
@@ -3712,9 +3826,13 @@ function renderGrid(){
   if(view.filter === 'available') list = list.filter(m => m.available_now);
   else if(view.filter !== 'all') list = list.filter(m => mechMatches(m, view.filter));
   if(view.terms.length) list = list.filter(m => view.terms.some(k => mechMatches(m, k)));
+  // Distance: hide mechanics who don't travel as far as the customer; unknown locations stay but sort last
+  let farCount = 0;
+  ALL_MECHS.forEach(m => { m._dist = (CUSTOMER_GEO && m.geo_lat != null && m.geo_lng != null) ? milesBetween(CUSTOMER_GEO, { lat: m.geo_lat, lng: m.geo_lng }) : null; });
+  if(CUSTOMER_GEO){ const before = list.length; list = list.filter(m => m._dist == null || m._dist <= m.radius_mi); farCount = before - list.length; }
   list.sort(SORTS[view.sort] || SORTS.rating);
 
-  const narrowed = view.filter !== 'all' || view.terms.length > 0;
+  const narrowed = view.filter !== 'all' || view.terms.length > 0 || farCount > 0;
   const what = view.terms.length ? view.terms.map(k => SERVICE_KEYS[k].label).join(' or ')
              : view.filter === 'available' ? 'taking bookings'
              : (SERVICE_KEYS[view.filter] || {}).label || '';
@@ -3722,9 +3840,9 @@ function renderGrid(){
   if(meta){
     meta.textContent = '';
     if(narrowed){
-      meta.appendChild(document.createTextNode(list.length + ' of ' + ALL_MECHS.length + ' mechanic' + (ALL_MECHS.length !== 1 ? 's' : '') + ' — ' + what));
+      meta.appendChild(document.createTextNode(list.length + ' of ' + ALL_MECHS.length + ' mechanic' + (ALL_MECHS.length !== 1 ? 's' : '') + (what ? ' — ' + what : '') + (farCount ? ' · ' + farCount + " don't travel to " + (CUSTOMER_GEO.label || 'you') : '')));
       const clr = document.createElement('button'); clr.className = 'meta-clear'; clr.textContent = 'Show all';
-      clr.addEventListener('click', resetView); meta.appendChild(clr);
+      clr.addEventListener('click', () => { setCustomerGeo(null); const u = document.getElementById('useLocBtn'); if(u) u.innerHTML = '<i class="ti ti-current-location" aria-hidden="true"></i> Use my current location'; resetView(); }); meta.appendChild(clr);
     } else {
       const avail = ALL_MECHS.filter(m => m.available_now).length;
       meta.appendChild(document.createTextNode(ALL_MECHS.length + ' mechanic' + (ALL_MECHS.length !== 1 ? 's' : '') + (avail ? ' · ' : '')));
@@ -3732,8 +3850,14 @@ function renderGrid(){
     }
   }
 
+  if(!list.length && farCount && !view.terms.length && view.filter === 'all'){
+    grid.appendChild(gridEmpty("No mechanics travel to " + (CUSTOMER_GEO.label || 'that address') + " yet",
+      "We're adding mechanics area by area. Send us the job and we'll try to find someone, or check back soon.",
+      [['Show all mechanics', 'btn-ghost', () => { setCustomerGeo(null); resetView(); }], ['Let us match you', 'btn-ore', () => openBooking(null)]]));
+    return;
+  }
   if(!list.length){
-    grid.appendChild(gridEmpty('No one lists ' + what + ' yet',
+    grid.appendChild(gridEmpty('No one lists ' + (what || 'that') + ' yet',
       "Most mechanics can still diagnose it on site. See everyone, or send us the job and we'll match you.",
       [['Show all mechanics', 'btn-ghost', resetView], ['Let us match you', 'btn-ore', () => openBooking(null)]]));
     return;
@@ -3768,11 +3892,18 @@ function sortToggle(el, key){
   document.querySelectorAll('.sort-pill').forEach(p => p.classList.remove('on'));
   el.classList.add('on');
   view.sort = key || 'rating';
+  if(key === 'near' && !CUSTOMER_GEO){ const m = document.getElementById('mechsMeta'); renderGrid(); if(m){ m.textContent = 'Add your address in the search box (or use your location) to sort by distance.'; } document.getElementById('searchLocation').focus(); return; }
   renderGrid();
 }
 
 // Hero search card → filters the grid and is carried into the booking form
-function runSearch(){
+async function runSearch(){
+  const locText = (document.getElementById('searchLocation').value || '').trim();
+  if(locText && (!CUSTOMER_GEO || CUSTOMER_GEO.label !== locText)){
+    const g = await geocode(locText);
+    setCustomerGeo(g ? { lat: g.lat, lng: g.lng, label: locText } : null);
+  }
+  if(!locText && CUSTOMER_GEO && CUSTOMER_GEO.label !== 'your current location') setCustomerGeo(null);
   const text = (document.getElementById('searchService').value || '').toLowerCase();
   const keys = new Set();
   document.querySelectorAll('#chips .chip.on').forEach(c => { if(c.dataset.key) keys.add(c.dataset.key); });
@@ -3793,6 +3924,8 @@ document.addEventListener('keydown', e => {
   if(e.key !== 'Escape') return;
   const on = id => { const el = document.getElementById(id); return el && el.classList.contains('on'); };
   if(on('agreementOverlay')) return closeAgreement();
+  if(on('inspOverlay')) return closeInspection();
+  if(on('garageOverlay')) return closeGarage();
   if(on('accountSettingsOverlay')){ document.getElementById('accountSettingsOverlay').remove(); return; }
   if(on('contactOverlay')) return closeContact();
   if(on('authOverlay')) return closeAuth();
@@ -3858,12 +3991,31 @@ function buildDateTabs(){
     row.appendChild(tab);
   }
   refreshSlots();
+  loadTakenSlots();
 }
 
 function slotMinutes(t){
   const m = /^(\d+):(\d+)\s*(AM|PM)$/i.exec((t||'').trim());
   if(!m) return 0;
   return ((+m[1] % 12) + (m[3].toUpperCase() === 'PM' ? 12 : 0)) * 60 + (+m[2]);
+}
+let takenTimes = new Set(), takenKey = '';
+function slotHHMM(t){ const m = slotMinutes(t); return String(Math.floor(m / 60)).padStart(2, '0') + String(m % 60).padStart(2, '0'); }
+function currentMechDoc(){ const k = Object.keys(MECHANICS).find(x => MECHANICS[x].name === selectedMechName); return k ? MECHANICS[k].id : ''; }
+// Times another customer already holds for this mechanic on this day
+async function loadTakenSlots(){
+  const mechDoc = currentMechDoc(), iso = selectedDateISO, key = mechDoc + '|' + iso;
+  takenKey = key; takenTimes = new Set();
+  if(!mechDoc || !iso){ refreshSlots(); return; }
+  try {
+    const snap = await db.collection('slots').where('mechanic_doc', '==', mechDoc).where('date_iso', '==', iso).get();
+    if(takenKey !== key) return;
+    snap.docs.forEach(d => { const t = d.data().time; if(typeof t === 'string') takenTimes.add(t); });
+  } catch(e){}
+  refreshSlots();
+}
+async function freeSlot(b){
+  if(b && b.slot_id){ try { await db.collection('slots').doc(b.slot_id).delete(); } catch(e){} }
 }
 // Times earlier than an hour from now can't be requested for today
 function refreshSlots(){
@@ -3872,10 +4024,12 @@ function refreshSlots(){
   const cutoff = now.getHours()*60 + now.getMinutes() + 60;
   let firstOpen = null, current = null;
   document.querySelectorAll('#timeSlots .slot').forEach(s => {
-    const past = isToday && slotMinutes(s.querySelector('.slot-time').textContent) < cutoff;
-    s.classList.toggle('taken', past);
-    s.querySelector('.slot-avail').textContent = past ? 'Passed' : '';
-    if(past) s.classList.remove('on');
+    const t = s.querySelector('.slot-time').textContent;
+    const past = isToday && slotMinutes(t) < cutoff, booked = takenTimes.has(t);
+    s.classList.toggle('taken', past || booked);
+    s.querySelector('.slot-avail').textContent = past ? 'Passed' : booked ? 'Booked' : '';
+    if(booked) s.style.color = ''; 
+    if(past || booked) s.classList.remove('on');
     else { if(!firstOpen) firstOpen = s; if(s.classList.contains('on')) current = s; }
   });
   if(!current && firstOpen){ firstOpen.classList.add('on'); current = firstOpen; }
@@ -4012,6 +4166,7 @@ function selectDate(el, label){
   el.classList.add('on');
   selectedDate = label;
   refreshSlots();
+  loadTakenSlots();
 }
 
 function selectSlot(el){
@@ -4045,10 +4200,16 @@ async function confirmBooking(agreedToTerms=false){
   const urgency = document.getElementById('modalUrgency') ? document.getElementById('modalUrgency').value : 'flexible';
   const mechKey = Object.keys(MECHANICS).find(k => MECHANICS[k].name === selectedMechName);
 
-  let bookingId = null;
+  let bookingId = null, slotId = '';
 
   try {
-    const bookingRef = await db.collection('bookings').add({
+    // The booking and its time slot are saved together: if someone else holds that slot, nothing is saved
+    const mkKey = Object.keys(MECHANICS).find(k => MECHANICS[k].name === selectedMechName);
+    const mechDoc = mkKey ? MECHANICS[mkKey].id : '', mechUid = mkKey ? MECHANICS[mkKey].ownerUid : '';
+    slotId = mechDoc && selectedDateISO ? mechDoc + '_' + selectedDateISO + '_' + slotHHMM(selectedTime) : '';
+    const bookingRef = db.collection('bookings').doc();
+    const batch = db.batch();
+    batch.set(bookingRef, {
       customer_id:    currentUser?.uid || null,
       customer_email: currentUser?.email || '',
       customer_name:  currentUser?.displayName || '',
@@ -4056,6 +4217,9 @@ async function confirmBooking(agreedToTerms=false){
       booking_date_iso: selectedDateISO,
       mechanic_slug:  mechKey || '',
       mechanic_name:  selectedMechName,
+      mechanic_doc:   mechDoc,
+      mechanic_uid:   mechUid || '',
+      slot_id:        slotId,
       service,
       vehicle,
       address,
@@ -4069,6 +4233,12 @@ async function confirmBooking(agreedToTerms=false){
       status:         'pending',
       created_at:     firebase.firestore.FieldValue.serverTimestamp()
     });
+    if(slotId) batch.set(db.collection('slots').doc(slotId), {
+      mechanic_doc: mechDoc, mechanic_uid: mechUid || '', date_iso: selectedDateISO, time: selectedTime,
+      customer_id: currentUser?.uid || '', booking_id: bookingRef.id,
+      created_at: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    await batch.commit();
     bookingId = bookingRef.id;
     // Save vehicle, address, mechanic to customer profile
     const mechKey2 = Object.keys(MECHANICS).find(k => MECHANICS[k].name === selectedMechName);
@@ -4078,7 +4248,11 @@ async function confirmBooking(agreedToTerms=false){
   } catch(err) {
     // Nothing was saved, so say so instead of showing a success screen
     console.error('Booking save error:', err);
-    e3.textContent = "We couldn't send your request, so nothing was booked. Check your connection and try again.";
+    let clash = false;
+    if(slotId){ try { const sd = await db.collection('slots').doc(slotId).get(); clash = sd.exists; } catch(e){} }
+    e3.textContent = clash ? selectedTime + ' on that day was just booked by someone else, so nothing was saved. Go back and pick another time.'
+                           : "We couldn't send your request, so nothing was booked. Check your connection and try again.";
+    if(clash) loadTakenSlots();
     e3.classList.add('on');
     if(btn){ btn.disabled=false; btn.innerHTML='<i class="ti ti-circle-check" aria-hidden="true"></i> Send Booking Request — No Fee'; }
     bookingBusy = false;
@@ -4443,6 +4617,8 @@ function openAccountSettings() {
   box.appendChild(closeBtn);
   const title = el('div', 'auth-title', 'Your account'); title.style.fontSize = '22px'; box.appendChild(title);
   box.appendChild(el('div', 'auth-sub', (currentUser.displayName ? currentUser.displayName + ' · ' : '') + (currentUser.email || '')));
+  const garageBtn = el('button', 'auth-btn', 'My car & service schedule'); garageBtn.style.cssText = 'margin-bottom:.6rem;background:transparent;border:0.5px solid var(--border-med);color:var(--cream)';
+  garageBtn.addEventListener('click', () => { close(); openGarage(); }); box.appendChild(garageBtn);
   const bookingsBtn = el('button', 'auth-btn', 'My bookings'); bookingsBtn.style.marginBottom = '1.1rem';
   bookingsBtn.addEventListener('click', () => { close(); openMyBookings(); }); box.appendChild(bookingsBtn);
   const field = (id, label, type, ph, value) => {
@@ -4775,8 +4951,378 @@ function updateCalc(){
 }
 updateCalc();
 
+
+// ═══════════════════════════════════════════════════════════
+// MECHANIC DASHBOARD
+// A mechanic signs up / logs in with the email they applied with. Once that email is
+// verified, their account is linked to their profile (the database rules check the email
+// against the private record, so nobody can claim someone else's profile).
+// ═══════════════════════════════════════════════════════════
+let MY_MECH = null;
+const INSPECTION_ITEMS = ['Brakes', 'Tires', 'Battery', 'Engine oil', 'Coolant', 'Brake fluid', 'Transmission fluid', 'Belts & hoses', 'Lights', 'Wipers', 'Suspension & steering', 'Exhaust', 'Air filter', 'Leaks'];
+
+async function checkMechanic(){
+  MY_MECH = null;
+  if(currentUser){
+    try {
+      let snap = await db.collection('mechanics').where('owner_uid', '==', currentUser.uid).limit(1).get();
+      if(snap.empty && currentUser.emailVerified && currentUser.email){
+        const hash = await sha256(currentUser.email.trim().toLowerCase());
+        const cand = hash ? await db.collection('mechanics').where('owner_email_hash', '==', hash).limit(1).get() : null;
+        if(cand && !cand.empty && !cand.docs[0].data().owner_uid){
+          await cand.docs[0].ref.update({ owner_uid: currentUser.uid });
+          snap = await db.collection('mechanics').where('owner_uid', '==', currentUser.uid).limit(1).get();
+        }
+      }
+      if(!snap.empty) MY_MECH = normalizeMech({ id: snap.docs[0].id, ...snap.docs[0].data() });
+    } catch(e){ MY_MECH = null; }
+  }
+  const pill = document.querySelectorAll('.npill')[2];
+  if(pill) pill.textContent = MY_MECH ? 'My jobs' : 'Dashboard';
+  renderMechGate();
+  if(document.getElementById('panel-dashboard').classList.contains('on')) loadMechPortal();
+}
+
+function renderMechGate(){
+  const gate = document.getElementById('mechGate'), portal = document.getElementById('mechPortal'), demo = document.getElementById('dashDemo');
+  if(!gate) return;
+  gate.innerHTML = '';
+  portal.style.display = MY_MECH ? '' : 'none';
+  demo.style.display = MY_MECH ? 'none' : '';
+  gate.style.display = MY_MECH ? 'none' : '';
+  if(MY_MECH) return;
+  const box = document.createElement('div'); box.className = 'mp-gate';
+  const p = document.createElement('p'); const actions = document.createElement('div'); actions.className = 'admin-actions';
+  const btn = (label, cls, fn) => { const b = document.createElement('button'); b.className = 'admin-btn ' + cls; b.textContent = label; b.addEventListener('click', fn); actions.appendChild(b); return b; };
+  if(!currentUser){
+    p.innerHTML = '<strong style="color:var(--cream)">This is a preview with sample data.</strong> Already approved as a mechanic? Log in with the email you applied with to see your real booking requests.';
+    btn('Log in', 'primary', () => openAuth('login'));
+    btn('Apply as a mechanic', '', () => { showPanel('mechanic'); openApply(); });
+  } else if(!currentUser.emailVerified){
+    p.innerHTML = '<strong style="color:var(--cream)">Approved mechanic?</strong> Confirm your email first. We sent a link to ' + esc(currentUser.email) + '. Open it, then press "I\'ve confirmed".';
+    btn('Resend the link', '', async e => { try { await currentUser.sendEmailVerification(); e.target.textContent = 'Sent — check your inbox'; } catch(err){ e.target.textContent = 'Try again in a minute'; } });
+    btn("I've confirmed", 'primary', async () => { try { await currentUser.reload(); currentUser = auth.currentUser || currentUser; await currentUser.getIdToken(true); } catch(e){} checkMechanic(); });
+  } else {
+    p.innerHTML = '<strong style="color:var(--cream)">No mechanic profile is linked to ' + esc(currentUser.email) + '.</strong> If you applied with a different email, log in with that one. If you applied recently, your profile appears here once it is approved.';
+    btn('Apply as a mechanic', '', () => { showPanel('mechanic'); openApply(); });
+  }
+  box.appendChild(p); box.appendChild(actions); gate.appendChild(box);
+}
+
+function mapsLink(addr){ return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(addr || ''); }
+
+async function loadMechPortal(){
+  const root = document.getElementById('mechPortal');
+  if(!root || !MY_MECH) return;
+  root.innerHTML = '<div class="admin-empty">Loading your jobs…</div>';
+  let books = [], reviews = [];
+  try {
+    books = (await db.collection('bookings').where('mechanic_uid', '==', currentUser.uid).get()).docs.map(d => ({ id: d.id, ...d.data() }));
+    reviews = cleanReviews(await db.collection('reviews').where('mechanic_slug', '==', MY_MECH.slug).get());
+  } catch(e){ root.innerHTML = '<div class="admin-empty">Could not load your jobs. Check your connection and reload.</div>'; return; }
+  const order = { pending: 0, confirmed: 1, completed: 2, cancelled: 3 };
+  books.sort((a, b) => (order[a.status] ?? 4) - (order[b.status] ?? 4) || String(a.booking_date_iso || '').localeCompare(String(b.booking_date_iso || '')));
+  const m = MY_MECH;
+  root.innerHTML = '';
+  // header
+  const head = document.createElement('div'); head.className = 'mp-head';
+  const av = document.createElement('div'); av.className = 'avatar'; av.style.background = m.avatar_bg; av.style.color = m.avatar_color; setAvatar(av, m.initials, m.photo);
+  const t = document.createElement('div'); t.style.flex = '1';
+  const h = document.createElement('div'); h.className = 'admin-h'; h.style.fontSize = '28px'; h.textContent = m.name;
+  const sub = document.createElement('div'); sub.className = 'admin-sub'; sub.style.margin = '.3rem 0 0';
+  sub.textContent = [m.verified ? 'Verified' : 'Verification in progress', mechLevel(m) === 'basic' ? 'Basic maintenance' : 'Full-service', m.rate_display ? m.rate_display + '/hr' : '', hasRating(m) ? m.rating.toFixed(1) + '★ from ' + m.review_count + ' review' + (m.review_count === 1 ? '' : 's') : 'No ratings yet', m.is_featured ? 'Featured' : ''].filter(Boolean).join(' · ');
+  t.appendChild(h); t.appendChild(sub);
+  const tog = adminBtn(m.available_now ? 'Taking bookings — pause' : 'Paused — resume bookings', m.available_now ? 'good' : 'primary', async () => {
+    await db.collection('mechanics').doc(m.id).update({ available_now: !m.available_now, avail_label: !m.available_now ? 'Taking bookings' : 'Not taking jobs right now' });
+    try { sessionStorage.removeItem('ww_mechanics_cache'); } catch(e){}
+    await checkMechanic(); loadMechanics();
+  });
+  head.appendChild(av); head.appendChild(t); head.appendChild(tog);
+  if(!m.is_featured){ const f = document.createElement('button'); f.className = 'admin-btn'; f.textContent = 'Get Featured — $29/mo'; f.addEventListener('click', () => openProUpgrade(f)); head.appendChild(f); }
+  root.appendChild(head);
+
+  // requests
+  const open = books.filter(b => b.status === 'pending' || b.status === 'confirmed');
+  const sec = adminSection('Your booking requests', open.length + ' open');
+  if(!books.length){ const e = document.createElement('div'); e.className = 'admin-empty'; e.textContent = 'No requests yet. They show up here (and by email) as soon as a customer books you.'; sec.appendChild(e); }
+  books.forEach(b => sec.appendChild(mechBookingCard(b)));
+  root.appendChild(sec);
+
+  // profile
+  const ps = adminSection('Your profile', 'what customers see');
+  const card = document.createElement('div'); card.className = 'admin-card';
+  const grid = document.createElement('div'); grid.className = 'mp-grid';
+  const fld = (label, el, full) => { const w = document.createElement('div'); if(full) w.className = 'full'; const l = document.createElement('label'); l.textContent = label; w.appendChild(l); w.appendChild(el); grid.appendChild(w); return el; };
+  const rate = document.createElement('input'); rate.type = 'number'; rate.min = 20; rate.max = 500; rate.value = m.rate_num || ''; fld('Hourly rate ($)', rate);
+  const rad = document.createElement('select'); [10, 15, 25, 40].forEach(n => { const o = document.createElement('option'); o.value = n; o.textContent = 'Up to ' + n + ' miles'; if(n === m.radius_mi) o.selected = true; rad.appendChild(o); }); fld('How far you travel', rad);
+  const zip = document.createElement('input'); zip.type = 'text'; zip.maxLength = 5; zip.inputMode = 'numeric'; zip.value = m.zip || ''; fld('Home ZIP code', zip);
+  const ph = document.createElement('input'); ph.type = 'file'; ph.accept = 'image/*'; let newPhoto = null; fld('Profile photo', ph);
+  ph.addEventListener('change', () => { const f = ph.files && ph.files[0]; if(!f) return; const img = new Image(); img.onload = () => { const S = 240, c = document.createElement('canvas'); c.width = S; c.height = S; const side = Math.min(img.width, img.height); c.getContext('2d').drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, S, S); newPhoto = c.toDataURL('image/jpeg', 0.8); setAvatar(av, m.initials, newPhoto); URL.revokeObjectURL(img.src); }; img.src = URL.createObjectURL(f); });
+  const bio = document.createElement('textarea'); bio.rows = 4; bio.maxLength = 1500; bio.value = m.bio || ''; fld('About you', bio, true);
+  card.appendChild(grid);
+  const sr = document.createElement('div'); sr.className = 'admin-actions'; sr.style.marginTop = '.75rem';
+  sr.appendChild(adminBtn('Save profile', 'primary', async () => {
+    const r = Math.round(Number(rate.value));
+    if(!(r >= 20 && r <= 500)) throw new Error('Hourly rate must be between $20 and $500.');
+    if(zip.value && !/^\d{5}$/.test(zip.value.trim())) throw new Error('ZIP code must be 5 digits.');
+    const patch = { rate_num: r, rate_display: '$' + r, bio: bio.value.trim().slice(0, 1500), radius_mi: Number(rad.value), updated_at: new Date().toISOString() };
+    if(zip.value.trim() !== m.zip){ const g = await geocode(zip.value.trim() + ', USA'); patch.zip = zip.value.trim(); patch.geo_lat = g ? g.lat : null; patch.geo_lng = g ? g.lng : null; }
+    if(newPhoto) patch.photo = newPhoto;
+    await db.collection('mechanics').doc(m.id).update(patch);
+    try { sessionStorage.removeItem('ww_mechanics_cache'); } catch(e){}
+    await checkMechanic(); loadMechanics();
+  }));
+  const share = document.createElement('button'); share.className = 'admin-btn'; share.textContent = 'Copy my profile link';
+  share.addEventListener('click', () => { const u = profileUrl(m.slug); if(navigator.clipboard) navigator.clipboard.writeText(u).then(() => { share.textContent = 'Link copied'; }).catch(() => { share.textContent = u; }); else share.textContent = u; });
+  sr.appendChild(share);
+  card.appendChild(sr); ps.appendChild(card); root.appendChild(ps);
+
+  // reviews
+  const rs = adminSection('Your reviews', reviews.length + ' total');
+  if(!reviews.length){ const e = document.createElement('div'); e.className = 'admin-empty'; e.textContent = 'Customers are asked to rate you after they mark a job complete.'; rs.appendChild(e); }
+  reviews.forEach(r => { const c = document.createElement('div'); c.className = 'admin-card'; c.appendChild(reviewNode(r, false)); rs.appendChild(c); });
+  root.appendChild(rs);
+}
+
+function mechBookingCard(b){
+  const st = b.status || 'pending';
+  const card = document.createElement('div'); card.className = 'admin-card';
+  const row = document.createElement('div'); row.className = 'admin-row';
+  const left = document.createElement('div');
+  const nm = document.createElement('div'); nm.className = 'admin-name'; nm.textContent = (b.service || 'Service') + ' — ' + (b.booking_date || '') + ' ' + (b.booking_time || '');
+  const meta = document.createElement('div'); meta.className = 'admin-meta';
+  meta.appendChild(document.createTextNode((b.customer_name || 'Customer') + ' ')); meta.appendChild(contactLine('', b.customer_phone));
+  meta.appendChild(document.createElement('br'));
+  if(b.address){ const a = document.createElement('a'); a.href = mapsLink(b.address); a.target = '_blank'; a.rel = 'noopener'; a.textContent = b.address; meta.appendChild(a); meta.appendChild(document.createElement('br')); }
+  meta.appendChild(document.createTextNode([b.vehicle, b.urgency && b.urgency !== 'flexible' ? 'Urgency: ' + b.urgency : '', b.notes].filter(Boolean).join(' · ')));
+  left.appendChild(nm); left.appendChild(meta); row.appendChild(left);
+  row.appendChild(adminTag(st, st === 'completed' ? 'ok' : st === 'confirmed' ? 'warn' : st === 'cancelled' ? '' : 'due'));
+  card.appendChild(row);
+  const acts = document.createElement('div'); acts.className = 'admin-actions'; acts.style.marginTop = '.7rem';
+  const set = s => async () => {
+    await db.collection('bookings').doc(b.id).update({ status: s, [s + '_at']: new Date().toISOString(), status_by: 'mechanic' });
+    if(s === 'cancelled') await freeSlot(b);
+    loadMechPortal();
+  };
+  // adminBtn reloads the admin tab; here the dashboard reloads itself
+  const btn = (label, cls, fn) => { const x = document.createElement('button'); x.className = 'admin-btn ' + cls; x.textContent = label; x.addEventListener('click', async () => { x.disabled = true; try { await fn(); } catch(e){ x.disabled = false; alert("That didn't save: " + (e.message || e.code || e)); } }); acts.appendChild(x); };
+  if(st === 'pending'){ btn('Confirm this time', 'primary', set('confirmed')); btn("Can't make it", '', async () => { if(confirm('Decline this request? The customer will see it as cancelled.')) await set('cancelled')(); }); }
+  if(st === 'confirmed'){ btn('Job done — mark complete', 'good', set('completed')); btn('Cancel', '', async () => { if(confirm('Cancel this confirmed job? Please also call the customer.')) await set('cancelled')(); }); }
+  if(st === 'confirmed' || st === 'completed') btn(b.report ? 'Edit inspection report' : 'Add inspection report', '', async () => openInspection(b, true));
+  if(acts.children.length) card.appendChild(acts);
+  return card;
+}
+
+// ─── INSPECTION REPORT ─────────────────────────────────
+// The mechanic marks each item good / soon / now with a note; the customer reads it in My bookings,
+// and anything marked soon or now shows up on their car's to-do list.
+let inspBooking = null;
+function closeInspection(){ document.getElementById('inspOverlay').classList.remove('on'); inspBooking = null; }
+function openInspection(b, editable){
+  inspBooking = b;
+  const rep = b.report || {};
+  const prev = {}; (rep.items || []).forEach(it => { prev[it.name] = it; });
+  document.getElementById('inspTitle').textContent = editable ? 'Inspection report' : 'Your inspection report';
+  document.getElementById('inspSub').textContent = [b.vehicle, b.booking_date, editable ? b.customer_name : b.mechanic_name].filter(Boolean).join(' · ');
+  document.getElementById('inspError').style.display = 'none';
+  const body = document.getElementById('inspBody'); body.innerHTML = '';
+  if(!editable){
+    if(rep.mileage) { const mi = document.createElement('div'); mi.className = 'admin-meta'; mi.textContent = 'Mileage at inspection: ' + Number(rep.mileage).toLocaleString(); body.appendChild(mi); }
+    const rank = { now: 0, soon: 1, good: 2 };
+    (rep.items || []).slice().sort((a, c) => (rank[a.status] ?? 3) - (rank[c.status] ?? 3)).forEach(it => {
+      const r = document.createElement('div'); r.className = 'rep-item';
+      const d = document.createElement('span'); d.className = 'rep-dot ' + it.status;
+      const txt = document.createElement('div'); txt.innerHTML = '<strong style="color:var(--cream)"></strong>';
+      txt.firstChild.textContent = it.name + ' — ' + ({ good: 'good', soon: 'needs attention soon', now: 'needs attention now' }[it.status] || it.status);
+      if(it.note){ txt.appendChild(document.createElement('br')); txt.appendChild(document.createTextNode(it.note)); }
+      r.appendChild(d); r.appendChild(txt); body.appendChild(r);
+    });
+    if(rep.summary){ const sm = document.createElement('div'); sm.className = 'rev-text'; sm.style.marginTop = '.8rem'; sm.textContent = rep.summary; body.appendChild(sm); }
+    const acts = document.createElement('div'); acts.className = 'admin-actions'; acts.style.marginTop = '1rem';
+    const fix = (rep.items || []).filter(it => it.status !== 'good');
+    if(fix.length){ const bk = document.createElement('button'); bk.className = 'admin-btn primary'; bk.textContent = 'Book a repair for these'; bk.addEventListener('click', () => { closeInspection(); closeMyBookings(); document.getElementById('modalService').value = ''; openBooking(b.mechanic_name || null); document.getElementById('modalService').value = 'From my inspection: ' + fix.map(f => f.name).join(', '); }); acts.appendChild(bk); }
+    body.appendChild(acts);
+  } else {
+    const meta = document.createElement('div'); meta.className = 'insp-meta';
+    const mil = document.createElement('input'); mil.type = 'number'; mil.min = 0; mil.placeholder = 'Odometer miles'; mil.value = rep.mileage || ''; mil.setAttribute('aria-label', 'Mileage');
+    const sum = document.createElement('textarea'); sum.rows = 2; sum.maxLength = 1000; sum.placeholder = 'Summary for the customer (optional)'; sum.value = rep.summary || '';
+    meta.appendChild(mil); meta.appendChild(sum); body.appendChild(meta);
+    const rows = INSPECTION_ITEMS.map(name => {
+      const r = document.createElement('div'); r.className = 'insp-row';
+      const lab = document.createElement('b'); lab.textContent = name;
+      const pick = document.createElement('div'); pick.className = 'insp-pick'; let val = (prev[name] || {}).status || '';
+      ['good', 'soon', 'now'].forEach(v => { const bt = document.createElement('button'); bt.type = 'button'; bt.dataset.v = v; bt.textContent = { good: 'Good', soon: 'Soon', now: 'Now' }[v]; if(v === val) bt.classList.add('on'); bt.addEventListener('click', () => { val = val === v ? '' : v; Array.from(pick.children).forEach(c => c.classList.toggle('on', c.dataset.v === val)); }); pick.appendChild(bt); });
+      const note = document.createElement('input'); note.type = 'text'; note.maxLength = 200; note.placeholder = 'Note (e.g. 3/32" tread, replace within 2 months)'; note.value = (prev[name] || {}).note || '';
+      r.appendChild(lab); r.appendChild(pick); r.appendChild(note); body.appendChild(r);
+      return () => val ? { name, status: val, note: note.value.trim().slice(0, 200) } : null;
+    });
+    const save = document.createElement('button'); save.className = 'auth-btn'; save.style.marginTop = '1rem'; save.textContent = 'Save report';
+    save.addEventListener('click', async () => {
+      const items = rows.map(f => f()).filter(Boolean);
+      const err = document.getElementById('inspError');
+      if(!items.length){ err.textContent = 'Mark at least one item.'; err.style.display = 'block'; return; }
+      save.disabled = true; save.textContent = 'Saving…';
+      try {
+        await db.collection('bookings').doc(b.id).update({ report: { items, mileage: Math.max(0, parseInt(mil.value) || 0), summary: sum.value.trim().slice(0, 1000), submitted_at: new Date().toISOString() } });
+        closeInspection(); loadMechPortal();
+      } catch(e){ err.textContent = "Couldn't save the report. Try again."; err.style.display = 'block'; save.disabled = false; save.textContent = 'Save report'; }
+    });
+    body.appendChild(save);
+  }
+  document.getElementById('inspOverlay').classList.add('on');
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// MY CAR — service schedule and reminders
+// Typical intervals only; the owner's manual always wins, and the page says so.
+// "Last done" comes from completed WrenchNow bookings, inspection reports, and anything
+// the customer logs themselves.
+// ═══════════════════════════════════════════════════════════
+const SERVICE_SCHEDULE = [
+  { key: 'oil',          name: 'Oil change',        miles: 5000,  months: 6,  book: 'Oil change',                   re: /\boil\b/ },
+  { key: 'tire_rotation',name: 'Tire rotation',     miles: 6000,  months: 6,  book: 'Tire rotation',                re: /rotat/ },
+  { key: 'brakes',       name: 'Brake check',       miles: 12000, months: 12, book: 'Brake inspection',             re: /brak/,          report: 'Brakes' },
+  { key: 'battery',      name: 'Battery test',      miles: null,  months: 12, book: 'Battery test',                 re: /batter/,        report: 'Battery' },
+  { key: 'air_filter',   name: 'Engine air filter', miles: 15000, months: 12, book: 'Engine air filter replacement',re: /air filter|engine filter/, report: 'Air filter' },
+  { key: 'cabin_filter', name: 'Cabin air filter',  miles: 15000, months: 12, book: 'Cabin air filter replacement', re: /cabin/ },
+  { key: 'wipers',       name: 'Wiper blades',      miles: null,  months: 12, book: 'Wiper blades',                 re: /wiper/,         report: 'Wipers' },
+  { key: 'inspection',   name: 'Full inspection',   miles: null,  months: 12, book: 'Full vehicle inspection',      re: /inspect/ }
+];
+const DAY = 86400000;
+function isoToday(){ const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function isoMs(iso){ const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || ''); return m ? new Date(+m[1], +m[2] - 1, +m[3]).getTime() : 0; }
+function addMonths(ms, n){ const d = new Date(ms); d.setMonth(d.getMonth() + n); return d.getTime(); }
+function monthLabel(ms){ return new Date(ms).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }); }
+function estimateMiles(p){
+  const base = parseInt(p.mileage) || 0; if(!base) return null;
+  const since = Math.max(0, (Date.now() - (isoMs(p.mileage_date) || Date.now())) / (30.44 * DAY));
+  return Math.round(base + since * (parseInt(p.miles_per_month) || 1000));
+}
+// Works out every schedule item's status from the profile + this customer's bookings
+function serviceStatus(p, bookings){
+  const log = Array.isArray(p.service_log) ? p.service_log : [];
+  const cur = estimateMiles(p), today = Date.now();
+  return SERVICE_SCHEDULE.map(item => {
+    const events = [];
+    log.filter(e => e && e.key === item.key && isoMs(e.date_iso)).forEach(e => events.push({ ms: isoMs(e.date_iso), miles: parseInt(e.mileage) || null, src: 'you' }));
+    bookings.filter(b => b.status === 'completed' && item.re.test(String(b.service || '').toLowerCase())).forEach(b => {
+      const ms = isoMs(b.booking_date_iso) || tsMillis(b.completed_at) || tsMillis(b.created_at);
+      if(ms) events.push({ ms, miles: b.report && b.report.mileage ? b.report.mileage : null, src: 'WrenchNow' });
+    });
+    if(item.report) bookings.forEach(b => {
+      const it = b.report && Array.isArray(b.report.items) ? b.report.items.find(x => x.name === item.report && x.status === 'good') : null;
+      if(it){ const ms = isoMs(b.booking_date_iso) || tsMillis(b.created_at); if(ms) events.push({ ms, miles: b.report.mileage || null, src: 'inspection' }); }
+    });
+    events.sort((a, b) => b.ms - a.ms);
+    const last = events[0];
+    if(!last) return { item, state: 'unknown', text: 'No record yet. Log it if you know when it was last done.' };
+    const dueMs = addMonths(last.ms, item.months);
+    const dueMiles = item.miles && last.miles ? last.miles + item.miles : null;
+    let state = 'ok';
+    if(today > dueMs || (dueMiles && cur && cur >= dueMiles)) state = 'overdue';
+    else if(dueMs - today < 30 * DAY || (dueMiles && cur && cur >= dueMiles - 500)) state = 'soon';
+    const lastTxt = 'Last done ' + new Date(last.ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) + (last.miles ? ' at ' + last.miles.toLocaleString() + ' mi' : '') + ' (' + last.src + ')';
+    const dueTxt = 'due ' + monthLabel(dueMs) + (dueMiles ? ' or ' + dueMiles.toLocaleString() + ' mi, whichever comes first' : '');
+    return { item, state, text: lastTxt + ' · ' + dueTxt };
+  });
+}
+function flaggedItems(bookings){
+  // Latest report wins for each item; only things a mechanic marked soon / now
+  const latest = {};
+  bookings.filter(b => b.report && Array.isArray(b.report.items)).sort((a, b) => (isoMs(a.booking_date_iso) || 0) - (isoMs(b.booking_date_iso) || 0)).forEach(b => {
+    b.report.items.forEach(it => { latest[it.name] = Object.assign({ date: b.booking_date || '', mech: b.mechanic_name || '' }, it); });
+  });
+  return Object.values(latest).filter(it => it.status === 'soon' || it.status === 'now').sort((a, b) => (a.status === 'now' ? 0 : 1) - (b.status === 'now' ? 0 : 1));
+}
+
+function closeGarage(){ document.getElementById('garageOverlay').classList.remove('on'); }
+async function openGarage(){
+  if(!currentUser){ pendingBooking = null; openAuth('signup'); return; }
+  document.getElementById('garageOverlay').classList.add('on');
+  const body = document.getElementById('garageBody'), err = document.getElementById('garageError');
+  err.style.display = 'none';
+  body.innerHTML = '<div class="admin-empty">Loading your car…</div>';
+  let p = {}, bookings = [];
+  try {
+    const d = await db.collection('customer_profiles').doc(currentUser.uid).get(); p = d.exists ? d.data() : {};
+    bookings = (await db.collection('bookings').where('customer_id', '==', currentUser.uid).get()).docs.map(x => ({ id: x.id, ...x.data() }));
+  } catch(e){ body.innerHTML = '<div class="admin-empty">Could not load your car. Check your connection and try again.</div>'; return; }
+  customerProfile = Object.assign({}, customerProfile, p);
+  renderGarage(p, bookings);
+}
+function renderGarage(p, bookings){
+  const body = document.getElementById('garageBody'); body.innerHTML = '';
+  const el = (tag, cls, text) => { const x = document.createElement(tag); if(cls) x.className = cls; if(text != null) x.textContent = text; return x; };
+  // car + mileage
+  const top = el('div', 'gar-top');
+  const f = (label, input) => { const w = el('div'); const l = el('label', '', label); w.appendChild(l); w.appendChild(input); top.appendChild(w); return input; };
+  const car = el('input'); car.type = 'text'; car.placeholder = 'e.g. 2018 Honda Civic'; car.value = p.vehicle || ''; f('Car', car);
+  const mi = el('input'); mi.type = 'number'; mi.min = 0; mi.placeholder = 'Odometer'; mi.value = estimateMiles(p) || ''; f('Current miles', mi);
+  const mpm = el('select'); [500, 1000, 1500, 2000, 3000].forEach(n => { const o = el('option', '', '~' + n.toLocaleString() + ' / month'); o.value = n; if(n === (parseInt(p.miles_per_month) || 1000)) o.selected = true; mpm.appendChild(o); }); f('You drive', mpm);
+  body.appendChild(top);
+  const remWrap = el('label', ''); remWrap.style.cssText = 'display:flex;gap:8px;align-items:center;font-size:13px;color:var(--ink);cursor:pointer;margin-bottom:.6rem';
+  const rem = el('input'); rem.type = 'checkbox'; rem.checked = !!p.reminders; rem.style.accentColor = 'var(--ore)';
+  remWrap.appendChild(rem); remWrap.appendChild(document.createTextNode('Email me at ' + (currentUser.email || 'my email') + ' when something is due'));
+  body.appendChild(remWrap);
+  const save = el('button', 'admin-btn primary', 'Save car details');
+  const saveProfile = async (extra) => {
+    const patch = Object.assign({ vehicle: car.value.trim().slice(0, 80), miles_per_month: Number(mpm.value), reminders: rem.checked, email: currentUser.email || '', updated_at: new Date().toISOString() }, extra || {});
+    const m = parseInt(mi.value);
+    if(m > 0 && m < 2000000 && m !== estimateMiles(p)){ patch.mileage = m; patch.mileage_date = isoToday(); }
+    await db.collection('customer_profiles').doc(currentUser.uid).set(patch, { merge: true });
+    Object.assign(p, patch); customerProfile = Object.assign({}, customerProfile, patch);
+    const mv = document.getElementById('modalVehicle'); if(mv && patch.vehicle) mv.value = patch.vehicle;
+  };
+  save.addEventListener('click', async () => { save.disabled = true; try { await saveProfile(); save.textContent = '✓ Saved'; renderGarage(p, bookings); } catch(e){ save.disabled = false; save.textContent = "Couldn't save — try again"; } });
+  body.appendChild(save);
+
+  // flagged by a mechanic
+  const flags = flaggedItems(bookings);
+  if(flags.length){
+    const h = el('div', 'admin-sec-title', 'Flagged by your mechanic'); h.style.cssText = 'margin-top:1.4rem;font-size:16px'; body.appendChild(h);
+    flags.forEach(it => {
+      const row = el('div', 'gar-item'); const r = el('div', 'gar-row');
+      const left = el('div'); left.appendChild(el('div', 'gar-name', it.name)); left.appendChild(el('div', 'gar-detail', (it.status === 'now' ? 'Needs attention now' : 'Needs attention soon') + (it.note ? ' — ' + it.note : '') + (it.mech ? ' · ' + it.mech + (it.date ? ', ' + it.date : '') : '')));
+      const right = el('div', 'admin-actions'); right.appendChild(adminTag(it.status === 'now' ? 'Now' : 'Soon', it.status === 'now' ? 'due' : 'warn'));
+      const bk = el('button', 'admin-btn', 'Book'); bk.addEventListener('click', () => { closeGarage(); openBooking(null); document.getElementById('modalService').value = it.name + (it.note ? ' — ' + it.note : ''); }); right.appendChild(bk);
+      r.appendChild(left); r.appendChild(right); row.appendChild(r); body.appendChild(row);
+    });
+  }
+
+  // schedule
+  const h2 = el('div', 'admin-sec-title', 'Service schedule'); h2.style.cssText = 'margin-top:1.4rem;font-size:16px'; body.appendChild(h2);
+  const rank = { overdue: 0, soon: 1, unknown: 2, ok: 3 };
+  serviceStatus(p, bookings).sort((a, b) => rank[a.state] - rank[b.state]).forEach(st => {
+    const row = el('div', 'gar-item'); const r = el('div', 'gar-row');
+    const left = el('div'); left.appendChild(el('div', 'gar-name', st.item.name)); left.appendChild(el('div', 'gar-detail', st.text));
+    const right = el('div', 'admin-actions');
+    right.appendChild(adminTag({ overdue: 'Overdue', soon: 'Due soon', ok: 'Up to date', unknown: 'No record' }[st.state], { overdue: 'due', soon: 'warn', ok: 'ok', unknown: '' }[st.state]));
+    const did = el('button', 'admin-btn', 'I did this'); const bk = el('button', 'admin-btn' + (st.state === 'overdue' || st.state === 'soon' ? ' primary' : ''), 'Book');
+    bk.addEventListener('click', () => { closeGarage(); openBooking(null); document.getElementById('modalService').value = st.item.book; });
+    right.appendChild(did); right.appendChild(bk);
+    r.appendChild(left); r.appendChild(right); row.appendChild(r);
+    const form = el('div', 'gar-did');
+    const dt = el('input'); dt.type = 'date'; dt.value = isoToday(); dt.max = isoToday(); dt.setAttribute('aria-label', 'Date done');
+    const dm = el('input'); dm.type = 'number'; dm.min = 0; dm.placeholder = 'Miles then (optional)'; dm.setAttribute('aria-label', 'Mileage then');
+    const ok = el('button', 'admin-btn primary', 'Save');
+    ok.addEventListener('click', async () => {
+      if(!dt.value){ return; }
+      ok.disabled = true;
+      const entry = { key: st.item.key, date_iso: dt.value, mileage: parseInt(dm.value) || null };
+      const log = (Array.isArray(p.service_log) ? p.service_log : []).concat([entry]).slice(-60);
+      try { await saveProfile({ service_log: log }); renderGarage(p, bookings); } catch(e){ ok.disabled = false; ok.textContent = 'Try again'; }
+    });
+    form.appendChild(dt); form.appendChild(dm); form.appendChild(ok); row.appendChild(form);
+    did.addEventListener('click', () => form.classList.toggle('on'));
+    body.appendChild(row);
+  });
+  body.appendChild(el('div', 'gar-note', "These are typical intervals for most cars. Your owner's manual and your mechanic's advice come first — some cars need oil every 3,000 miles, others go 10,000. Reminders are emailed at most once a month per item."));
+}
+
 // ─── CONTACT FORM ──────────────────────────────────────
 function openContact(){
+  contactOpenedAt = Date.now();
   document.getElementById('contactForm').style.display = '';
   document.getElementById('contactDone').style.display = 'none';
   document.getElementById('contactError').style.display = 'none';
@@ -4798,6 +5344,8 @@ async function sendContact(){
   if(!name) return fail('Please enter your name.');
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return fail('Please enter a valid email so we can reply.');
   if(message.length < 5) return fail('Please write a short message.');
+  if(document.getElementById('contactWebsite').value || Date.now() - contactOpenedAt < 3000){ document.getElementById('contactForm').style.display = 'none'; document.getElementById('contactDone').style.display = 'block'; return; }
+  if(tooMany('contact', 5)) return fail("You've sent several messages today. We'll reply by email soon.");
   btn.disabled = true; btn.textContent = 'Sending…';
   try {
     await db.collection('messages').add({
@@ -4910,8 +5458,13 @@ async function approveApplication(a, mechs){
             : (a.specialties ? String(a.specialties).split(',').map(s => s.trim()).filter(Boolean) : []);
   if(level === 'basic') specs = specs.filter(sv => BASIC_SERVICES.includes(sv));
   if(!specs.length) specs = level === 'basic' ? ['Oil change'] : ['General Repairs'];
+  const geo = a.zip ? await geocode(a.zip + ', USA') : null;
+  const emailHash = await sha256((a.email || '').trim().toLowerCase());
   const batch = db.batch();
   batch.set(db.collection('mechanics').doc(slug), {
+    zip: a.zip || '', radius_mi: [10, 15, 25, 40].includes(Number(a.radius_mi)) ? Number(a.radius_mi) : 25,
+    geo_lat: geo ? geo.lat : null, geo_lng: geo ? geo.lng : null,
+    owner_uid: '', owner_email_hash: emailHash,
     slug, name: a.name, city: a.city || '', service_level: level, photo: safePhoto(a.photo),
     initials: (a.name || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2),
     avatar_bg: pal.bg, avatar_color: pal.color,
@@ -4957,7 +5510,7 @@ function adminBookings(books, priv, mechs){
     row.appendChild(left);
     row.appendChild(adminTag(st, st === 'completed' ? 'ok' : st === 'confirmed' ? 'warn' : st === 'cancelled' ? '' : 'due'));
     card.appendChild(row);
-    const setStatus = s => () => db.collection('bookings').doc(b.id).update({ status: s, [s + '_at']: new Date().toISOString(), status_by: 'admin' });
+    const setStatus = s => async () => { await db.collection('bookings').doc(b.id).update({ status: s, [s + '_at']: new Date().toISOString(), status_by: 'admin' }); if(s === 'cancelled') await freeSlot(b); };
     const acts = document.createElement('div'); acts.className = 'admin-actions'; acts.style.marginTop = '.7rem';
     // "Let us match you" bookings arrive with no mechanic — pick one here
     if(!b.mechanic_slug && (st === 'pending' || st === 'confirmed')){
@@ -4967,7 +5520,7 @@ function adminBookings(books, priv, mechs){
       sel.addEventListener('change', async () => {
         const m = (mechs || []).find(x => x.slug === sel.value); if(!m) return;
         sel.disabled = true;
-        try { await db.collection('bookings').doc(b.id).update({ mechanic_slug: m.slug, mechanic_name: m.name, rate_num: m.rate_num || b.rate_num || 0, assigned_at: new Date().toISOString() }); }
+        try { await db.collection('bookings').doc(b.id).update({ mechanic_slug: m.slug, mechanic_name: m.name, mechanic_doc: m.id, mechanic_uid: m.owner_uid || '', rate_num: m.rate_num || b.rate_num || 0, assigned_at: new Date().toISOString() }); }
         catch(e){ alert('Could not assign: ' + (e.message || e.code)); }
         loadAdmin();
       });
@@ -5022,7 +5575,7 @@ function adminMechanics(mechs, priv, done){
     const left = document.createElement('div');
     const nm = document.createElement('div'); nm.className = 'admin-name'; nm.textContent = m.name || m.slug;
     const meta = document.createElement('div'); meta.className = 'admin-meta';
-    meta.appendChild(document.createTextNode([mechLevel(m) === 'basic' ? 'Basic maintenance' : 'Full-service', mechCity(m), m.rate_display ? m.rate_display + '/hr' : '', n + ' completed job' + (n !== 1 ? 's' : '')].filter(Boolean).join(' · ')));
+    meta.appendChild(document.createTextNode([mechLevel(m) === 'basic' ? 'Basic maintenance' : 'Full-service', m.owner_uid ? 'has a login' : 'no login linked', m.geo_lat == null ? 'no map location' : 'travels ' + m.radius_mi + ' mi', mechCity(m), m.rate_display ? m.rate_display + '/hr' : '', n + ' completed job' + (n !== 1 ? 's' : '')].filter(Boolean).join(' · ')));
     if(p){ meta.appendChild(document.createElement('br')); meta.appendChild(contactLine(p.email, p.phone)); }
     left.appendChild(nm); left.appendChild(meta);
     const right = document.createElement('div'); right.style.textAlign = 'right';
@@ -5045,17 +5598,29 @@ function adminMechanics(mechs, priv, done){
     const form = document.createElement('div'); form.className = 'admin-edit'; form.style.display = 'none';
     const rateIn = document.createElement('input'); rateIn.type = 'number'; rateIn.min = 20; rateIn.max = 500; rateIn.value = m.rate_num || ''; rateIn.placeholder = 'Rate $/hr'; rateIn.setAttribute('aria-label', 'Hourly rate');
     const cityIn = document.createElement('input'); cityIn.type = 'text'; cityIn.value = mechCity(m); cityIn.placeholder = 'City'; cityIn.setAttribute('aria-label', 'City');
+    const zipIn = document.createElement('input'); zipIn.type = 'text'; zipIn.maxLength = 5; zipIn.value = m.zip || ''; zipIn.placeholder = 'Home ZIP' + (m.geo_lat == null ? ' (no location yet)' : ''); zipIn.setAttribute('aria-label', 'Home ZIP');
+    const radIn = document.createElement('select'); [10, 15, 25, 40].forEach(n => { const o = document.createElement('option'); o.value = n; o.textContent = 'Travels up to ' + n + ' mi'; if(n === m.radius_mi) o.selected = true; radIn.appendChild(o); }); radIn.setAttribute('aria-label', 'Travel radius');
     const bioIn = document.createElement('textarea'); bioIn.value = m.bio || ''; bioIn.placeholder = 'Bio'; bioIn.setAttribute('aria-label', 'Bio');
-    form.appendChild(rateIn); form.appendChild(cityIn); form.appendChild(bioIn);
+    form.appendChild(rateIn); form.appendChild(cityIn); form.appendChild(zipIn); form.appendChild(radIn); form.appendChild(bioIn);
     const saveRow = document.createElement('div'); saveRow.className = 'admin-actions'; saveRow.style.gridColumn = '1 / -1';
     saveRow.appendChild(adminBtn('Save changes', 'primary', async () => {
       const rate = Math.round(Number(rateIn.value));
       if(!(rate >= 20 && rate <= 500)) throw new Error('Rate must be between $20 and $500 per hour.');
-      await upd({ rate_num: rate, rate_display: '$' + rate, city: cityIn.value.trim().slice(0, 80), bio: bioIn.value.trim().slice(0, 1500) })();
+      const patch = { rate_num: rate, rate_display: '$' + rate, city: cityIn.value.trim().slice(0, 80), bio: bioIn.value.trim().slice(0, 1500), radius_mi: Number(radIn.value) };
+      const z = zipIn.value.trim();
+      if(z && !/^\d{5}$/.test(z)) throw new Error('ZIP must be 5 digits.');
+      if(z && (z !== m.zip || m.geo_lat == null)){ const g = await geocode(z + ', USA'); patch.zip = z; patch.geo_lat = g ? g.lat : null; patch.geo_lng = g ? g.lng : null; if(!g) alert("Saved, but that ZIP couldn't be found on the map, so distance matching is off for this mechanic."); }
+      await upd(patch)();
     }));
     form.appendChild(saveRow);
     editBtn.addEventListener('click', () => { form.style.display = form.style.display === 'none' ? 'grid' : 'none'; });
     acts.appendChild(editBtn);
+    if(!m.owner_uid) acts.appendChild(adminBtn('Link a login', '', async () => {
+      const uid = (prompt("Paste the mechanic's User UID from Firebase → Authentication → Users (only needed for profiles created before mechanic logins existed):") || '').trim();
+      if(!uid) return;
+      if(!/^[A-Za-z0-9]{20,40}$/.test(uid)) throw new Error("That doesn't look like a Firebase User UID.");
+      await db.collection('mechanics').doc(m.id).update({ owner_uid: uid });
+    }));
     acts.appendChild(adminBtn('Remove from site', '', async () => {
       if(!confirm('Take ' + m.name + ' off the site? Customers will no longer see or book them. Their application and contact details are kept.')) return;
       await db.collection('mechanics').doc(m.id).delete();
@@ -5074,6 +5639,14 @@ document.addEventListener('DOMContentLoaded', () => {
 document.querySelectorAll('[data-fee]').forEach(el => { el.textContent = '$' + VERIFY_FEE; });
 });
 
+
+// Optional App Check: blocks scripts that hit the database without loading the real site
+if(RECAPTCHA_SITE_KEY){
+  const sc = document.createElement('script');
+  sc.src = 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js';
+  sc.onload = () => { try { firebase.appCheck().activate(RECAPTCHA_SITE_KEY, true); } catch(e){ console.warn('App Check not started', e); } };
+  document.head.appendChild(sc);
+}
 
 // Functions are global — no window assignment needed with compat SDK
 loadMechanics();
@@ -5147,7 +5720,12 @@ function renderReceiptStrip(slug) {
 })();
 
 // ─── MECHANIC APPLICATION ──────────────────────────────
+let applyOpenedAt = 0, contactOpenedAt = 0;
+function tooMany(key, max){
+  try { const k = 'ww_' + key + '_' + new Date().toISOString().slice(0, 10); const n = (+localStorage.getItem(k) || 0) + 1; localStorage.setItem(k, n); return n > max; } catch(e){ return false; }
+}
 function openApply() {
+  applyOpenedAt = Date.now();
   document.getElementById('applyOverlay').classList.add('on');
   document.getElementById('applySuccess').style.display = 'none';
   document.getElementById('applyForm').style.display = 'block';
@@ -5236,6 +5814,8 @@ async function submitApplication() {
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return fail('Please enter a valid email address.');
   if(!phone) return fail('Please enter your phone number.');
   if(!city)  return fail('Please enter the city you will work in.');
+  const zip = val('applyZip');
+  if(!/^\d{5}$/.test(zip)) return fail('Please enter your 5-digit home ZIP code.');
   if(!years) return fail('Please enter your years of experience.');
   const rateNum = parseInt(rate);
   if(!(rateNum >= 30 && rateNum <= 300)) return fail('Please enter your hourly rate (between $30 and $300).');
@@ -5246,6 +5826,9 @@ async function submitApplication() {
   const agreeTerms = document.getElementById('applyAgreeTerms');
   if(agreeTerms && !agreeTerms.checked) return fail('Please read and agree to the Terms of Service, Privacy Policy, and Mechanic Agreement.');
 
+  // Bots fill hidden fields and submit instantly; pretend it worked and save nothing
+  if(document.getElementById('applyWebsite').value || Date.now() - applyOpenedAt < 4000){ document.getElementById('applyForm').style.display = 'none'; document.getElementById('applySuccess').style.display = 'block'; return; }
+  if(tooMany('apply', 3)) return fail("You've already sent a few applications today. We'll be in touch by email.");
   btn.disabled = true;
   btn.innerHTML = '<i class="ti ti-loader" style="animation:spin .7s linear infinite"></i> Submitting…';
 
@@ -5255,6 +5838,7 @@ async function submitApplication() {
       name: name.slice(0, 80), email: email.slice(0, 120), phone: phone.slice(0, 30), city: city.slice(0, 80),
       years_experience: Math.min(parseInt(years) || 0, 60),
       rate_num: rateNum,
+      zip, radius_mi: Number(document.getElementById('applyRadius').value) || 25,
       service_level: applyLevel,
       specialties: specs.slice(0, 300),
       specialties_list: services,
@@ -5384,7 +5968,7 @@ async function openMyBookings() {
           bt.addEventListener('click', async () => {
             if(!confirm(ask)) return;
             bt.disabled = true;
-            try { await db.collection('bookings').doc(b.id).update({ status, [status + '_at']: new Date().toISOString(), status_by: 'customer' }); }
+            try { await db.collection('bookings').doc(b.id).update({ status, [status + '_at']: new Date().toISOString(), status_by: 'customer' }); if(status === 'cancelled') await freeSlot(b); }
             catch(e){ alert('Could not update this booking — please try again.'); }
             openMyBookings();
             if(status === 'completed' && b.mechanic_slug) openReview(b);
@@ -5394,6 +5978,12 @@ async function openMyBookings() {
         acts.appendChild(mk("Job's done — mark complete", 'admin-btn good', 'completed', 'Confirm the work is finished? This goes on your mechanic\'s record.'));
         acts.appendChild(mk('Cancel request', 'admin-btn', 'cancelled', 'Cancel this booking request?'));
         item.appendChild(acts);
+      }
+      if(b.report && Array.isArray(b.report.items) && b.report.items.length){
+        const ra = document.createElement('div'); ra.className = 'mbi-actions';
+        const rb = document.createElement('button'); rb.className = 'admin-btn'; const flagged = b.report.items.filter(it => it.status !== 'good').length;
+        rb.textContent = 'Inspection report' + (flagged ? ' · ' + flagged + ' item' + (flagged === 1 ? '' : 's') + ' need attention' : ' · all good');
+        rb.addEventListener('click', () => openInspection(b, false)); ra.appendChild(rb); item.appendChild(ra);
       }
       if(statusRaw === 'completed' && b.mechanic_slug){
         const acts = document.createElement('div'); acts.className = 'mbi-actions';
@@ -5516,6 +6106,7 @@ function updateNavAuth(user) {
     loggedIn.style.display = 'none';
   }
   checkAdmin();
+  checkMechanic();
 }
 
 async function signOut() {
@@ -5653,6 +6244,18 @@ auth.onAuthStateChanged((user) => {
           </div>
         </div>
 
+        <div class="apply-row">
+          <div class="apply-field">
+            <label class="apply-label" for="applyZip">Home ZIP code *</label>
+            <input class="apply-input" id="applyZip" type="text" inputmode="numeric" maxlength="5" placeholder="80202"/>
+          </div>
+          <div class="apply-field">
+            <label class="apply-label" for="applyRadius">How far will you travel? *</label>
+            <select class="apply-input" id="applyRadius"><option value="10">Up to 10 miles</option><option value="15">Up to 15 miles</option><option value="25" selected>Up to 25 miles</option><option value="40">Up to 40 miles</option></select>
+          </div>
+        </div>
+        <input class="hp" id="applyWebsite" type="text" tabindex="-1" autocomplete="off" aria-hidden="true"/>
+
         <div class="apply-section-title">Experience</div>
         <div class="apply-field">
           <label class="apply-label">Years of professional experience *</label>
@@ -5739,6 +6342,26 @@ auth.onAuthStateChanged((user) => {
 <!-- ══════════════════════════════════════════════ -->
 <!-- AUTH MODAL -->
 <!-- ══════════════════════════════════════════════ -->
+<div class="auth-overlay" id="garageOverlay" onclick="if(event.target===this)closeGarage()">
+  <div class="auth-box" style="max-width:640px;width:100%">
+    <button class="auth-close" onclick="closeGarage()" aria-label="Close"><i class="ti ti-x" aria-hidden="true"></i></button>
+    <div class="auth-title">My car</div>
+    <div class="auth-sub">What's due, what's done, and what your mechanic flagged.</div>
+    <div class="auth-error" id="garageError"></div>
+    <div id="garageBody"></div>
+  </div>
+</div>
+
+<div class="auth-overlay" id="inspOverlay" onclick="if(event.target===this)closeInspection()">
+  <div class="auth-box" style="max-width:640px;width:100%">
+    <button class="auth-close" onclick="closeInspection()" aria-label="Close"><i class="ti ti-x" aria-hidden="true"></i></button>
+    <div class="auth-title" id="inspTitle">Inspection report</div>
+    <div class="auth-sub" id="inspSub"></div>
+    <div class="auth-error" id="inspError"></div>
+    <div id="inspBody"></div>
+  </div>
+</div>
+
 <div class="auth-overlay" id="reviewOverlay" onclick="if(event.target===this)closeReview()">
   <div class="auth-box">
     <button class="auth-close" onclick="closeReview()" aria-label="Close"><i class="ti ti-x" aria-hidden="true"></i></button>
@@ -5761,6 +6384,7 @@ auth.onAuthStateChanged((user) => {
       <div class="auth-error" id="contactError"></div>
       <div class="auth-field"><label class="auth-label" for="contactName">Your name</label><input class="auth-input" id="contactName" type="text" placeholder="First and last name"/></div>
       <div class="auth-field"><label class="auth-label" for="contactEmail">Email to reply to</label><input class="auth-input" id="contactEmail" type="email" placeholder="you@email.com"/></div>
+      <input class="hp" id="contactWebsite" type="text" tabindex="-1" autocomplete="off" aria-hidden="true"/>
       <div class="auth-field"><label class="auth-label" for="contactMsg">Message</label><textarea class="auth-input" id="contactMsg" rows="4" style="resize:vertical" placeholder="How can we help?"></textarea></div>
       <button class="auth-btn" id="contactBtn" onclick="sendContact()">Send message</button>
     </div>

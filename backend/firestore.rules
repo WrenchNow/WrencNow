@@ -15,8 +15,24 @@ service cloud.firestore {
 
     // Public mechanic profiles: anyone can read, only an admin can publish or change them.
     match /mechanics/{id} {
+      function changes() { return request.resource.data.diff(resource.data).affectedKeys(); }
       allow read: if true;
-      allow write: if isAdmin();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin()
+        // A linked mechanic may edit their own public details (rate, bio, photo, travel area, pause)
+        || (signedIn() && resource.data.owner_uid == request.auth.uid
+            && changes().hasOnly(['bio', 'photo', 'rate_num', 'rate_display', 'available_now', 'avail_label', 'zip', 'radius_mi', 'geo_lat', 'geo_lng', 'updated_at'])
+            && (!changes().hasAny(['rate_num']) || (request.resource.data.rate_num is int && request.resource.data.rate_num >= 20 && request.resource.data.rate_num <= 500))
+            && (!changes().hasAny(['bio']) || (request.resource.data.bio is string && request.resource.data.bio.size() <= 1500))
+            && (!changes().hasAny(['photo']) || (request.resource.data.photo is string && request.resource.data.photo.size() <= 120000))
+            && (!changes().hasAny(['radius_mi']) || request.resource.data.radius_mi in [10, 15, 25, 40]))
+        // Linking: a signed-in user whose VERIFIED email matches the private record claims an unclaimed profile
+        || (signedIn() && request.auth.token.email_verified == true
+            && (!('owner_uid' in resource.data) || resource.data.owner_uid == '')
+            && changes().hasOnly(['owner_uid'])
+            && request.resource.data.owner_uid == request.auth.uid
+            && exists(/databases/$(database)/documents/mechanic_private/$(resource.data.slug))
+            && get(/databases/$(database)/documents/mechanic_private/$(resource.data.slug)).data.email.lower() == request.auth.token.email.lower());
     }
 
     // Mechanic email, phone, fee and payback status — never public.
@@ -36,7 +52,8 @@ service cloud.firestore {
                     && (!('photo' in request.resource.data) || (request.resource.data.photo is string && request.resource.data.photo.size() <= 120000))
                     && request.resource.data.name is string  && request.resource.data.name.size()  <= 80
                     && request.resource.data.email is string && request.resource.data.email.size() <= 120
-                    && request.resource.data.bio is string   && request.resource.data.bio.size()   <= 1500;
+                    && request.resource.data.bio is string   && request.resource.data.bio.size()   <= 1500
+                    && request.resource.data.created_at == request.time;
       allow read, update, delete: if isAdmin();
     }
 
@@ -47,15 +64,25 @@ service cloud.firestore {
                     && request.resource.data.status == 'pending'
                     && request.resource.data.service is string && request.resource.data.service.size() <= 300
                     && request.resource.data.address is string && request.resource.data.address.size() <= 300
-                    && (!('notes' in request.resource.data) || (request.resource.data.notes is string && request.resource.data.notes.size() <= 2000));
-      allow read: if isAdmin() || (signedIn() && resource.data.customer_id == request.auth.uid);
+                    && (!('notes' in request.resource.data) || (request.resource.data.notes is string && request.resource.data.notes.size() <= 2000))
+                    // the mechanic account named on the booking must really own that mechanic profile
+                    && (!('mechanic_uid' in request.resource.data) || request.resource.data.mechanic_uid == ''
+                        || get(/databases/$(database)/documents/mechanics/$(request.resource.data.mechanic_doc)).data.owner_uid == request.resource.data.mechanic_uid);
+      allow read: if isAdmin() || (signedIn() && (resource.data.customer_id == request.auth.uid
+                                                  || (resource.data.mechanic_uid != '' && resource.data.mechanic_uid == request.auth.uid)));
       allow update: if isAdmin() || (
                        signedIn()
                     && resource.data.customer_id == request.auth.uid
                     && resource.data.status in ['pending', 'confirmed']
                     && request.resource.data.status in ['completed', 'cancelled']
                     && request.resource.data.diff(resource.data).affectedKeys()
-                         .hasOnly(['status', 'completed_at', 'cancelled_at', 'status_by']));
+                         .hasOnly(['status', 'completed_at', 'cancelled_at', 'status_by']))
+        // The booked mechanic may confirm, decline, complete, and attach an inspection report
+        || (signedIn() && resource.data.mechanic_uid != '' && resource.data.mechanic_uid == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'confirmed_at', 'completed_at', 'cancelled_at', 'status_by', 'report'])
+            && (request.resource.data.status == resource.data.status
+                || (resource.data.status == 'pending' && request.resource.data.status in ['confirmed', 'cancelled'])
+                || (resource.data.status == 'confirmed' && request.resource.data.status in ['completed', 'cancelled'])));
       allow delete: if isAdmin();
     }
 
@@ -64,7 +91,8 @@ service cloud.firestore {
       allow create: if request.resource.data.status == 'new'
                     && request.resource.data.name is string    && request.resource.data.name.size()    <= 80
                     && request.resource.data.email is string   && request.resource.data.email.size()   <= 120
-                    && request.resource.data.message is string && request.resource.data.message.size() <= 2000;
+                    && request.resource.data.message is string && request.resource.data.message.size() <= 2000
+                    && request.resource.data.created_at == request.time;
       allow read, update, delete: if isAdmin();
     }
 
@@ -82,6 +110,20 @@ service cloud.firestore {
                     && get(/databases/$(database)/documents/bookings/$(bookingId)).data.status == 'completed'
                     && get(/databases/$(database)/documents/bookings/$(bookingId)).data.mechanic_slug == request.resource.data.mechanic_slug;
       allow update, delete: if isAdmin();
+    }
+
+    // One document per mechanic + day + time. Creating it fails if it already exists, which is what
+    // stops two customers booking the same mechanic at the same time. No personal details inside.
+    match /slots/{slotId} {
+      allow read: if true;
+      allow create: if signedIn()
+                    && request.resource.data.customer_id == request.auth.uid
+                    && request.resource.data.mechanic_doc is string
+                    && request.resource.data.date_iso is string
+                    && request.resource.data.time is string;
+      allow update: if false;
+      allow delete: if isAdmin() || (signedIn() && (resource.data.customer_id == request.auth.uid
+                                                    || (resource.data.mechanic_uid != '' && resource.data.mechanic_uid == request.auth.uid)));
     }
 
     match /customer_profiles/{uid} {

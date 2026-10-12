@@ -12,6 +12,8 @@
  *   onBookingCreated      – new booking → email the mechanic, the customer and you
  *   onBookingUpdated      – confirmed → email the customer; completed → update the mechanic's job count
  *                           cancelled → tell the mechanic the job is off
+ *   serviceReminders      – every morning, customers who opted in get one email listing what's
+ *                           due on their car (each item at most once a month)
  *   onReviewWritten       – a review is posted or deleted → the mechanic's star rating and review
  *                           count are recalculated from their real reviews
  *   onMessageCreated      – contact form message → forwarded to you
@@ -20,6 +22,7 @@
  */
 const { onDocumentCreated, onDocumentUpdated, onDocumentWritten } = require('firebase-functions/v2/firestore');
 const { onRequest } = require('firebase-functions/v2/https');
+const { onSchedule } = require('firebase-functions/v2/scheduler');
 const crypto = require('crypto');
 const { defineSecret, defineString } = require('firebase-functions/params');
 const { initializeApp } = require('firebase-admin/app');
@@ -268,7 +271,8 @@ exports.onBookingCreated = onDocumentCreated(
         subject: 'New booking request — ' + (b.service || 'service'),
         html: layout('New booking request',
           `<p>${esc(b.customer_name || 'A customer')} would like to book you.</p>${details}
-           <p><strong>Reply to this email</strong> to confirm the time with the customer, or to suggest the closest time you can do.</p>`)
+           <p><strong>Reply to this email</strong> to confirm the time with the customer, or to suggest the closest time you can do.</p>
+           <p>Or log in at <a href="${esc(SITE_URL.value())}">${esc(SITE_URL.value())}</a> with the email you applied with and open <strong>My jobs</strong> to confirm it there.</p>`)
       });
     }
     await sendEmail({
@@ -328,8 +332,9 @@ exports.onBookingUpdated = onDocumentUpdated(
       if (p && p.email) await sendEmail({ to: p.email, subject: 'Booking cancelled — ' + (after.service || 'service'),
         html: layout('This booking was cancelled', `<p>${esc(after.customer_name || 'The customer')} cancelled the request below. Nothing more to do.</p>`
           + rows([['Service', after.service], ['Vehicle', after.vehicle], ['Was requested for', (after.booking_date || '') + ' · ' + (after.booking_time || '')]])) });
-      if (after.status_by === 'admin') await sendEmail({ to: after.customer_email, replyTo: ADMIN_EMAIL.value(), subject: 'Your WrenchNow booking was cancelled',
-        html: layout('Your booking was cancelled', '<p>We had to cancel this request. Reply to this email if you have questions, or book another mechanic on the site.</p>' + rows([['Service', after.service], ['Was requested for', (after.booking_date || '') + ' · ' + (after.booking_time || '')]])) });
+      if (after.slot_id) { try { await db.collection('slots').doc(after.slot_id).delete(); } catch (e) {} }
+      if (after.status_by === 'admin' || after.status_by === 'mechanic') await sendEmail({ to: after.customer_email, replyTo: ADMIN_EMAIL.value(), subject: 'Your WrenchNow booking was cancelled',
+        html: layout('Your booking was cancelled', '<p>' + (after.status_by === 'mechanic' ? esc(after.mechanic_name || 'Your mechanic') + " can't make this one." : 'We had to cancel this request.') + ' Reply to this email if you have questions, or book another mechanic on the site.</p>' + rows([['Service', after.service], ['Was requested for', (after.booking_date || '') + ' · ' + (after.booking_time || '')]])) });
       return;
     }
     if (after.status !== 'completed' || !after.mechanic_slug) return;
@@ -360,4 +365,70 @@ exports.onReviewWritten = onDocumentWritten(
     const avg = count ? Math.round(ratings.reduce((a, b) => a + b, 0) / count * 10) / 10 : 0;
     const mech = await db.collection('mechanics').where('slug', '==', slug).get();
     await Promise.all(mech.docs.map(d => d.ref.update({ rating: avg, review_count: count })));
+  });
+
+// ── 7. Service reminders ───────────────────────────────────
+// Same typical intervals as the site's "My car" screen. Owner's manual wins; the email says so.
+const SCHEDULE = [
+  { key: 'oil', name: 'Oil change', miles: 5000, months: 6, re: /\boil\b/ },
+  { key: 'tire_rotation', name: 'Tire rotation', miles: 6000, months: 6, re: /rotat/ },
+  { key: 'brakes', name: 'Brake check', miles: 12000, months: 12, re: /brak/, report: 'Brakes' },
+  { key: 'battery', name: 'Battery test', miles: null, months: 12, re: /batter/, report: 'Battery' },
+  { key: 'air_filter', name: 'Engine air filter', miles: 15000, months: 12, re: /air filter|engine filter/, report: 'Air filter' },
+  { key: 'cabin_filter', name: 'Cabin air filter', miles: 15000, months: 12, re: /cabin/ },
+  { key: 'wipers', name: 'Wiper blades', miles: null, months: 12, re: /wiper/, report: 'Wipers' },
+  { key: 'inspection', name: 'Full inspection', miles: null, months: 12, re: /inspect/ }
+];
+const isoMs = iso => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || ''); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) : 0; };
+const tsMs = t => (t && t.seconds ? t.seconds * 1000 : (t ? Date.parse(t) || 0 : 0));
+const addMonths = (ms, n) => { const d = new Date(ms); d.setUTCMonth(d.getUTCMonth() + n); return d.getTime(); };
+function dueItems(p, bookings) {
+  const now = Date.now();
+  const base = parseInt(p.mileage) || 0;
+  const cur = base ? Math.round(base + Math.max(0, (now - (isoMs(p.mileage_date) || now)) / (30.44 * 864e5)) * (parseInt(p.miles_per_month) || 1000)) : null;
+  const log = Array.isArray(p.service_log) ? p.service_log : [];
+  const out = [];
+  for (const item of SCHEDULE) {
+    const ev = [];
+    log.filter(e => e && e.key === item.key && isoMs(e.date_iso)).forEach(e => ev.push({ ms: isoMs(e.date_iso), miles: parseInt(e.mileage) || null }));
+    bookings.filter(b => b.status === 'completed' && item.re.test(String(b.service || '').toLowerCase())).forEach(b => { const ms = isoMs(b.booking_date_iso) || tsMs(b.created_at); if (ms) ev.push({ ms, miles: (b.report && b.report.mileage) || null }); });
+    if (item.report) bookings.forEach(b => { const it = b.report && Array.isArray(b.report.items) && b.report.items.find(x => x.name === item.report && x.status === 'good'); if (it) { const ms = isoMs(b.booking_date_iso) || tsMs(b.created_at); if (ms) ev.push({ ms, miles: b.report.mileage || null }); } });
+    ev.sort((a, b) => b.ms - a.ms);
+    if (!ev.length) continue;
+    const dueMs = addMonths(ev[0].ms, item.months), dueMiles = item.miles && ev[0].miles ? ev[0].miles + item.miles : null;
+    const overdue = now > dueMs || (dueMiles && cur && cur >= dueMiles);
+    const soon = !overdue && (dueMs - now < 30 * 864e5 || (dueMiles && cur && cur >= dueMiles - 500));
+    if (overdue || soon) out.push({ key: item.key, name: item.name, overdue });
+  }
+  // anything a mechanic flagged on the latest inspection
+  const latest = {};
+  bookings.filter(b => b.report && Array.isArray(b.report.items)).sort((a, b) => (isoMs(a.booking_date_iso) || 0) - (isoMs(b.booking_date_iso) || 0))
+    .forEach(b => b.report.items.forEach(it => { latest[it.name] = it; }));
+  Object.values(latest).filter(it => it.status === 'now' || it.status === 'soon')
+    .forEach(it => out.push({ key: 'flag_' + it.name, name: it.name + (it.note ? ' — ' + it.note : '') + ' (flagged by your mechanic)', overdue: it.status === 'now' }));
+  return out;
+}
+exports.serviceReminders = onSchedule(
+  { schedule: 'every day 09:05', timeZone: 'America/Denver', secrets: [RESEND_API_KEY] },
+  async () => {
+    const profiles = await db.collection('customer_profiles').where('reminders', '==', true).get();
+    const now = Date.now();
+    for (const doc of profiles.docs) {
+      const p = doc.data();
+      if (!p.email) continue;
+      const bookings = (await db.collection('bookings').where('customer_id', '==', doc.id).get()).docs.map(d => d.data());
+      const last = p.last_reminded || {};
+      const due = dueItems(p, bookings).filter(it => !last[it.key] || now - Date.parse(last[it.key]) > 30 * 864e5);
+      if (!due.length) continue;
+      await sendEmail({
+        to: p.email, replyTo: ADMIN_EMAIL.value(),
+        subject: (p.vehicle ? p.vehicle + ': ' : 'Your car: ') + due.length + ' thing' + (due.length === 1 ? '' : 's') + ' due',
+        html: layout('Time for some car care', '<ul>' + due.map(it => `<li><strong>${esc(it.name)}</strong> — ${it.overdue ? 'overdue' : 'due soon'}</li>`).join('') + '</ul>'
+          + `<p><a href="${esc(SITE_URL.value())}">Book a mobile mechanic</a> and they'll come to you. Tap your initials → My car to see the full schedule or turn these emails off.</p>`
+          + "<p style=\"font-size:12px;color:#888\">These are typical intervals. Your owner's manual and your mechanic's advice come first.</p>")
+      });
+      const stamp = new Date().toISOString(); const upd = {};
+      due.forEach(it => { upd['last_reminded.' + it.key] = stamp; });
+      await doc.ref.update(upd);
+    }
   });

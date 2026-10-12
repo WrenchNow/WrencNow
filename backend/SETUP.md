@@ -59,3 +59,20 @@ Without step 3 everything still works by hand from the Admin tab; you just get n
 4. In Checkr → Developer settings → Webhooks, add the `checkrWebhook` URL printed by the deploy.
 
 After that: fee paid → Checkr emails the applicant → the result appears on their card in the Admin tab ("Check: CLEAR" or "NEEDS REVIEW"). Until then, the "Send background check invite" button just emails you a reminder to send it by hand.
+
+## 6. Mechanic logins (nothing to deploy beyond the rules)
+- When you approve an applicant, their profile remembers their email.
+- They sign up on the site with that same email and click the confirmation link Firebase emails them. The next time they log in, the **Dashboard** tab becomes **My jobs**: their requests with customer phone and address, confirm / decline / complete, inspection reports, profile editing, pause, and their reviews.
+- Profiles created before this existed (yours, for example) have no saved email. In the Admin tab press **Link a login** on that mechanic and paste their User UID from Firebase → Authentication → Users.
+- If confirmation emails don't arrive, check Firebase → Authentication → Templates and make sure your site's address is listed under Authentication → Settings → Authorized domains.
+
+## 7. Service reminders
+`serviceReminders` runs every morning at 9:05 Denver time once functions are deployed (uses Cloud Scheduler, included in the Blaze plan). Customers turn reminders on in **My car**. Each item is emailed at most once a month.
+
+## 8. Distance matching
+Addresses are turned into map positions with OpenStreetMap's free Nominatim service, straight from the visitor's browser. It's fine for a small site; if traffic grows, swap `GEOCODER_URL` at the top of the site script for a paid geocoder. Mechanics approved before this change have no map location: open **Edit** on them in the Admin tab and save their ZIP.
+
+## 9. Optional: stronger bot protection (App Check)
+1. Firebase console → App Check → register the web app with **reCAPTCHA v3** and copy the site key.
+2. Paste it into `RECAPTCHA_SITE_KEY` at the top of the site script and redeploy the site.
+3. After a day of normal traffic shows as verified in App Check, press **Enforce** for Firestore.
