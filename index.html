@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>WrenchNow — Mobile Mechanics At Your Door</title>
 <meta name="theme-color" content="#0e0e0c"/>
+<link rel="canonical" href="https://getwrenchnow.com/">
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="apple-touch-icon" href="apple-touch-icon.png"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
@@ -4469,7 +4470,7 @@ function sendBookingConfirmationEmail({customerEmail, customerName, mechName, se
       date,
       time,
       bookingId,
-      siteUrl: 'https://webmechaniq.netlify.app'
+      siteUrl: 'https://getwrenchnow.com'
     }
   });
 }
@@ -4490,7 +4491,7 @@ function sendMechanicBookingEmail({mechEmail, mechName, customerName, service, v
       date,
       time,
       bookingId,
-      siteUrl: 'https://webmechaniq.netlify.app'
+      siteUrl: 'https://getwrenchnow.com'
     }
   });
 }
@@ -4504,8 +4505,8 @@ function sendMechanicApprovalEmail({mechEmail, mechName, slug}) {
     subject: 'You\'re live on WrenchNow — welcome aboard',
     data: {
       mechName,
-      profileUrl: 'https://webmechaniq.netlify.app',
-      siteUrl: 'https://webmechaniq.netlify.app'
+      profileUrl: 'https://getwrenchnow.com',
+      siteUrl: 'https://getwrenchnow.com'
     }
   });
 }
