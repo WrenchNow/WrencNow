@@ -52,6 +52,10 @@ const SITE_URL              = defineString('SITE_URL', { default: 'https://wondr
 const VERIFY_PAYMENT_LINK   = defineString('VERIFY_PAYMENT_LINK', { default: '' }); // same live link as in the site file
 const PLATFORM_FEE_PCT      = defineString('PLATFORM_FEE_PCT', { default: '0' });    // your cut of each job, e.g. 15 — taken from the mechanic's share
 const CUSTOMER_FEE_CENTS    = defineString('CUSTOMER_FEE_CENTS', { default: '0' });  // optional flat service fee added to the customer's charge, in cents
+// Stripe bills YOUR account for card processing (~2.9% + 30¢) and Connect payouts (~0.25% + 25¢) on every job.
+// These pass that cost to the mechanic's share so a 0% platform fee doesn't cost you money.
+const PROCESSING_FEE_PCT    = defineString('PROCESSING_FEE_PCT', { default: '3.2' });
+const PROCESSING_FEE_CENTS  = defineString('PROCESSING_FEE_CENTS', { default: '55' });
 
 const VERIFY_FEE = 49;   // keep in step with the constant at the top of the site script
 
@@ -162,6 +166,19 @@ exports.stripeWebhook = onRequest(
       } else if (session.mode === 'payment' && session.payment_status === 'paid') {
         await ref.update({ payment_status: 'paid', paid_cents: session.amount_total, payment_intent: session.payment_intent || '', paid_at: new Date().toISOString() });
       }
+    }
+    // Refund issued in the Stripe dashboard → booking shows Refunded
+    if (event.type === 'charge.refunded') {
+      const ch = event.data.object;
+      const bk = ch.payment_intent ? await db.collection('bookings').where('payment_intent', '==', ch.payment_intent).limit(1).get() : { empty: true };
+      if (!bk.empty) await bk.docs[0].ref.update({ payment_status: 'refunded', refunded_cents: ch.amount_refunded, refunded_at: new Date().toISOString() });
+    }
+    // Customer disputed the charge with their bank → flag it and tell you right away (you have a deadline to respond)
+    if (event.type === 'charge.dispute.created') {
+      const dp = event.data.object;
+      const bk = dp.payment_intent ? await db.collection('bookings').where('payment_intent', '==', dp.payment_intent).limit(1).get() : { empty: true };
+      if (!bk.empty) await bk.docs[0].ref.update({ payment_status: 'chargeback', chargeback_reason: dp.reason || '', chargeback_at: new Date().toISOString() });
+      await toAdmin('Chargeback opened — respond in Stripe', layout('A customer disputed a charge with their bank', rows([['Booking', bk.empty ? '(not found)' : bk.docs[0].id], ['Amount', '$' + (dp.amount / 100).toFixed(2)], ['Reason', dp.reason], ['Respond by', dp.evidence_details && dp.evidence_details.due_by ? new Date(dp.evidence_details.due_by * 1000).toDateString() : 'see Stripe']]) + '<p>Open Stripe → Payments → Disputes to send evidence (the quote, the inspection report, messages). To recover the money from the mechanic, reverse the transfer in Stripe → Connect → Transfers.</p>'));
     }
     // Mechanic finished (or lost) Stripe payout setup
     if (event.type === 'account.updated') {
@@ -546,8 +563,11 @@ async function chargeJob(ref) {
   const amount = Math.round(b.final_cents || b.price_cents || 0);
   const custFee = Math.max(0, parseInt(CUSTOMER_FEE_CENTS.value()) || 0);
   const pct = Math.min(50, Math.max(0, Number(PLATFORM_FEE_PCT.value()) || 0));
-  const appFee = Math.round(amount * pct / 100) + custFee;
+  const procPct = Math.min(10, Math.max(0, Number(PROCESSING_FEE_PCT.value()) || 0));
+  const procCents = Math.max(0, parseInt(PROCESSING_FEE_CENTS.value()) || 0);
   const total = amount + custFee;
+  const platformCut = Math.round(amount * pct / 100), processing = Math.round(total * procPct / 100) + procCents;
+  const appFee = Math.min(total - 50, platformCut + processing + custFee);   // mechanic always receives something
   const pay = (await db.collection('booking_payments').doc(id).get()).data();
   const slug = b.mechanic_slug || await mechanicSlugByDoc(b.mechanic_doc);
   const p = await mechanicPrivate(slug);
@@ -566,7 +586,7 @@ async function chargeJob(ref) {
       description: 'WrenchNow: ' + (b.service || 'mobile mechanic') + ' with ' + (b.mechanic_name || ''),
       metadata: { booking_id: id }, ...transfer
     }, { idempotencyKey: 'charge_' + id + '_' + total });
-    await ref.update({ payment_status: 'paid', paid_cents: total, fee_cents: appFee, payment_intent: pi.id, paid_at: new Date().toISOString() });
+    await ref.update({ payment_status: 'paid', paid_cents: total, fee_cents: appFee, platform_fee_cents: platformCut, processing_cents: processing, mechanic_net_cents: total - appFee, payment_intent: pi.id, paid_at: new Date().toISOString() });
     await sendEmail({ to: b.customer_email, replyTo: ADMIN_EMAIL.value(), subject: 'Receipt: $' + (total / 100).toFixed(2) + ' paid to ' + (b.mechanic_name || 'your mechanic'),
       html: layout('Payment received', rows([['Job', b.service], ['Mechanic', b.mechanic_name], ['Paid', '$' + (total / 100).toFixed(2)]]) + '<p>Thanks for using WrenchNow. A quick review helps other drivers choose.</p>') });
   } catch (err) {

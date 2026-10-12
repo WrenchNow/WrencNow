@@ -38,7 +38,7 @@ If the CLI offers to delete an older `sendEmail` function, say yes. The site no 
 ## 4. Stripe
 1. Create a **live** Payment Link for the $49 verification fee. Paste it into `VERIFY_PAYMENT_LINK` near the top of the site's script.
 2. Create a **live** $29/month subscription Payment Link for Featured. Paste it into `FEATURED_PAYMENT_LINK` near the top of the site's script.
-3. Developers → Webhooks → add endpoint: the `stripeWebhook` URL printed by the deploy, events `checkout.session.completed`, `customer.subscription.deleted` and `account.updated`. Tick **"Listen to events on Connected accounts"** as well, so `account.updated` arrives when mechanics finish payout setup.
+3. Developers → Webhooks → add endpoint: the `stripeWebhook` URL printed by the deploy, events `checkout.session.completed`, `customer.subscription.deleted`, `account.updated`, `charge.refunded` and `charge.dispute.created`. Tick **"Listen to events on Connected accounts"** as well, so `account.updated` arrives when mechanics finish payout setup.
 4. Copy the signing secret into `STRIPE_WEBHOOK_SECRET` (step 3 command) and deploy functions again.
 
 ## How the flow runs afterwards
@@ -86,7 +86,8 @@ Quotes work as soon as the new rules are published. Customers request, mechanics
 3. Deploy functions: `firebase deploy --only functions`. It asks for two new values:
    - `PLATFORM_FEE_PCT`: your cut of each job, taken from the mechanic's side. Use `0` at launch; `10` means 10%.
    - `CUSTOMER_FEE_CENTS`: an optional flat fee added to the customer's charge. `0` means none; `299` means $2.99.
-   You can change either later with another deploy.
+   - `PROCESSING_FEE_PCT` / `PROCESSING_FEE_CENTS`: Stripe charges **your** account about 2.9% + 30¢ per card payment and 0.25% + 25¢ per mechanic payout. The defaults (`3.2` and `55`) take that out of the mechanic's share, so jobs don't cost you money. Connect also bills you **$2 a month per mechanic who gets paid that month**; that is only covered once you set a platform fee above 0.
+   You can change any of these later with another deploy.
 4. On your site → **Admin** → **Online payments** → turn **On**.
 
 Once payments are on:
@@ -96,6 +97,8 @@ Once payments are on:
 - The card is charged the final approved price when the customer presses **Confirm & pay**, or automatically 48 hours after the mechanic marks the job done.
 - **Report a problem** puts the payment on hold. You settle it from the Admin tab with **Charge now** or **Settled outside Stripe**.
 - If a card fails, the customer is emailed a secure Stripe pay link and you're emailed too.
+- **Refunds:** in Stripe → Payments, open the charge → Refund, and tick **Reverse transfer** so the money comes back from the mechanic, not from you. The booking then shows Refunded.
+- **Chargebacks:** if a customer disputes with their bank, you're emailed with the deadline. Answer it in Stripe → Disputes. Stripe takes chargebacks from your balance first; reverse the mechanic's transfer to recover it.
 
 ## 11. The installable app
 The upload folder includes `manifest.webmanifest`, `sw.js` and the icons. **Upload the whole folder (or zip), not just index.html**, or the app won't install.

@@ -2573,7 +2573,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
           <button class="btn-ore" style="width:100%;justify-content:center;padding:15px;margin-top:.25rem" onclick="runSearch()">
             <i class="ti ti-search" aria-hidden="true"></i> Show Me Mechanics
           </button>
-          <p style="text-align:center;font-size:11px;color:#8a867c;margin-top:.85rem">Free to browse · No booking fee · Pay your mechanic when the job is done</p>
+          <p style="text-align:center;font-size:11px;color:#8a867c;margin-top:.85rem" id="heroPayLine">Free to browse · Compare quotes · Pay when the job is done</p>
         </div>
       </div>
     </div>
@@ -2660,8 +2660,8 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
         </div>
         <div class="step">
           <div class="step-dot">02</div>
-          <div class="step-title">Pick your time slot</div>
-          <div class="step-desc">Choose today, tomorrow, or later this week. Your mechanic confirms by email, or suggests the closest time they can do.</div>
+          <div class="step-title">Compare quotes</div>
+          <div class="step-desc">Ask up to 3 mechanics, or everyone nearby. Each sends a price and a time. Your address stays private until you accept one.</div>
         </div>
         <div class="step">
           <div class="step-dot">03</div>
@@ -2671,7 +2671,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
         <div class="step">
           <div class="step-dot">04</div>
           <div class="step-title">Pay when you're happy</div>
-          <div class="step-desc">Review what was done and pay your mechanic directly. You approved the price before work started, so there are no surprise charges.</div>
+          <div class="step-desc" id="howPayStep">Review what was done, then pay your mechanic. You agreed the price before work started, and any change needs your OK first.</div>
         </div>
       </div>
     </div>
@@ -2769,7 +2769,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
     <div>
       <div class="launch-tag">🎉 Founding Mechanic — 0% Platform Fee During Launch</div>
       <div class="mhero-title">STOP<br>SPLITTING WITH<br><span class="ore">THE SHOP.</span></div>
-      <p class="hero-sub"><strong style="color:var(--green)">No platform fee during launch.</strong> Set your own rate and keep everything you earn. One <span data-fee>$49</span> verification fee covers your background check.</p>
+      <p class="hero-sub"><strong style="color:var(--green)">No platform fee during launch.</strong> Set your own prices and keep what you quote — only card processing (about 3%) comes out when a customer pays by card. One <span data-fee>$49</span> verification fee covers your background check.</p>
       <div class="hero-actions" style="margin-bottom:2rem">
         <button class="btn-ore" onclick="openApply()" style="box-shadow:0 4px 20px rgba(46,199,122,0.25)"><i class="ti ti-clipboard-check" aria-hidden="true"></i> Apply — Founding Mechanic Spot</button>
         <button class="btn-ghost" onclick="showPanel('dashboard')">View mechanic dashboard →</button>
@@ -2805,7 +2805,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
       <div class="launch-banner-icon">🚀</div>
       <div>
         <div class="launch-banner-title">Founding Mechanic Programme — 0% platform fee</div>
-        <div class="launch-banner-sub">Pay <strong style="color:var(--green)">zero platform fees</strong> during our entire launch period. The only cost is a one-time <span data-fee>$49</span> verification fee for your background check. Want more jobs? Go Featured for $29/month and get pinned to the top of search results.</div>
+        <div class="launch-banner-sub">Pay <strong style="color:var(--green)">zero platform fees</strong> during our entire launch period. Apart from card processing on card-paid jobs (about 3%), the only cost is a one-time <span data-fee>$49</span> verification fee for your background check. Want more jobs? Go Featured for $29/month and get pinned to the top of search results.</div>
       </div>
     </div>
   </div>
@@ -3398,7 +3398,7 @@ function mechToLookup(m) {
     id: m.id || m.slug,
     ownerUid: m.owner_uid || '',
     photo: safePhoto(m.photo),
-    bookBtn: 'Book ' + m.name.split(' ')[0] + ' Now'
+    bookBtn: 'Get a quote from ' + m.name.split(' ')[0]
   };
 }
 
@@ -4872,7 +4872,15 @@ const REQ = { mechs: [], mode: 'open', photos: [], days: new Set(), parts: new S
 const COMPARE = new Set();
 let SITE_CONFIG = { payments_on: false };
 function paymentsOn(){ return SITE_CONFIG.payments_on === true && !!FUNCTIONS_BASE; }
-(async () => { try { const d = await db.collection('config').doc('site').get(); if(d.exists) SITE_CONFIG = Object.assign({ payments_on: false }, d.data()); } catch(e){} })();
+(async () => { try { const d = await db.collection('config').doc('site').get(); if(d.exists) SITE_CONFIG = Object.assign({ payments_on: false }, d.data()); } catch(e){} applyPaymentCopy(); })();
+function applyPaymentCopy(){
+  const on = SITE_CONFIG.payments_on === true;
+  const h = document.getElementById('howPayStep');
+  if(h) h.textContent = on ? "Your card is saved when you accept a quote and charged only after the job is done. You agreed the price up front, and any change needs your OK first."
+                           : "Review what was done, then pay your mechanic directly. You agreed the price up front, and any change needs your OK first.";
+  const l = document.getElementById('heroPayLine');
+  if(l) l.textContent = 'Free to browse · Compare quotes · ' + (on ? 'Card charged only when the job is done' : 'Pay your mechanic when the job is done');
+}
 function money(c){ c = Math.round(Number(c) || 0); return '$' + (c % 100 ? (c / 100).toFixed(2) : (c / 100).toLocaleString()); }
 function dayLabel(iso){ const ms = isoMs(iso); if(!ms) return iso || ''; const d = new Date(ms), t = new Date(); t.setHours(0,0,0,0); const diff = Math.round((ms - t.getTime()) / DAY); return diff === 0 ? 'Today' : diff === 1 ? 'Tomorrow' : d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }); }
 function toast(msg, ms){ const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), ms || 4500); }
@@ -5294,7 +5302,7 @@ async function loadMechPortal(){
     const pc = document.createElement('div'); pc.className = 'admin-card';
     const ptxt = document.createElement('div'); ptxt.className = 'admin-meta';
     ptxt.textContent = m.payouts_ready ? 'Stripe payouts are set up. Customers pay through WrenchNow and Stripe sends your share to your bank automatically.'
-                                       : "Customers pay through WrenchNow and Stripe sends your share straight to your bank. Set this up once (name, date of birth, last 4 of SSN, bank account — entered on Stripe's own page) and you can start sending quotes.";
+                                       : "Customers pay through WrenchNow and Stripe sends your share straight to your bank (card processing, about 3%, is taken out first). Set this up once (name, date of birth, last 4 of SSN, bank account — entered on Stripe's own page) and you can start sending quotes.";
     pc.appendChild(ptxt);
     if(!m.payouts_ready){ const pa = document.createElement('div'); pa.className = 'admin-actions'; pa.style.marginTop = '.7rem'; const pb = document.createElement('button'); pb.className = 'admin-btn primary'; pb.textContent = 'Set up payouts'; pb.addEventListener('click', () => setupPayouts(pb)); pa.appendChild(pb); pc.appendChild(pa); }
     pay.appendChild(pc); root.appendChild(pay);
@@ -6352,7 +6360,7 @@ async function openMyBookings() {
       wrap.style.cssText = 'text-align:center;padding:3rem 1rem';
       const ico = document.createElement('div'); ico.style.cssText='font-size:32px;margin-bottom:1rem'; ico.textContent='🔧';
       const ttl = document.createElement('div'); ttl.style.cssText='font-size:15px;font-weight:600;color:var(--cream);margin-bottom:.5rem'; ttl.textContent='No bookings yet';
-      const txt = document.createElement('p'); txt.style.cssText='color:var(--muted);font-size:13px;margin-bottom:1.5rem'; txt.textContent='Your bookings will appear here after you book a mechanic.';
+      const txt = document.createElement('p'); txt.style.cssText='color:var(--muted);font-size:13px;margin-bottom:1.5rem'; txt.textContent='Your quote requests and bookings will appear here.';
       const btn = document.createElement('button'); btn.className='btn-ore'; btn.style.borderRadius='11px'; btn.textContent='Find a mechanic →';
       btn.addEventListener('click', () => { closeMyBookings(); openBooking(null); });
       wrap.appendChild(ico); wrap.appendChild(ttl); wrap.appendChild(txt); wrap.appendChild(btn);
@@ -6430,7 +6438,7 @@ async function openMyBookings() {
                       paid: 'Paid ' + money(b.paid_cents || due) + ' ✓',
                       payment_failed: "Your card couldn't be charged. Please pay to finish this booking.",
                       disputed: "Problem reported. We'll be in touch before anything is charged.",
-                      refunded: 'Refunded.' }[ps] || '';
+                      refunded: 'Refunded' + (b.refunded_cents ? ' ' + money(b.refunded_cents) : '') + '.', settled: 'Settled.', chargeback: 'Disputed with your bank — we\'ll follow up by email.' }[ps] || '';
         pl.textContent = txt; pl.classList.add(ps === 'paid' ? 'ok' : (ps === 'needs_card' || ps === 'payment_failed' || ps === 'disputed') ? 'warn' : 'x');
         const pa = document.createElement('div'); pa.className = 'mbi-actions';
         if(ps === 'needs_card' && statusRaw !== 'cancelled'){ const c = document.createElement('button'); c.className = 'admin-btn primary'; c.textContent = 'Add a card'; c.addEventListener('click', () => startCardSetup(b.id, c)); pa.appendChild(c); }
@@ -6982,8 +6990,9 @@ auth.onAuthStateChanged((user) => {
       <p>THE PLATFORM IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT. WRENCHNOW DOES NOT WARRANT THAT THE PLATFORM WILL BE UNINTERRUPTED, ERROR-FREE, OR FREE OF VIRUSES OR OTHER HARMFUL COMPONENTS.</p>
 
       <h2>7. Payment Terms</h2>
-      <p>Customers pay for services through the WrenchNow platform. WrenchNow charges a platform fee on each transaction. All payments are processed by Stripe, Inc. and are subject to Stripe's terms and conditions. WrenchNow is not responsible for any errors, delays, or failures in payment processing.</p>
-      <p>All sales are final unless WrenchNow determines at its sole discretion that a refund is warranted. Disputes regarding payment must be raised within 30 days of the transaction.</p>
+      <p><strong>Quotes.</strong> Mechanics send a price (labor and parts) before any work is booked. The Customer accepts or declines. If the Mechanic finds more work is needed, they send a revised price, and nothing changes unless the Customer approves it; if the Customer declines, the original price stands.</p>
+      <p><strong>When online payment is offered</strong>, the Customer's card is saved through Stripe, Inc. when they accept a quote and is charged the agreed (or approved revised) price when the Customer confirms the job is done, or 48 hours after the Mechanic marks it done unless the Customer reports a problem first. Reporting a problem holds the payment while WrenchNow looks into it. Payments are processed by Stripe and paid out to the Mechanic through Stripe; WrenchNow never stores card numbers. Card processing costs and any platform fee are deducted from the Mechanic's share and shown in their Stripe account. <strong>When online payment is not offered</strong>, the Customer pays the Mechanic directly and WrenchNow does not handle the money.</p>
+      <p>Refunds are decided case by case after hearing from both sides. Payment problems must be raised within 30 days of the job.</p>
 
       <h2>8. Dispute Resolution Between Customers and Mechanics</h2>
       <p>WrenchNow provides a dispute mediation process to assist in resolving disagreements between Customers and Mechanics. <strong>WrenchNow does not guarantee the outcome of any dispute, does not guarantee the quality of work performed, and does not offer any warranty or guarantee on automotive services booked through the platform.</strong> Any resolution is at WrenchNow's sole discretion and is provided as a courtesy only. Customers should raise any concerns directly with the Mechanic in the first instance.</p>
@@ -6992,7 +7001,7 @@ auth.onAuthStateChanged((user) => {
       <p>You agree not to:</p>
       <ul>
         <li>Use the platform for any unlawful purpose or in violation of any applicable laws</li>
-        <li>Circumvent the platform by arranging payments directly with Mechanics outside of WrenchNow</li>
+        <li>Take a job found on WrenchNow off the platform to avoid its payment process, when online payment is offered</li>
         <li>Submit false, fraudulent, or misleading information</li>
         <li>Harass, threaten, or harm any Mechanic or other user</li>
         <li>Interfere with the platform's operation or security</li>
@@ -7092,7 +7101,7 @@ auth.onAuthStateChanged((user) => {
       <h2>3. How We Share Your Information</h2>
       <p>We do not sell your personal information. We share information only in the following circumstances:</p>
       <ul>
-        <li><strong>With Mechanics:</strong> When you book a service, we share your name, vehicle information, and service address with the Mechanic you have selected</li>
+        <li><strong>With Mechanics:</strong> When you ask for quotes, mechanics see your first name, vehicle, the job, any photos you add, and your ZIP code / rough area. Your exact address and phone number are shared only with the one Mechanic whose quote you accept</li>
         <li><strong>With Customers:</strong> Mechanic profiles including name, location, specialties, ratings, and verified job prices are visible to all users</li>
         <li><strong>With service providers:</strong> We use Google Firebase (database and sign-in), Stripe (payments), Resend (email), and, for mechanic applicants who consent, a background-check provider to operate the platform. These providers process data on our behalf under confidentiality obligations</li>
         <li><strong>For legal reasons:</strong> We may disclose information if required by law, court order, or to protect the rights and safety of WrenchNow, its users, or the public</li>
@@ -7215,7 +7224,7 @@ auth.onAuthStateChanged((user) => {
         <li>Perform services while impaired by alcohol, drugs, or any substance</li>
         <li>Misrepresent your qualifications, experience, or the services you provide</li>
         <li>Charge amounts beyond those agreed with the customer and disclosed on the platform</li>
-        <li>Circumvent the WrenchNow platform by arranging direct payments with customers outside the platform</li>
+        <li>Take payment outside WrenchNow for a job found on WrenchNow when online payment is offered</li>
         <li>Harass, intimidate, or behave inappropriately toward any customer</li>
         <li>Share customer personal information with any third party</li>
         <li>Use WrenchNow for any unlawful purpose</li>
@@ -7225,8 +7234,10 @@ auth.onAuthStateChanged((user) => {
 
       <h2>6. Platform Fee and Payments</h2>
       <p><strong>Launch period and verification fee.</strong> During the launch period the platform fee is 0%. Applicants pay a one-time verification fee of <span data-fee>$49</span>, which covers a third-party background and driving-record check and is not refunded once the check has been ordered. Outside the launch period, the following applies:</p>
-      <p>WrenchNow charges a platform fee on each completed transaction. The current platform fee is 15% of the total job value. This fee is subject to change with 30 days' notice.</p>
-      <p>Payments are processed through Stripe Connect. You are required to maintain a valid Stripe Connect account to receive payments. WrenchNow is not responsible for delays or failures in payment processing caused by Stripe or by errors in your account information.</p>
+      <p>After the launch period WrenchNow may charge a platform fee on each completed job, a percentage of the job price. You will get at least 30 days' notice by email before any platform fee starts or changes, and it never applies to jobs already accepted.</p>
+      <p><strong>Quotes and price changes.</strong> You set your price for each job as a quote (labor and parts). If you find more work is needed, send a revised price through WrenchNow before doing the extra work; the customer must approve it, and if they don't, the original price stands.</p>
+      <p><strong>Getting paid.</strong> When online payment is offered, you must complete Stripe payout setup (Stripe Connect) before sending quotes. The customer's payment goes to your Stripe account, less card processing costs (about 3.2% + 55¢ per job, covering Stripe's card and payout fees) and any platform fee in effect. Payment is taken when the customer confirms the job, or 48 hours after you mark it done unless the customer reports a problem first. If a customer reports a problem or disputes the charge with their bank, payment may be held, and if a refund is issued, the amount paid to you for that job may be reversed. When online payment is not offered, the customer pays you directly.</p>
+      <p>Payments are processed through Stripe Connect. WrenchNow is not responsible for delays or failures in payment processing caused by Stripe or by errors in your account information.</p>
 
       <h2>7. Liability and Indemnification</h2>
       <p><strong>You are solely responsible for any damage, injury, loss, or claim arising from the services you perform through WrenchNow.</strong> WrenchNow assumes no liability for your work, your vehicle, your tools, or your conduct.</p>
