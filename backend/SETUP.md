@@ -135,3 +135,7 @@ Mechanics upload their liability insurance certificate in My jobs → Insurance.
 - Only jobs paid through WrenchNow count toward a mechanic's reviews, job total and ranking.
 - Customers can press "Asked to pay outside WrenchNow?" on a booking; you get an email and it shows in Admin → Bookings.
 - "Book again" on a finished job makes rebooking the same mechanic through the app the easy path.
+
+
+## 17. Dealer price comparison
+Quotes and finished jobs show "Typical dealer ≈ $X · you save about $Y": labor hours × a dealer's hourly rate, plus parts with a dealer's markup. The home page shows the running total saved. Set the rate and markup in Admin → Online payments. They start at $185/hr and +30%. Call two or three Denver dealer service departments, ask their hourly labor rate, and use the real number so the claim holds up.

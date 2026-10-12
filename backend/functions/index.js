@@ -459,7 +459,7 @@ function apptMs(iso, time) {
   return ms;
 }
 
-// "Saved vs. typical shop prices" — same formula as the site: labor hours × shop rate + parts × shop markup, minus what was paid
+// "Saved vs. typical dealer prices" — same formula as the site: labor hours × dealer rate + parts × dealer markup, minus what was paid
 async function recomputeSavings() {
   const cfg = (await db.collection('config').doc('site').get()).data() || {};
   const rate = cfg.shop_rate >= 60 && cfg.shop_rate <= 400 ? cfg.shop_rate : 185, markup = cfg.parts_markup_pct >= 0 && cfg.parts_markup_pct <= 150 ? cfg.parts_markup_pct : 30;
