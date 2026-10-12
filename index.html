@@ -2429,6 +2429,12 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
 .photo-strip img { width: 58px; height: 58px; object-fit: cover; border-radius: 9px; border: 0.5px solid var(--border-med); }
 .quote-card { background: var(--surface); border: 0.5px solid var(--border-med); border-radius: 12px; padding: .8rem .95rem; margin-top: 8px; }
 .quote-card.best { border-color: rgba(46,199,122,.45); }
+.mtag-ok{color:var(--green)!important;border-color:rgba(46,199,122,.35)!important}
+.mtag-warn{color:#f87171!important;border-color:rgba(248,113,113,.4)!important}
+.status-no_show{color:#f87171;background:rgba(248,113,113,.1)}
+.appr-banner{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:900;width:min(560px,calc(100vw - 32px));box-sizing:border-box;background:var(--raised);border:1px solid var(--ore);border-radius:12px;padding:12px 14px;display:none;gap:10px;align-items:center;box-shadow:0 10px 30px rgba(0,0,0,.5);font-size:14px;color:var(--cream)}
+.appr-banner.on{display:flex}
+.appr-banner button{flex-shrink:0}
 .quote-top { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; flex-wrap: wrap; }
 @media (max-width: 480px){ .quote-top{ flex-direction: column; align-items: flex-start; gap: 4px; } .quote-top > div:last-child{ text-align: left !important; } }
 #bookingHeader .step-progress{ padding-right: 40px; }
@@ -2441,6 +2447,8 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
 .rev-form { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: .6rem; }
 .rev-form input { background: var(--surface); border: 0.5px solid var(--border-med); border-radius: 8px; padding: 8px 10px; color: var(--cream); font-family: var(--font-body); font-size: 13px; min-width: 0; }
 .rev-form .full { grid-column: 1 / -1; }
+.ins-form { display: grid; gap: 6px; margin-top: .6rem; }
+.ins-form input { background: var(--surface); border: 0.5px solid var(--border-med); border-radius: 8px; padding: 8px 10px; color: var(--cream); font-family: var(--font-body); font-size: 13px; min-width: 0; }
 
 
 /* ── Installable app ── */
@@ -2458,6 +2466,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
 
 </head>
 <body>
+<div class="appr-banner" id="apprBanner" role="status"><span id="apprText" style="flex:1"></span><button class="admin-btn primary" onclick="document.getElementById('apprBanner').classList.remove('on');openMyBookings()">Review</button></div>
 
 <!-- NAV -->
 <nav class="nav">
@@ -2625,7 +2634,8 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
 
     <!-- Sort row -->
     <div class="sort-row" style="margin-bottom:1.25rem">
-      <button class="sort-pill on" onclick="sortToggle(this,'rating')">Top rated</button>
+      <button class="sort-pill on" onclick="sortToggle(this,'best')" title="Reviews, showing up for jobs, experience, verification and insurance">Best match</button>
+      <button class="sort-pill" onclick="sortToggle(this,'rating')">Top rated</button>
       <button class="sort-pill" onclick="sortToggle(this,'near')">Nearest</button>
       <button class="sort-pill" onclick="sortToggle(this,'price')">Lowest price</button>
       <button class="sort-pill" onclick="sortToggle(this,'jobs')">Most jobs done</button>
@@ -2769,7 +2779,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
     <div>
       <div class="launch-tag">🎉 Founding Mechanic — 0% Platform Fee During Launch</div>
       <div class="mhero-title">STOP<br>SPLITTING WITH<br><span class="ore">THE SHOP.</span></div>
-      <p class="hero-sub"><strong style="color:var(--green)">No platform fee during launch.</strong> Set your own prices and keep what you quote — only card processing (about 3%) comes out when a customer pays by card. One <span data-fee>$49</span> verification fee covers your background check.</p>
+      <p class="hero-sub"><strong style="color:var(--green)">Just 5% per job.</strong> Set your own prices. On jobs paid through WrenchNow we keep 5%, card processing (about 3%) comes out, and the rest goes straight to your bank. No monthly fee. One <span data-fee>$49</span> verification fee covers your background check.</p>
       <div class="hero-actions" style="margin-bottom:2rem">
         <button class="btn-ore" onclick="openApply()" style="box-shadow:0 4px 20px rgba(46,199,122,0.25)"><i class="ti ti-clipboard-check" aria-hidden="true"></i> Apply — Founding Mechanic Spot</button>
         <button class="btn-ghost" onclick="showPanel('dashboard')">View mechanic dashboard →</button>
@@ -2804,8 +2814,8 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
     <div class="launch-banner">
       <div class="launch-banner-icon">🚀</div>
       <div>
-        <div class="launch-banner-title">Founding Mechanic Programme — 0% platform fee</div>
-        <div class="launch-banner-sub">Pay <strong style="color:var(--green)">zero platform fees</strong> during our entire launch period. Apart from card processing on card-paid jobs (about 3%), the only cost is a one-time <span data-fee>$49</span> verification fee for your background check. Want more jobs? Go Featured for $29/month and get pinned to the top of search results.</div>
+        <div class="launch-banner-title">Founding mechanics — 5% flat, no monthly fee</div>
+        <div class="launch-banner-sub">A shop takes a big cut of every job. We take <strong style="color:var(--green)">5%</strong>, plus card processing (about 3%) on card-paid jobs. The only other cost is a one-time <span data-fee>$49</span> verification fee for your background check. Want more jobs? Go Featured for $29/month and get pinned to the top of search results.</div>
       </div>
     </div>
   </div>
@@ -2815,7 +2825,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
     <div class="tag">Why mechanics choose us</div>
     <div style="font-family:var(--font-display);font-size:44px;font-weight:900;margin-bottom:1.5rem">BUILT FOR<br>WORKING MECHANICS</div>
     <div class="perks">
-      <div class="perk" style="border-color:rgba(46,199,122,0.3);background:linear-gradient(160deg,rgba(46,199,122,0.05),transparent)"><div class="perk-icon" style="color:var(--green)"><i class="ti ti-gift" aria-hidden="true"></i></div><div class="perk-title">0% platform fee <span class="free-badge">now</span></div><div class="perk-desc">No platform cut while we build the network. Keep 100% of what you charge during the launch period.</div></div>
+      <div class="perk" style="border-color:rgba(46,199,122,0.3);background:linear-gradient(160deg,rgba(46,199,122,0.05),transparent)"><div class="perk-icon" style="color:var(--green)"><i class="ti ti-gift" aria-hidden="true"></i></div><div class="perk-title">5% platform fee <span class="free-badge">flat</span></div><div class="perk-desc">Keep about 92% of every job after our 5% and card processing. No monthly fee, no lead fees, no paying to quote.</div></div>
       <div class="perk"><div class="perk-icon" style="color:var(--amber)"><i class="ti ti-star" aria-hidden="true"></i></div><div class="perk-title">Go Featured — $29/mo</div><div class="perk-desc">Optional. Featured mechanics are pinned to the top of search results with a gold badge, so customers see you first. Cancel anytime.<br><button class="btn-ghost" style="margin-top:.75rem;padding:8px 14px;font-size:13px" onclick="openProUpgrade(this)">Get Featured</button></div></div>
       <div class="perk"><div class="perk-icon"><i class="ti ti-shield-check" aria-hidden="true"></i></div><div class="perk-title">A badge customers trust</div><div class="perk-desc">Pass verification and your profile carries the Verified badge — the first thing customers look for before letting someone work on their car.</div></div>
       <div class="perk"><div class="perk-icon"><i class="ti ti-calendar-stats" aria-hidden="true"></i></div><div class="perk-title">You set the schedule</div><div class="perk-desc">Take the requests that suit you and pass on the ones that don't. No quotas, no penalties.</div></div>
@@ -3215,7 +3225,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
 <div class="profile-stat-row">
             <div class="pstat"><div class="pstat-num" id="profileJobs">—</div><div class="pstat-label">Jobs done</div></div>
             <div class="pstat"><div class="pstat-num" id="profileRepeat">—</div><div class="pstat-label">Repeat clients</div></div>
-            <div class="pstat"><div class="pstat-num" id="profileOnTime">—</div><div class="pstat-label">On-time</div></div>
+            <div class="pstat"><div class="pstat-num" id="profileOnTime">—</div><div class="pstat-label">Showed up</div></div>
             <div class="pstat"><div class="pstat-num" id="profileResponse">—</div><div class="pstat-label">Avg. response</div></div>
           </div>
         </div>
@@ -3388,7 +3398,7 @@ function mechToLookup(m) {
     reviews: (m.review_count || 0) + ' review' + (m.review_count === 1 ? '' : 's'),
     jobs: String(m.jobs_completed),
     repeat: m.repeat_pct,
-    onTime: m.on_time_pct,
+    onTime: reliability(m) != null ? reliability(m) + '%' : '',
     response: m.response_time,
     rate: m.rate_display,
     availNow: m.available_now === true,
@@ -3398,6 +3408,7 @@ function mechToLookup(m) {
     id: m.id || m.slug,
     ownerUid: m.owner_uid || '',
     photo: safePhoto(m.photo),
+    insured: m.insured === true, diag: diagLabel(m), noShows: m.no_shows || 0, lateCancels: m.late_cancels || 0,
     bookBtn: 'Get a quote from ' + m.name.split(' ')[0]
   };
 }
@@ -3481,6 +3492,10 @@ function renderMechCard(m) {
   const tagsEl = document.createElement('div');
   tagsEl.className = 'mcard-tags';
   if(mechLevel(m) === 'basic'){ const lv=document.createElement('span'); lv.className='mtag mtag-level'; lv.textContent='Basic maintenance only'; tagsEl.appendChild(lv); }
+  const trust = (txt, cls) => { const t = document.createElement('span'); t.className = 'mtag ' + cls; t.textContent = txt; tagsEl.appendChild(t); };
+  if(m.insured) trust('✓ Insured', 'mtag-ok');
+  if(diagLabel(m)) trust(diagLabel(m), m.diag_fee_cents === 0 ? 'mtag-ok' : 'mtag-level');
+  if(m.no_shows > 0) trust(m.no_shows + ' no-show' + (m.no_shows === 1 ? '' : 's'), 'mtag-warn');
   const tagList = (m.specialties||[]).slice(0,4);
   const extra = (m.specialties||[]).length - 4;
   tagList.forEach(t => { const s=document.createElement('span'); s.className='mtag'; s.textContent=t; tagsEl.appendChild(s); });
@@ -3723,6 +3738,9 @@ function normalizeMech(m){
     is_featured: m.is_featured === true, verified: m.verified === true,
     available_now: m.available_now === true,
     service_level: m.service_level === 'basic' ? 'basic' : 'full', photo: safePhoto(m.photo), payouts_ready: m.payouts_ready === true,
+    diag_fee_cents: Number.isInteger(m.diag_fee_cents) && m.diag_fee_cents >= 0 && m.diag_fee_cents <= 50000 ? m.diag_fee_cents : null,
+    insured: m.insured === true && (!m.insured_until || !(Date.parse(m.insured_until) < Date.now())), insured_until: str(m.insured_until, 10),
+    no_shows: Math.max(0, parseInt(m.no_shows) || 0), late_cancels: Math.max(0, parseInt(m.late_cancels) || 0),
     owner_uid: str(m.owner_uid, 128), zip: str(m.zip, 10),
     radius_mi: [10, 15, 25, 40].includes(Number(m.radius_mi)) ? Number(m.radius_mi) : 25,
     geo_lat: Math.abs(Number(m.geo_lat)) <= 90 && m.geo_lat !== null && m.geo_lat !== '' && !isNaN(Number(m.geo_lat)) ? Number(m.geo_lat) : null,
@@ -3734,6 +3752,32 @@ async function sha256(text){
   catch(e){ return ''; }
 }
 function mechLevel(m){ return m && m.service_level === 'basic' ? 'basic' : 'full'; }
+// Showed up for booked jobs: completed ÷ (completed + no-shows + late cancellations). Needs 3+ booked jobs to mean anything.
+function reliability(m){ const total = (m.jobs_completed || 0) + (m.no_shows || 0) + (m.late_cancels || 0); return total >= 3 ? Math.round((m.jobs_completed || 0) / total * 100) : null; }
+function priceLabel(b){ const c = b.final_cents || b.price_cents || 0; return b.booking_kind === 'diagnosis' && !c ? 'Free diagnosis' : money(c) + (b.booking_kind === 'diagnosis' && !b.final_cents ? ' diagnosis' : ''); }
+function diagLabel(m){ if(!m || mechLevel(m) === 'basic' || m.diag_fee_cents == null) return ''; return m.diag_fee_cents === 0 ? 'Free diagnosis' : 'Diagnosis ' + money(m.diag_fee_cents); }
+function isDiagnosisJob(text){ return /not sure|diagnos|check engine|warning light|weird noise|won'?t start|inspection/i.test(text || ''); }
+// Best match: reviews matter most (more reviews = more trust), then showing up, then experience, verification and insurance
+function matchScore(m){
+  const n = m.review_count || 0, avg = hasRating(m) ? Number(m.rating) : 0;
+  const stars = (avg * n + 4.2 * 3) / (n + 3);              // a 5.0 from 1 review doesn't beat a 4.8 from 40
+  const rel = reliability(m); const relPenalty = rel == null ? 0 : (100 - rel) / 10;   // 90% showed up → −1
+  return stars * 2 + Math.min(n, 50) / 25 + Math.min(m.jobs_completed || 0, 100) / 50 - relPenalty
+       + (m.verified ? 0.6 : 0) + (m.insured ? 0.4 : 0) + (m.available_now ? 0.3 : 0) - (m._dist != null ? Math.min(m._dist, 40) / 40 : 0);
+}
+function shrinkImage(file, maxSide, quality, maxBytes){
+  return new Promise((resolve, reject) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      let w = img.width, h = img.height, q = quality; const k = Math.min(1, maxSide / Math.max(w, h)); w = Math.round(w * k); h = Math.round(h * k);
+      const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(img, 0, 0, w, h); URL.revokeObjectURL(url);
+      let out = c.toDataURL('image/jpeg', q); while(out.length > maxBytes && q > 0.35){ q -= 0.1; out = c.toDataURL('image/jpeg', q); }
+      out.length > maxBytes ? reject(new Error('too big')) : resolve(out);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('not an image')); };
+    img.src = url;
+  });
+}
 function safePhoto(p){ return typeof p === 'string' && p.indexOf('data:image/jpeg;base64,') === 0 && p.length < 120000 ? p : ''; }
 function setAvatar(el, initials, photo){
   const src = safePhoto(photo);
@@ -3788,7 +3832,7 @@ function useMyLocation(){
 // the filter chips and the sort pills all write to `view`, then renderGrid().
 let ALL_MECHS = [];
 let LOAD_FAILED = false;
-const view = { filter: 'all', sort: 'rating', terms: [] };
+const view = { filter: 'all', sort: 'best', terms: [] };
 
 const SERVICE_KEYS = {
   oil:          { label: 'oil change',    re: /\boil\b|lube/ },
@@ -3831,6 +3875,7 @@ function mechMatches(m, key){
   return k.re.test(specs + ' ' + (m.tagline || '').toLowerCase());
 }
 const SORTS = {
+  best:      (a,b) => matchScore(b) - matchScore(a),
   rating:    (a,b) => ((b.verified === true ? 1 : 0) - (a.verified === true ? 1 : 0)) || (hasRating(b) - hasRating(a)) || (hasRating(a) ? Number(b.rating) - Number(a.rating) : 0) || ((b.jobs_completed||0) - (a.jobs_completed||0)),
   price:     (a,b) => (a.rate_num || 1e9) - (b.rate_num || 1e9),
   near:      (a,b) => ((a._dist == null ? 1e9 : a._dist) - (b._dist == null ? 1e9 : b._dist)) || SORTS.rating(a,b),
@@ -3886,7 +3931,7 @@ function renderGrid(){
   let farCount = 0;
   ALL_MECHS.forEach(m => { m._dist = (CUSTOMER_GEO && m.geo_lat != null && m.geo_lng != null) ? milesBetween(CUSTOMER_GEO, { lat: m.geo_lat, lng: m.geo_lng }) : null; });
   if(CUSTOMER_GEO){ const before = list.length; list = list.filter(m => m._dist == null || m._dist <= m.radius_mi); farCount = before - list.length; }
-  list.sort(SORTS[view.sort] || SORTS.rating);
+  list.sort(SORTS[view.sort] || SORTS.best);
 
   const narrowed = view.filter !== 'all' || view.terms.length > 0 || farCount > 0;
   const what = view.terms.length ? view.terms.map(k => SERVICE_KEYS[k].label).join(' or ')
@@ -3947,7 +3992,7 @@ function filterToggle(el, filter){
 function sortToggle(el, key){
   document.querySelectorAll('.sort-pill').forEach(p => p.classList.remove('on'));
   el.classList.add('on');
-  view.sort = key || 'rating';
+  view.sort = key || 'best';
   if(key === 'near' && !CUSTOMER_GEO){ const m = document.getElementById('mechsMeta'); renderGrid(); if(m){ m.textContent = 'Add your address in the search box (or use your location) to sort by distance.'; } document.getElementById('searchLocation').focus(); return; }
   renderGrid();
 }
@@ -4312,7 +4357,10 @@ function openProfile(mechKey){
     };
     if(m.featured) addBadge('pbadge-top', 'ti-star', 'Featured');
     if(m.badge === 'top') addBadge('pbadge-top', 'ti-award', 'Top Pro');
-    if(m.verified) addBadge('pbadge-verified', 'ti-shield-check', 'Verified — background, driving record, skills & insurance');
+    if(m.verified) addBadge('pbadge-verified', 'ti-shield-check', 'Verified — background & driving record');
+    if(m.insured) addBadge('pbadge-verified', 'ti-certificate', 'Insured — certificate checked');
+    if(m.diag) addBadge('pbadge-insured', 'ti-stethoscope', m.diag);
+    if(m.noShows || m.lateCancels) addBadge('pbadge-insured', 'ti-alert-triangle', [m.noShows ? m.noShows + ' no-show' + (m.noShows === 1 ? '' : 's') : '', m.lateCancels ? m.lateCancels + ' last-minute cancellation' + (m.lateCancels === 1 ? '' : 's') : ''].filter(Boolean).join(' · '));
     else addBadge('pbadge-insured', 'ti-clock', 'Verification in progress');
   }
   let shown = 0;
@@ -4676,13 +4724,14 @@ async function loadAdmin(){
   if(!isAdmin){ root.innerHTML = '<div class="admin-empty">Admin access only.</div>'; return; }
   root.innerHTML = '<div class="admin-empty">Loading…</div>';
   try {
-    const [appSnap, mechSnap, bookSnap, privSnap, msgSnap, revSnap] = await Promise.all([
+    const [appSnap, mechSnap, bookSnap, privSnap, msgSnap, revSnap, insSnap] = await Promise.all([
       db.collection('mechanic_applications').get(),
       db.collection('mechanics').get(),
       db.collection('bookings').get(),
       db.collection('mechanic_private').get(),
       db.collection('messages').get(),
-      db.collection('reviews').get()
+      db.collection('reviews').get(),
+      db.collection('insurance_docs').get().catch(() => ({ docs: [] }))
     ]);
     const reviews = cleanReviews(revSnap);
     const msgs = msgSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => tsMillis(b.created_at) - tsMillis(a.created_at));
@@ -4692,7 +4741,14 @@ async function loadAdmin(){
     const broken = mechsRaw.filter(r => !normalizeMech(r));
     const books = bookSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => tsMillis(b.created_at) - tsMillis(a.created_at));
     const priv  = {}; privSnap.docs.forEach(d => { priv[d.id] = d.data(); });
-    const done  = {}; books.forEach(b => { if(b.status === 'completed' && b.mechanic_slug) done[b.mechanic_slug] = (done[b.mechanic_slug] || 0) + 1; });
+    const done  = {}; books.forEach(b => { if(b.status === 'completed' && b.mechanic_slug && !['refunded', 'chargeback'].includes(b.payment_status)) done[b.mechanic_slug] = (done[b.mechanic_slug] || 0) + 1; });
+    const insDocs = {}; insSnap.docs.forEach(d => { insDocs[d.id] = d.data(); });
+    // no-shows and last-minute cancellations (the server keeps these too; this catches up if it hasn't run)
+    for(const m of mechs){
+      const mine = books.filter(b => b.mechanic_slug === m.slug);
+      const ns = mine.filter(b => b.status === 'no_show').length, lc = mine.filter(b => b.status === 'cancelled' && b.late_cancel === true).length;
+      if(ns !== (m.no_shows || 0) || lc !== (m.late_cancels || 0)){ m.no_shows = ns; m.late_cancels = lc; try { await db.collection('mechanics').doc(m.id).update({ no_shows: ns, late_cancels: lc }); sessionStorage.removeItem('ww_mechanics_cache'); } catch(e){} }
+    }
 
     // Keep the public job count in step with confirmed-complete bookings (never lowers a count)
     for(const m of mechs){
@@ -4721,7 +4777,7 @@ async function loadAdmin(){
     root.appendChild(await adminRequests(reqs));
     root.appendChild(adminBookings(books.slice(0, 40), priv, mechs));
     root.appendChild(adminMessages(msgs));
-    root.appendChild(adminMechanics(mechs, priv, done));
+    root.appendChild(adminMechanics(mechs, priv, done, insDocs));
     root.appendChild(adminReviews(reviews));
     if(broken.length) root.appendChild(adminBroken(broken));
   } catch(err){
@@ -5079,7 +5135,7 @@ async function renderMyRequests(container, reqs){
     let quotes = [];
     try { quotes = (await db.collection('requests').doc(r.id).collection('quotes').get()).docs.map(d => ({ id: d.id, ...d.data() })); } catch(e){}
     const now = Date.now();
-    quotes = quotes.filter(q => q.status === 'sent' && Number(q.total_cents) > 0 && (!q.valid_until || Date.parse(q.valid_until) > now)).sort((a, b) => a.total_cents - b.total_cents);
+    quotes = quotes.filter(q => q.status === 'sent' && (Number(q.total_cents) > 0 || (q.kind === 'diagnosis' && Number(q.total_cents) === 0)) && (!q.valid_until || Date.parse(q.valid_until) > now)).sort((a, b) => a.total_cents - b.total_cents);
     stEl.textContent = quotes.length ? quotes.length + ' quote' + (quotes.length === 1 ? '' : 's') : 'Waiting for quotes';
     quotes.forEach((q, i) => {
       const m = Object.values(MECHANICS).find(x => x.id === q.mechanic_doc) || {};
@@ -5092,15 +5148,17 @@ async function renderMyRequests(container, reqs){
       nm.lastChild.textContent = [m.verified ? '✓ Verified' : 'Not yet verified', raw && hasRating(raw) ? raw.rating.toFixed(1) + '★ (' + raw.review_count + ')' : 'No ratings yet', dist != null ? '≈ ' + Math.round(dist) + ' mi away' : ''].filter(Boolean).join(' · ');
       const pr = document.createElement('div'); pr.style.textAlign = 'right';
       pr.innerHTML = '<div class="quote-price"></div><div class="quote-meta"></div>';
-      pr.firstChild.textContent = money(q.total_cents);
-      pr.lastChild.textContent = 'labor ' + money(q.labor_cents) + ' + parts ' + money(q.parts_cents) + (i === 0 && quotes.length > 1 ? ' · lowest' : '');
+      const diagQ = q.kind === 'diagnosis';
+      pr.firstChild.textContent = diagQ && !q.total_cents ? 'Free' : money(q.total_cents);
+      pr.lastChild.textContent = (diagQ ? 'diagnosis visit' : 'labor ' + money(q.labor_cents) + ' + parts ' + money(q.parts_cents)) + (i === 0 && quotes.length > 1 ? ' · lowest' : '');
       top.appendChild(nm); top.appendChild(pr); card.appendChild(top);
       const when = document.createElement('div'); when.className = 'quote-meta'; when.style.marginTop = '.4rem';
       when.textContent = 'Can come ' + dayLabel(q.date_iso) + ' at ' + (q.time || '') + (q.valid_until ? ' · quote good until ' + new Date(Date.parse(q.valid_until)).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '');
       card.appendChild(when);
       if(q.note){ const n = document.createElement('div'); n.className = 'rev-text'; n.style.fontSize = '13px'; n.textContent = '“' + q.note + '”'; card.appendChild(n); }
+      if(diagQ){ const dn = document.createElement('div'); dn.className = 'quote-meta'; dn.style.marginTop = '.3rem'; dn.textContent = 'This covers finding the problem. The repair price comes after, and nothing extra is done or charged until you approve it in the app.'; card.appendChild(dn); }
       const acts = document.createElement('div'); acts.className = 'mbi-actions';
-      const acc = document.createElement('button'); acc.className = 'admin-btn primary'; acc.textContent = 'Accept ' + money(q.total_cents);
+      const acc = document.createElement('button'); acc.className = 'admin-btn primary'; acc.textContent = 'Accept ' + (q.kind === 'diagnosis' && !q.total_cents ? 'free diagnosis' : money(q.total_cents));
       acc.addEventListener('click', () => showAcceptAgreement(r, q));
       const dec = document.createElement('button'); dec.className = 'admin-btn'; dec.textContent = 'Decline';
       dec.addEventListener('click', async () => { dec.disabled = true; try { await db.collection('requests').doc(r.id).collection('quotes').doc(q.id).update({ status: 'declined' }); } catch(e){} openMyBookings(); });
@@ -5149,7 +5207,7 @@ async function acceptQuote(){
       booking_date_iso: q.date_iso, booking_date: dayLabel(q.date_iso) === 'Today' || dayLabel(q.date_iso) === 'Tomorrow' ? new Date(isoMs(q.date_iso)).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : dayLabel(q.date_iso),
       booking_time: q.time,
       mechanic_slug: q.mechanic_slug || raw.slug || '', mechanic_name: q.mechanic_name || '', mechanic_doc: q.mechanic_doc, mechanic_uid: q.mechanic_uid,
-      slot_id: slotId, request_id: r.id, quote_uid: q.mechanic_uid,
+      slot_id: slotId, request_id: r.id, quote_uid: q.mechanic_uid, booking_kind: q.kind === 'diagnosis' ? 'diagnosis' : 'job',
       price_cents: q.total_cents, labor_cents: q.labor_cents, parts_cents: q.parts_cents, quote_note: q.note || '',
       rate_num: raw.rate_num || 0,
       agreed_to_terms: true, agreed_at: new Date().toISOString(),
@@ -5308,6 +5366,38 @@ async function loadMechPortal(){
     pay.appendChild(pc); root.appendChild(pay);
   }
 
+  // insurance: upload a certificate, admin checks it, Insured badge shows on the profile
+  {
+    const ins = adminSection('Insurance', m.insured ? 'Insured badge on' + (m.insured_until ? ' until ' + m.insured_until : '') : 'optional — earns an Insured badge');
+    const ic = document.createElement('div'); ic.className = 'admin-card';
+    const it = document.createElement('div'); it.className = 'admin-meta';
+    let existing = null; try { const d = await db.collection('insurance_docs').doc(m.id).get(); if(d.exists) existing = d.data(); } catch(e){}
+    it.textContent = m.insured ? 'Your certificate was checked. Customers see "Insured" on your profile and insured mechanics rank higher. Upload the renewal before it ends.'
+                   : existing ? 'Certificate uploaded (ends ' + existing.expires + '). We\'ll check it and turn on your Insured badge.'
+                   : 'Upload your general liability (garage liability) insurance certificate. Once we check it, you get an Insured badge and rank higher in search. Customers trust insured mechanics more.';
+    ic.appendChild(it);
+    const f = document.createElement('div'); f.className = 'ins-form'; f.style.gridTemplateColumns = 'repeat(auto-fit, minmax(150px, 1fr))';
+    const file = document.createElement('input'); file.type = 'file'; file.accept = 'image/*'; file.setAttribute('aria-label', 'Insurance certificate photo');
+    const insurer = document.createElement('input'); insurer.type = 'text'; insurer.maxLength = 80; insurer.placeholder = 'Insurance company'; insurer.value = existing ? existing.insurer || '' : '';
+    const exp = document.createElement('input'); exp.type = 'date'; exp.setAttribute('aria-label', 'Policy end date'); exp.value = existing ? existing.expires || '' : '';
+    const msg = document.createElement('div'); msg.className = 'admin-meta'; msg.style.gridColumn = '1 / -1';
+    const up = document.createElement('button'); up.className = 'admin-btn primary'; up.textContent = existing ? 'Upload new certificate' : 'Upload certificate';
+    up.addEventListener('click', async () => {
+      const fl = file.files && file.files[0];
+      if(!fl){ msg.textContent = 'Choose a photo or screenshot of the certificate.'; return; }
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(exp.value) || Date.parse(exp.value) < Date.now()){ msg.textContent = 'Add the policy end date (it must be in the future).'; return; }
+      up.disabled = true; msg.textContent = 'Uploading…';
+      try {
+        const image = await shrinkImage(fl, 1100, 0.72, 380000);
+        await db.collection('insurance_docs').doc(m.id).set({ image, expires: exp.value, insurer: insurer.value.trim().slice(0, 80), mechanic_name: m.name, uploaded_at: new Date().toISOString() });
+        msg.textContent = "Uploaded. We'll check it and turn on your Insured badge.";
+      } catch(e){ msg.textContent = "Couldn't upload. Try a smaller or clearer photo."; }
+      up.disabled = false;
+    });
+    f.appendChild(file); f.appendChild(insurer); f.appendChild(exp); f.appendChild(up); f.appendChild(msg);
+    ic.appendChild(f); ins.appendChild(ic); root.appendChild(ins);
+  }
+
   // quote requests: sent to me directly, or open to mechanics near me
   const qs = adminSection('Quote requests', '');
   root.appendChild(qs);
@@ -5332,6 +5422,7 @@ async function loadMechPortal(){
   const open = books.filter(b => b.status === 'pending' || b.status === 'confirmed');
   const sec = adminSection('Your jobs', open.length + ' upcoming');
   if(!books.length){ const e = document.createElement('div'); e.className = 'admin-empty'; e.textContent = 'No jobs yet. When a customer accepts your quote, the job shows up here with their address and phone.'; sec.appendChild(e); }
+  else { const rm = document.createElement('div'); rm.className = 'admin-meta'; rm.style.margin = '-.3rem 0 .8rem'; rm.textContent = 'Only jobs booked and paid through WrenchNow count toward your job total, reviews and search ranking. Missed appointments and last-minute cancellations show on your profile.'; sec.appendChild(rm); }
   books.forEach(b => sec.appendChild(mechBookingCard(b)));
   root.appendChild(sec);
 
@@ -5345,6 +5436,16 @@ async function loadMechPortal(){
   const zip = document.createElement('input'); zip.type = 'text'; zip.maxLength = 5; zip.inputMode = 'numeric'; zip.value = m.zip || ''; fld('Home ZIP code', zip);
   const ph = document.createElement('input'); ph.type = 'file'; ph.accept = 'image/*'; let newPhoto = null; fld('Profile photo', ph);
   ph.addEventListener('change', () => { const f = ph.files && ph.files[0]; if(!f) return; const img = new Image(); img.onload = () => { const S = 240, c = document.createElement('canvas'); c.width = S; c.height = S; const side = Math.min(img.width, img.height); c.getContext('2d').drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, S, S); newPhoto = c.toDataURL('image/jpeg', 0.8); setAvatar(av, m.initials, newPhoto); URL.revokeObjectURL(img.src); }; img.src = URL.createObjectURL(f); });
+  let diagSel = null, diagAmt = null;
+  if(mechLevel(m) === 'full'){
+    diagSel = document.createElement('select');
+    [['', 'Quote it per job'], ['free', 'Free diagnosis'], ['fee', 'Charge a diagnosis fee']].forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; diagSel.appendChild(o); });
+    diagSel.value = m.diag_fee_cents == null ? '' : m.diag_fee_cents === 0 ? 'free' : 'fee';
+    fld('"Not sure what\'s wrong" visits', diagSel);
+    diagAmt = document.createElement('input'); diagAmt.type = 'number'; diagAmt.min = 1; diagAmt.max = 500; diagAmt.placeholder = 'e.g. 60'; diagAmt.value = m.diag_fee_cents > 0 ? m.diag_fee_cents / 100 : '';
+    const aw = fld('Diagnosis fee ($)', diagAmt).parentNode;
+    const showAmt = () => { aw.style.display = diagSel.value === 'fee' ? '' : 'none'; }; diagSel.addEventListener('change', showAmt); showAmt();
+  }
   const bio = document.createElement('textarea'); bio.rows = 4; bio.maxLength = 1500; bio.value = m.bio || ''; fld('About you', bio, true);
   card.appendChild(grid);
   const sr = document.createElement('div'); sr.className = 'admin-actions'; sr.style.marginTop = '.75rem';
@@ -5355,6 +5456,10 @@ async function loadMechPortal(){
     const patch = { rate_num: r, rate_display: '$' + r, bio: bio.value.trim().slice(0, 1500), radius_mi: Number(rad.value), updated_at: new Date().toISOString() };
     if(zip.value.trim() !== m.zip){ const g = await geocode(zip.value.trim() + ', USA'); patch.zip = zip.value.trim(); patch.geo_lat = g ? g.lat : null; patch.geo_lng = g ? g.lng : null; }
     if(newPhoto) patch.photo = newPhoto;
+    if(diagSel){
+      if(diagSel.value === 'fee'){ const d = Math.round(Number(diagAmt.value) * 100); if(!(d >= 100 && d <= 50000)) throw new Error('Diagnosis fee must be between $1 and $500.'); patch.diag_fee_cents = d; }
+      else patch.diag_fee_cents = diagSel.value === 'free' ? 0 : null;
+    }
     await db.collection('mechanics').doc(m.id).update(patch);
     try { sessionStorage.removeItem('ww_mechanics_cache'); } catch(e){}
     await checkMechanic(); loadMechanics();
@@ -5402,21 +5507,29 @@ async function quoteRequestCard(r, m){
   const note = document.createElement('input'); note.type = 'text'; note.maxLength = 300; note.className = 'full'; note.placeholder = "Note to the customer (what's included, parts brand, anything to check)"; note.style.gridColumn = '1 / -1';
   if(mine && mine.status === 'sent'){ lab.value = mine.labor_cents / 100; par.value = mine.parts_cents / 100; day.value = mine.date_iso; tm.value = mine.time; note.value = mine.note || ''; }
   else if((r.pref_dates || []).length) day.value = r.pref_dates[0];
+  const isDiag = isDiagnosisJob((r.service || '') + ' ' + (r.notes || ''));
+  if(isDiag){
+    if(!(mine && mine.status === 'sent')){ lab.value = m.diag_fee_cents != null ? m.diag_fee_cents / 100 : ''; par.value = 0; }
+    lab.placeholder = 'Diagnosis $'; lab.setAttribute('aria-label', 'Diagnosis fee in dollars (0 for free)');
+    const dn = document.createElement('div'); dn.className = 'admin-meta'; dn.style.gridColumn = '1 / -1';
+    dn.textContent = "Diagnosis visit: quote what you charge to find the problem (0 = free). Once you know what's wrong, use \"Send repair price\" on the job — the customer approves it on their phone before you start.";
+    f.appendChild(dn);
+  }
   const acts = document.createElement('div'); acts.className = 'admin-actions'; acts.style.gridColumn = '1 / -1';
   const send = document.createElement('button'); send.className = 'admin-btn primary'; send.textContent = mine && mine.status === 'sent' ? 'Update quote' : 'Send quote';
   const msg = document.createElement('div'); msg.className = 'admin-meta'; msg.style.gridColumn = '1 / -1';
-  if(mine && mine.status === 'sent') msg.textContent = 'Your quote of ' + money(mine.total_cents) + ' was sent. You can change it until the customer decides.';
+  if(mine && mine.status === 'sent') msg.textContent = 'Your quote of ' + (mine.kind === 'diagnosis' && !mine.total_cents ? 'a free diagnosis' : money(mine.total_cents)) + ' was sent. You can change it until the customer decides.';
   if(mine && mine.status === 'declined') msg.textContent = 'The customer went with someone else.';
   send.addEventListener('click', async () => {
     const lc = Math.round(Number(lab.value || 0) * 100), pc = Math.round(Number(par.value || 0) * 100);
-    if(!(lc >= 0 && pc >= 0 && lc + pc >= 500 && lc + pc <= 2000000)){ msg.textContent = 'Enter labor and parts in dollars (at least $5 total).'; return; }
+    if(!(lc >= 0 && pc >= 0 && (isDiag ? lc + pc >= 0 && lab.value !== '' : lc + pc >= 500) && lc + pc <= 2000000)){ msg.textContent = isDiag ? 'Enter your diagnosis fee in dollars (0 for free).' : 'Enter labor and parts in dollars (at least $5 total).'; return; }
     send.disabled = true;
     try {
       const slot = await db.collection('slots').doc(m.id + '_' + day.value + '_' + slotHHMM(tm.value)).get();
       if(slot.exists){ msg.textContent = 'You already have a job at ' + tm.value + ' on ' + dayLabel(day.value) + '. Pick another time.'; send.disabled = false; return; }
       await db.collection('requests').doc(r.id).collection('quotes').doc(currentUser.uid).set({
         mechanic_uid: currentUser.uid, mechanic_doc: m.id, mechanic_slug: m.slug, mechanic_name: m.name,
-        labor_cents: lc, parts_cents: pc, total_cents: lc + pc, date_iso: day.value, time: tm.value,
+        labor_cents: lc, parts_cents: pc, total_cents: lc + pc, kind: isDiag ? 'diagnosis' : 'job', date_iso: day.value, time: tm.value,
         note: note.value.trim().slice(0, 300), status: 'sent',
         valid_until: new Date(Date.now() + 48 * 3600 * 1000).toISOString(), updated_at: new Date().toISOString()
       });
@@ -5442,7 +5555,7 @@ function mechBookingCard(b){
   meta.appendChild(document.createElement('br'));
   if(b.address){ const a = document.createElement('a'); a.href = mapsLink(b.address); a.target = '_blank'; a.rel = 'noopener'; a.textContent = b.address; meta.appendChild(a); meta.appendChild(document.createElement('br')); }
   meta.appendChild(document.createTextNode([b.vehicle, b.urgency && b.urgency !== 'flexible' ? 'Urgency: ' + b.urgency : '', b.notes].filter(Boolean).join(' · ')));
-  if(b.price_cents){ meta.appendChild(document.createElement('br')); meta.appendChild(document.createTextNode('Agreed: ' + money(b.final_cents || b.price_cents) + (b.revision && b.revision.status === 'pending' ? ' · revised price ' + money(b.revision.total_cents) + ' waiting for the customer' : '') + (b.revision && b.revision.status === 'rejected' ? ' · revision rejected' : '') + ' · ' + ({ pay_mechanic: 'customer pays you directly', needs_card: 'customer has not added a card yet', card_saved: 'card on file', charge_now: 'payment processing', charging: 'payment processing', paid: 'paid', payment_failed: 'customer payment failed', disputed: 'customer reported a problem' }[b.payment_status] || ''))); }
+  if(b.price_cents || b.booking_kind === 'diagnosis'){ meta.appendChild(document.createElement('br')); meta.appendChild(document.createTextNode('Agreed: ' + priceLabel(b) + (b.revision && b.revision.status === 'pending' ? ' · revised price ' + money(b.revision.total_cents) + ' waiting for the customer' : '') + (b.revision && b.revision.status === 'rejected' ? ' · revision rejected' : '') + ' · ' + ({ pay_mechanic: 'customer pays you directly', needs_card: 'customer has not added a card yet', card_saved: 'card on file', charge_now: 'payment processing', charging: 'payment processing', paid: 'paid', payment_failed: 'customer payment failed', disputed: 'customer reported a problem' }[b.payment_status] || ''))); }
   left.appendChild(nm); left.appendChild(meta); row.appendChild(left);
   row.appendChild(adminTag(st, st === 'completed' ? 'ok' : st === 'confirmed' ? 'warn' : st === 'cancelled' ? '' : 'due'));
   card.appendChild(row);
@@ -5455,14 +5568,16 @@ function mechBookingCard(b){
   // adminBtn reloads the admin tab; here the dashboard reloads itself
   const btn = (label, cls, fn) => { const x = document.createElement('button'); x.className = 'admin-btn ' + cls; x.textContent = label; x.addEventListener('click', async () => { x.disabled = true; try { await fn(); } catch(e){ x.disabled = false; alert("That didn't save: " + (e.message || e.code || e)); } }); acts.appendChild(x); };
   if(st === 'pending'){ btn('Confirm this time', 'primary', set('confirmed')); btn("Can't make it", '', async () => { if(confirm('Decline this request? The customer will see it as cancelled.')) await set('cancelled')(); }); }
-  if(st === 'confirmed'){ btn('Job done — mark complete', 'good', set('completed')); btn('Cancel', '', async () => { if(confirm('Cancel this confirmed job? Please also call the customer.')) await set('cancelled')(); }); }
+  if(st === 'confirmed'){ btn('Job done — mark complete', 'good', set('completed')); btn('Cancel', '', async () => { if(confirm('Cancel this confirmed job? Please also call the customer.' + (Date.now() > apptMillis(b.booking_date_iso, b.booking_time) - 24 * 3600000 ? ' This is within 24 hours of the job, so it will show on your profile as a last-minute cancellation.' : ''))) await set('cancelled')(); }); }
   if(st === 'confirmed' || st === 'completed') btn(b.report ? 'Edit inspection report' : 'Add inspection report', '', async () => openInspection(b, true));
-  if((st === 'confirmed' || st === 'completed') && b.price_cents && !['paid', 'charging', 'charge_now'].includes(b.payment_status) && !(b.revision && b.revision.status === 'pending')){
-    btn('Revise final price', '', async () => {
+  if((st === 'confirmed' || st === 'completed') && (b.price_cents || b.booking_kind === 'diagnosis') && !['paid', 'charging', 'charge_now'].includes(b.payment_status) && !(b.revision && b.revision.status === 'pending')){
+    btn(b.booking_kind === 'diagnosis' && !b.final_cents ? 'Send repair price' : 'Revise final price', b.booking_kind === 'diagnosis' && !b.final_cents ? 'primary' : '', async () => {
       const f = document.createElement('div'); f.className = 'rev-form';
       const lab = document.createElement('input'); lab.type = 'number'; lab.min = 0; lab.placeholder = 'Labor $'; lab.value = (b.labor_cents || 0) / 100;
       const par = document.createElement('input'); par.type = 'number'; par.min = 0; par.placeholder = 'Parts $'; par.value = (b.parts_cents || 0) / 100;
-      const why = document.createElement('input'); why.type = 'text'; why.maxLength = 300; why.className = 'full'; why.placeholder = 'Why? e.g. rotors were also worn, needed replacing';
+      if(b.booking_kind === 'diagnosis' && !b.final_cents){ lab.value = ''; par.value = ''; }
+      const why = document.createElement('input'); why.type = 'text'; why.maxLength = 300; why.className = 'full'; why.placeholder = b.booking_kind === 'diagnosis' ? "What's wrong and what the price covers (include the diagnosis fee if you charge one)" : 'Why? e.g. rotors were also worn, needed replacing';
+      const tip = document.createElement('div'); tip.className = 'admin-meta full'; tip.textContent = 'The customer gets it on their phone right away and taps Approve. Start the extra work only after it shows approved here.';
       const go = document.createElement('button'); go.className = 'admin-btn primary full'; go.textContent = 'Send revised price to the customer';
       go.addEventListener('click', async () => {
         const lc = Math.round(Number(lab.value) * 100), pc = Math.round(Number(par.value) * 100);
@@ -5472,7 +5587,7 @@ function mechBookingCard(b){
         try { await db.collection('bookings').doc(b.id).update({ revision: { labor_cents: lc, parts_cents: pc, total_cents: lc + pc, reason: why.value.trim().slice(0, 300), status: 'pending', at: new Date().toISOString() } }); loadMechPortal(); }
         catch(e){ go.disabled = false; alert("Couldn't send — try again."); }
       });
-      f.appendChild(lab); f.appendChild(par); f.appendChild(why); f.appendChild(go); card.appendChild(f);
+      f.appendChild(lab); f.appendChild(par); f.appendChild(why); f.appendChild(tip); f.appendChild(go); card.appendChild(f);
     });
   }
   if(acts.children.length) card.appendChild(acts);
@@ -5796,7 +5911,7 @@ function adminPayments(mechs){
   const t = document.createElement('div'); t.className = 'admin-meta';
   const ready = mechs.filter(m => m.payouts_ready).length;
   t.textContent = paymentsOn()
-    ? 'Customers save a card when they accept a quote and are charged after the job. Mechanics must finish Stripe payouts before quoting (' + ready + ' of ' + mechs.length + ' have).'
+    ? 'Customers save a card when they accept a quote and are charged after the job. You keep 5% of each job (set by PLATFORM_FEE_PCT); card processing comes out of the mechanic\'s share. Mechanics must finish Stripe payouts before quoting (' + ready + ' of ' + mechs.length + ' have).'
     : "Off: customers pay mechanics directly. Turn on only after the payment functions are deployed, your Stripe account is live with Connect switched on, and the Stripe webhook is added (see SETUP.md). Once on, mechanics without Stripe payouts can't quote.";
   card.appendChild(t);
   const acts = document.createElement('div'); acts.className = 'admin-actions'; acts.style.marginTop = '.7rem';
@@ -5953,11 +6068,13 @@ function adminBookings(books, priv, mechs){
     const p = priv[b.mechanic_slug]; if(p) meta.appendChild(contactLine(p.email, p.phone));
     meta.appendChild(document.createElement('br'));
     meta.appendChild(document.createTextNode([b.vehicle, b.address, b.urgency && b.urgency !== 'flexible' ? 'Urgency: ' + b.urgency : '', b.notes].filter(Boolean).join(' · ')));
-    if(b.price_cents){ meta.appendChild(document.createElement('br')); meta.appendChild(document.createTextNode('Price ' + money(b.final_cents || b.price_cents) + ' · payment: ' + (b.payment_status || 'n/a') + (b.dispute_note ? ' · problem: ' + b.dispute_note : '') + (b.payment_error ? ' · ' + b.payment_error : ''))); }
+    if(b.price_cents || b.booking_kind === 'diagnosis'){ meta.appendChild(document.createElement('br')); meta.appendChild(document.createTextNode('Price ' + priceLabel(b) + ' · payment: ' + (b.payment_status || 'n/a') + (b.dispute_note ? ' · problem: ' + b.dispute_note : '') + (b.payment_error ? ' · ' + b.payment_error : ''))); }
     left.appendChild(nm); left.appendChild(meta);
     row.appendChild(left);
-    row.appendChild(adminTag(st, st === 'completed' ? 'ok' : st === 'confirmed' ? 'warn' : st === 'cancelled' ? '' : 'due'));
+    row.appendChild(adminTag(st.replace('_', '-'), st === 'completed' ? 'ok' : st === 'confirmed' ? 'warn' : st === 'cancelled' ? '' : 'due'));
     card.appendChild(row);
+    if(b.offapp_report){ const w = document.createElement('div'); w.className = 'pay-line warn'; w.textContent = 'Customer says they were asked to pay outside WrenchNow: “' + b.offapp_report + '”'; card.appendChild(w); }
+    if(b.late_cancel){ const w = document.createElement('div'); w.className = 'admin-meta'; w.textContent = 'Mechanic cancelled within 24 hours of the job (counts against them).'; card.appendChild(w); }
     const setStatus = s => async () => { await db.collection('bookings').doc(b.id).update({ status: s, [s + '_at']: new Date().toISOString(), status_by: 'admin' }); if(s === 'cancelled') await freeSlot(b); };
     const acts = document.createElement('div'); acts.className = 'admin-actions'; acts.style.marginTop = '.7rem';
     if(b.payment_status === 'disputed' || b.payment_status === 'payment_failed'){
@@ -5978,6 +6095,8 @@ function adminBookings(books, priv, mechs){
       });
       acts.appendChild(sel);
     }
+    if(st === 'no_show') acts.appendChild(adminBtn('Undo no-show (mechanic was there)', '', async () => { await db.collection('bookings').doc(b.id).update({ status: 'completed', completed_at: new Date().toISOString(), status_by: 'admin', no_show_undone: true }); }));
+    if(b.late_cancel) acts.appendChild(adminBtn('Excuse late cancellation', '', () => db.collection('bookings').doc(b.id).update({ late_cancel: false })));
     if(st === 'pending') acts.appendChild(adminBtn('Mark confirmed', 'primary', setStatus('confirmed')));
     if(st === 'pending' || st === 'confirmed'){
       acts.appendChild(adminBtn('Mark job complete', 'good', setStatus('completed')));
@@ -6016,7 +6135,8 @@ function adminBroken(broken){
 }
 
 // 3 ── Mechanics: verification, availability and Featured placement
-function adminMechanics(mechs, priv, done){
+function adminMechanics(mechs, priv, done, insDocs){
+  insDocs = insDocs || {};
   const feat = mechs.filter(m => m.is_featured).length;
   const sec = adminSection('Mechanics', mechs.length + ' live' + (feat ? ' · ' + feat + ' featured' : ''));
   if(!mechs.length){ const e = document.createElement('div'); e.className = 'admin-empty'; e.textContent = 'No mechanics published yet.'; sec.appendChild(e); return sec; }
@@ -6033,6 +6153,11 @@ function adminMechanics(mechs, priv, done){
     const right = document.createElement('div'); right.style.textAlign = 'right';
     if(m.is_featured){ right.appendChild(adminTag('Featured', 'due')); right.appendChild(document.createTextNode(' ')); }
     right.appendChild(adminTag(m.verified ? 'Verified' : 'Not verified', m.verified ? 'ok' : 'warn'));
+    const ins = insDocs[m.id];
+    if(m.insured){ right.appendChild(document.createTextNode(' ')); right.appendChild(adminTag('Insured', 'ok')); }
+    else if(ins){ right.appendChild(document.createTextNode(' ')); right.appendChild(adminTag('Insurance to check', 'due')); }
+    if(m.no_shows || m.late_cancels){ meta.appendChild(document.createElement('br')); meta.appendChild(document.createTextNode('Reliability: ' + (m.no_shows || 0) + ' no-show(s) · ' + (m.late_cancels || 0) + ' late cancellation(s)' + (reliability(m) != null ? ' · showed up ' + reliability(m) + '%' : ''))); }
+    if(ins){ meta.appendChild(document.createElement('br')); const a = document.createElement('a'); a.href = '#'; a.textContent = 'View insurance certificate'; a.addEventListener('click', e => { e.preventDefault(); const w = window.open(''); if(w){ const im = w.document.createElement('img'); im.src = ins.image; im.style.maxWidth = '100%'; w.document.body.appendChild(im); } }); meta.appendChild(a); meta.appendChild(document.createTextNode(' · ' + (ins.insurer || 'insurer not given') + ' · ends ' + ins.expires)); }
     row.appendChild(left); row.appendChild(right);
     card.appendChild(row);
 
@@ -6043,6 +6168,8 @@ function adminMechanics(mechs, priv, done){
     const upd = patch => async () => { await db.collection('mechanics').doc(m.id).update(patch); try { sessionStorage.removeItem('ww_mechanics_cache'); } catch(e){} loadMechanics(); };
     if(!m.verified) acts.appendChild(adminBtn("I've checked them — mark verified", 'good', upd({ verified: true, verified_at: new Date().toISOString(), badge_type: 'verified' })));
     acts.appendChild(adminBtn(mechLevel(m) === 'basic' ? 'Allow Full-service' : 'Limit to Basic', '', upd(mechLevel(m) === 'basic' ? { service_level: 'full' } : { service_level: 'basic', specialties: (m.specialties || []).filter(sv => BASIC_SERVICES.includes(sv)).concat((m.specialties || []).some(sv => BASIC_SERVICES.includes(sv)) ? [] : ['Oil change']) })));
+    if(ins && !m.insured) acts.appendChild(adminBtn("Certificate checks out — mark insured", 'good', upd({ insured: true, insured_until: ins.expires, insured_checked_at: new Date().toISOString() })));
+    if(m.insured) acts.appendChild(adminBtn('Remove Insured', '', upd({ insured: false })));
     acts.appendChild(adminBtn(m.is_featured ? 'Remove Featured' : 'Make Featured', m.is_featured ? '' : 'primary', upd({ is_featured: !m.is_featured })));
     acts.appendChild(adminBtn(m.available_now ? 'Pause bookings' : 'Resume bookings', '', upd(m.available_now ? { available_now: false, avail_label: 'Not taking jobs right now' } : { available_now: true, avail_label: 'Taking bookings' })));
     // Edit the public details, or take the profile off the site
@@ -6413,7 +6540,8 @@ async function openMyBookings() {
       addRow('Service', b.service);
       addRow('Vehicle', b.vehicle);
       addRow('Location', b.address);
-      if(b.price_cents) addRow('Agreed price', money(b.final_cents || b.price_cents) + (b.final_cents && b.final_cents !== b.price_cents ? ' (revised from ' + money(b.price_cents) + ')' : ' (labor ' + money(b.labor_cents) + ' + parts ' + money(b.parts_cents) + ')'));
+      if(b.booking_kind === 'diagnosis' && !b.final_cents) addRow('Agreed price', priceLabel(b) + ' · repair price comes after, for your approval');
+      else if(b.price_cents || b.final_cents) addRow('Agreed price', money(b.final_cents || b.price_cents) + (b.final_cents && b.final_cents !== b.price_cents ? ' (revised from ' + (b.booking_kind === 'diagnosis' && !b.price_cents ? 'free diagnosis' : money(b.price_cents)) + ')' : ' (labor ' + money(b.labor_cents) + ' + parts ' + money(b.parts_cents) + ')'));
 
       item.appendChild(bHead);
       item.appendChild(detail);
@@ -6472,6 +6600,19 @@ async function openMyBookings() {
         acts.appendChild(mk('Cancel booking', 'admin-btn', 'cancelled', 'Cancel this booking? ' + (ps === 'card_saved' ? 'Your card will not be charged.' : 'Your mechanic will be told.')));
         item.appendChild(acts);
       }
+      // after the appointment time: the mechanic never came
+      if(statusRaw === 'confirmed' && b.booking_date_iso && Date.now() > apptMillis(b.booking_date_iso, b.booking_time) + 30 * 60000){
+        const ns = document.createElement('div'); ns.className = 'mbi-actions';
+        const nb = document.createElement('button'); nb.className = 'admin-btn'; nb.textContent = "Mechanic didn't show up";
+        nb.addEventListener('click', async () => {
+          if(!confirm("Report that " + (b.mechanic_name || 'your mechanic') + " didn't come? Nothing will be charged, and it's noted on their profile.")) return;
+          nb.disabled = true;
+          try { await db.collection('bookings').doc(b.id).update({ status: 'no_show', no_show_at: new Date().toISOString(), status_by: 'customer' }); await freeSlot(b); toast("Reported. Sorry about that. Ask another mechanic for a quote and we'll follow up."); }
+          catch(e){ alert('Could not save — try again.'); }
+          openMyBookings();
+        });
+        ns.appendChild(nb); item.appendChild(ns);
+      }
       if(b.report && Array.isArray(b.report.items) && b.report.items.length){
         const ra = document.createElement('div'); ra.className = 'mbi-actions';
         const rb = document.createElement('button'); rb.className = 'admin-btn'; const flagged = b.report.items.filter(it => it.status !== 'good').length;
@@ -6482,7 +6623,21 @@ async function openMyBookings() {
         const acts = document.createElement('div'); acts.className = 'mbi-actions';
         if(myReviews[b.id]){ const done = document.createElement('div'); done.className = 'rev-stars'; done.textContent = starText(myReviews[b.id].rating) + '  You rated this job'; acts.appendChild(done); }
         else { const rb = document.createElement('button'); rb.className = 'admin-btn primary'; rb.textContent = 'Rate ' + (b.mechanic_name || 'your mechanic').split(' ')[0]; rb.addEventListener('click', () => openReview(b)); acts.appendChild(rb); }
+        const again = Object.keys(MECHANICS).find(k => MECHANICS[k].id === b.mechanic_doc || k === b.mechanic_slug);
+        if(again){ const ab = document.createElement('button'); ab.className = 'admin-btn'; ab.textContent = 'Book ' + MECHANICS[again].name.split(' ')[0] + ' again'; ab.addEventListener('click', () => { closeMyBookings(); openBooking(MECHANICS[again].name); const v = document.getElementById('modalVehicle'); if(v && !v.value) v.value = b.vehicle || ''; }); acts.appendChild(ab); }
         item.appendChild(acts);
+      }
+      // a mechanic asking to be paid outside the app loses the customer their protection — let them tell us
+      if(['confirmed', 'completed'].includes(statusRaw) && b.mechanic_slug && !b.offapp_report){
+        const oa = document.createElement('button'); oa.className = 'link-btn'; oa.style.cssText = 'background:none;border:0;color:var(--muted);font-size:12px;text-decoration:underline;cursor:pointer;padding:.4rem 0 0';
+        oa.textContent = 'Asked to pay outside WrenchNow?';
+        oa.addEventListener('click', async () => {
+          const note = prompt("Tell us what happened. Paying through WrenchNow keeps your payment protection and lets you report problems. We'll look into it.");
+          if(!note) return;
+          try { await db.collection('bookings').doc(b.id).update({ offapp_report: note.slice(0, 1000), offapp_report_at: new Date().toISOString() }); toast('Thanks, we got it.'); } catch(e){ alert('Could not send — try again.'); }
+          openMyBookings();
+        });
+        item.appendChild(oa);
       }
       bBody.appendChild(item);
     });
@@ -6493,6 +6648,30 @@ async function openMyBookings() {
   }
 }
 
+function apptMillis(iso, time){
+  const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ''), t = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i.exec(time || '');
+  if(!d) return 0; let h = t ? Number(t[1]) % 12 + (/pm/i.test(t[3]) ? 12 : 0) : 23, mi = t ? Number(t[2]) : 59;
+  return new Date(+d[1], +d[2] - 1, +d[3], h, mi).getTime();
+}
+// Price change from a mechanic (often while they're standing at the car): show it wherever the customer is on the site
+let apprUnsub = null;
+function watchApprovals(){
+  if(apprUnsub){ try { apprUnsub(); } catch(e){} apprUnsub = null; }
+  const bn = document.getElementById('apprBanner'); if(bn) bn.classList.remove('on');
+  if(!currentUser) return;
+  const show = docs => {
+    const p = docs.map(d => ({ id: d.id, ...d.data() })).find(b => b.revision && b.revision.status === 'pending');
+    if(!bn) return;
+    if(!p){ bn.classList.remove('on'); return; }
+    document.getElementById('apprText').textContent = (p.mechanic_name || 'Your mechanic').split(' ')[0] + ' sent a new price: ' + money(p.revision.total_cents) + (p.revision.reason ? ' — ' + p.revision.reason : '');
+    bn.classList.add('on');
+  };
+  try {
+    const q = db.collection('bookings').where('customer_id', '==', currentUser.uid);
+    if(typeof q.onSnapshot === 'function') apprUnsub = q.onSnapshot(s => show(s.docs), () => {});
+    else q.get().then(s => show(s.docs)).catch(() => {});
+  } catch(e){}
+}
 function closeMyBookings() {
   document.getElementById('myBookingsOverlay').classList.remove('on');
   document.body.style.overflow = '';
@@ -6671,10 +6850,12 @@ auth.onAuthStateChanged((user) => {
     sessionStorage.setItem('ww_user', JSON.stringify({ uid: user.uid, email: user.email, displayName: user.displayName }));
     updateNavAuth(user);
     loadCustomerProfile();
+    watchApprovals();
   } else {
     currentUser = null;
     customerProfile = null;
     updateNavAuth(null);
+    watchApprovals();
   }
 });
 
@@ -6991,7 +7172,7 @@ auth.onAuthStateChanged((user) => {
 
       <h2>7. Payment Terms</h2>
       <p><strong>Quotes.</strong> Mechanics send a price (labor and parts) before any work is booked. The Customer accepts or declines. If the Mechanic finds more work is needed, they send a revised price, and nothing changes unless the Customer approves it; if the Customer declines, the original price stands.</p>
-      <p><strong>When online payment is offered</strong>, the Customer's card is saved through Stripe, Inc. when they accept a quote and is charged the agreed (or approved revised) price when the Customer confirms the job is done, or 48 hours after the Mechanic marks it done unless the Customer reports a problem first. Reporting a problem holds the payment while WrenchNow looks into it. Payments are processed by Stripe and paid out to the Mechanic through Stripe; WrenchNow never stores card numbers. Card processing costs and any platform fee are deducted from the Mechanic's share and shown in their Stripe account. <strong>When online payment is not offered</strong>, the Customer pays the Mechanic directly and WrenchNow does not handle the money.</p>
+      <p><strong>When online payment is offered</strong>, the Customer's card is saved through Stripe, Inc. when they accept a quote and is charged the agreed (or approved revised) price when the Customer confirms the job is done, or 48 hours after the Mechanic marks it done unless the Customer reports a problem first. Reporting a problem holds the payment while WrenchNow looks into it. Payments are processed by Stripe and paid out to the Mechanic through Stripe; WrenchNow never stores card numbers. Card processing costs and WrenchNow's 5% platform fee are deducted from the Mechanic's share and shown in their Stripe account. <strong>When online payment is not offered</strong>, the Customer pays the Mechanic directly and WrenchNow does not handle the money.</p>
       <p>Refunds are decided case by case after hearing from both sides. Payment problems must be raised within 30 days of the job.</p>
 
       <h2>8. Dispute Resolution Between Customers and Mechanics</h2>
@@ -7230,13 +7411,14 @@ auth.onAuthStateChanged((user) => {
         <li>Use WrenchNow for any unlawful purpose</li>
         <li>Damage a customer's vehicle, property, or any third-party property intentionally or through gross negligence</li>
         <li>Solicit customers to use your services outside the WrenchNow platform for 12 months after your last booking through WrenchNow</li>
+        <li>Miss confirmed appointments without notice. Missed appointments and cancellations within 24 hours of a job are shown on your profile and lower your place in search; repeated no-shows can lead to removal</li>
       </ul>
 
       <h2>6. Platform Fee and Payments</h2>
-      <p><strong>Launch period and verification fee.</strong> During the launch period the platform fee is 0%. Applicants pay a one-time verification fee of <span data-fee>$49</span>, which covers a third-party background and driving-record check and is not refunded once the check has been ordered. Outside the launch period, the following applies:</p>
-      <p>After the launch period WrenchNow may charge a platform fee on each completed job, a percentage of the job price. You will get at least 30 days' notice by email before any platform fee starts or changes, and it never applies to jobs already accepted.</p>
+      <p><strong>Platform fee and verification fee.</strong> WrenchNow's platform fee is 5% of the job price on jobs paid through WrenchNow. Applicants pay a one-time verification fee of <span data-fee>$49</span>, which covers a third-party background and driving-record check and is not refunded once the check has been ordered.</p>
+      <p>You will get at least 30 days' notice by email before the platform fee changes, and a change never applies to jobs already accepted.</p>
       <p><strong>Quotes and price changes.</strong> You set your price for each job as a quote (labor and parts). If you find more work is needed, send a revised price through WrenchNow before doing the extra work; the customer must approve it, and if they don't, the original price stands.</p>
-      <p><strong>Getting paid.</strong> When online payment is offered, you must complete Stripe payout setup (Stripe Connect) before sending quotes. The customer's payment goes to your Stripe account, less card processing costs (about 3.2% + 55¢ per job, covering Stripe's card and payout fees) and any platform fee in effect. Payment is taken when the customer confirms the job, or 48 hours after you mark it done unless the customer reports a problem first. If a customer reports a problem or disputes the charge with their bank, payment may be held, and if a refund is issued, the amount paid to you for that job may be reversed. When online payment is not offered, the customer pays you directly.</p>
+      <p><strong>Getting paid.</strong> When online payment is offered, you must complete Stripe payout setup (Stripe Connect) before sending quotes. The customer's payment goes to your Stripe account, less card processing costs (about 3.2% + 55¢ per job, covering Stripe's card and payout fees) and the 5% platform fee. Payment is taken when the customer confirms the job, or 48 hours after you mark it done unless the customer reports a problem first. If a customer reports a problem or disputes the charge with their bank, payment may be held, and if a refund is issued, the amount paid to you for that job may be reversed. When online payment is not offered, the customer pays you directly.</p>
       <p>Payments are processed through Stripe Connect. WrenchNow is not responsible for delays or failures in payment processing caused by Stripe or by errors in your account information.</p>
 
       <h2>7. Liability and Indemnification</h2>

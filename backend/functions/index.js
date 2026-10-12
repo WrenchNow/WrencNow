@@ -50,7 +50,7 @@ const ADMIN_EMAIL           = defineString('ADMIN_EMAIL');                      
 const EMAIL_FROM            = defineString('EMAIL_FROM', { default: 'WrenchNow <onboarding@resend.dev>' });
 const SITE_URL              = defineString('SITE_URL', { default: 'https://wondrous-granita-ea4a9e.netlify.app' });
 const VERIFY_PAYMENT_LINK   = defineString('VERIFY_PAYMENT_LINK', { default: '' }); // same live link as in the site file
-const PLATFORM_FEE_PCT      = defineString('PLATFORM_FEE_PCT', { default: '0' });    // your cut of each job, e.g. 15 — taken from the mechanic's share
+const PLATFORM_FEE_PCT      = defineString('PLATFORM_FEE_PCT', { default: '5' });    // your cut of each job paid through WrenchNow, taken from the mechanic's share
 const CUSTOMER_FEE_CENTS    = defineString('CUSTOMER_FEE_CENTS', { default: '0' });  // optional flat service fee added to the customer's charge, in cents
 // Stripe bills YOUR account for card processing (~2.9% + 30¢) and Connect payouts (~0.25% + 25¢) on every job.
 // These pass that cost to the mechanic's share so a 0% platform fee doesn't cost you money.
@@ -390,7 +390,32 @@ exports.onBookingUpdated = onDocumentUpdated(
     if (after.payment_status === 'disputed' && before.payment_status !== 'disputed') {
       await toAdmin('Problem reported — payment on hold', layout('A customer reported a problem', rows([['Booking', event.params.id], ['Customer', after.customer_email], ['Mechanic', after.mechanic_name], ['Problem', after.dispute_note]]) + '<p>Sort it out with both of them, then use Charge now or Settled outside Stripe in the Admin tab.</p>'));
     }
+    if (after.offapp_report && !before.offapp_report) {
+      await toAdmin('Customer says they were asked to pay outside WrenchNow', layout('Off-app payment report', rows([['Booking', event.params.id], ['Customer', after.customer_email], ['Mechanic', after.mechanic_name], ['What happened', after.offapp_report]]) + '<p>Check with the mechanic. Repeated reports are grounds to remove a profile (Mechanic Agreement §5).</p>'));
+    }
     if (before.status === after.status) return;
+    const ref = event.data.after.ref;
+
+    // Customer says the mechanic never came. Only counts once the appointment time (+30 min) has passed.
+    if (after.status === 'no_show' && after.status_by === 'customer') {
+      const when = apptMs(after.booking_date_iso, after.booking_time);
+      if (when && Date.now() < when + 30 * 60 * 1000) { await ref.update({ status: before.status, status_by: 'system', no_show_at: null }); return; }
+      if (after.slot_id) { try { await db.collection('slots').doc(after.slot_id).delete(); } catch (e) {} }
+      if (['needs_card', 'card_saved'].includes(after.payment_status)) await ref.update({ payment_status: 'no_charge' });
+      const mp = await mechanicPrivate(after.mechanic_slug);
+      if (mp && mp.email) await sendEmail({ to: mp.email, replyTo: ADMIN_EMAIL.value(), subject: 'Missed appointment reported — ' + (after.service || ''),
+        html: layout('The customer reported you didn\'t show up', rows([['Job', after.service], ['Was booked for', (after.booking_date || '') + ' · ' + (after.booking_time || '')]]) + '<p>No-shows appear on your profile and lower your place in search. If you were there, reply to this email within 7 days with proof (a photo, messages) and we\'ll remove it.</p>') });
+      await toAdmin('No-show reported', layout('Customer reported a no-show', rows([['Booking', event.params.id], ['Mechanic', after.mechanic_name], ['Customer', after.customer_email], ['Was booked for', (after.booking_date || '') + ' · ' + (after.booking_time || '')]]) + '<p>If the mechanic proves they were there, use <strong>Undo no-show</strong> in the Admin tab.</p>'));
+      await recomputeMechStats(after.mechanic_slug);
+      return;
+    }
+    if (before.status === 'no_show') { await recomputeMechStats(after.mechanic_slug); }   // admin undid it
+
+    // Mechanic cancelling within 24 hours of the appointment counts against their reliability
+    if (after.status === 'cancelled' && after.status_by === 'mechanic' && before.status === 'confirmed') {
+      const when = apptMs(after.booking_date_iso, after.booking_time);
+      if (when && when - Date.now() < 24 * 3600 * 1000) { await ref.update({ late_cancel: true }); await recomputeMechStats(after.mechanic_slug); }
+    }
 
     if (after.status === 'confirmed') {
       await sendEmail({
@@ -417,13 +442,63 @@ exports.onBookingUpdated = onDocumentUpdated(
         html: layout('Your job is marked complete', `<p>Thanks for using WrenchNow. A quick star rating helps the next customer choose, and helps good mechanics get more work.</p><p><a href="${esc(SITE_URL.value())}">Open WrenchNow</a>, tap your initials, then My bookings to rate this job.</p>`) });
     }
 
-    const slug = after.mechanic_slug;
-    const countSnap = await db.collection('bookings').where('mechanic_slug', '==', slug).where('status', '==', 'completed').count().get();
-    const jobs = countSnap.data().count;
+    await recomputeMechStats(after.mechanic_slug);
+  });
 
-    // public job count (never lowered)
-    const mechSnap = await db.collection('mechanics').where('slug', '==', slug).get();
-    await Promise.all(mechSnap.docs.filter(d => (d.data().jobs_completed || 0) < jobs).map(d => d.ref.update({ jobs_completed: jobs })));
+// Appointment time as epoch ms (bookings are stored as local Denver date + "2:00 PM")
+function apptMs(iso, time) {
+  const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ''), t = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i.exec(time || '');
+  if (!d || !t) return 0;
+  let h = Number(t[1]) % 12; if (/pm/i.test(t[3])) h += 12;
+  const wall = Date.UTC(+d[1], +d[2] - 1, +d[3], h, +t[2]);
+  const fmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const offsetAt = ms => { const parts = fmt.formatToParts(new Date(ms)); const g = k => Number(parts.find(p => p.type === k).value); return Date.UTC(g('year'), g('month') - 1, g('day'), g('hour') % 24, g('minute')) - ms; };
+  let ms = wall - offsetAt(wall);
+  ms = wall - offsetAt(ms);   // second pass gets daylight-saving change days right
+  return ms;
+}
+
+// Jobs done (paid or settled, not refunded), no-shows and late cancellations → the public profile and ranking
+async function recomputeMechStats(slug) {
+  if (!slug) return;
+  const all = (await db.collection('bookings').where('mechanic_slug', '==', slug).get()).docs.map(d => d.data());
+  const jobs = all.filter(b => b.status === 'completed' && !['refunded', 'chargeback'].includes(b.payment_status)).length;
+  const noShows = all.filter(b => b.status === 'no_show').length;
+  const late = all.filter(b => b.status === 'cancelled' && b.late_cancel === true).length;
+  const mechSnap = await db.collection('mechanics').where('slug', '==', slug).get();
+  await Promise.all(mechSnap.docs.map(d => d.ref.update({
+    jobs_completed: Math.max(jobs, d.data().jobs_completed_base || 0),   // jobs_completed_base: jobs you entered by hand for an imported mechanic
+    no_shows: noShows, late_cancels: late
+  })));
+}
+
+// Daily: insurance badges expire on their end date; mechanics get a heads-up 14 days before
+exports.insuranceCheck = onSchedule(
+  { schedule: 'every day 08:15', timeZone: 'America/Denver', secrets: [RESEND_API_KEY] },
+  async () => {
+    const snap = await db.collection('mechanics').where('insured', '==', true).get();
+    const now = Date.now();
+    for (const d of snap.docs) {
+      const m = d.data(), until = Date.parse(m.insured_until || '');
+      if (!until) continue;
+      const p = await mechanicPrivate(m.slug);
+      if (until < now) {
+        await d.ref.update({ insured: false });
+        if (p && p.email) await sendEmail({ to: p.email, subject: 'Your Insured badge has expired', html: layout('Upload your new insurance certificate', `<p>Your certificate on file ended ${esc(m.insured_until)}, so the Insured badge is off your profile. Upload the new one in <a href="${esc(SITE_URL.value())}">My jobs</a> → Insurance.</p>`) });
+      } else if (until - now < 14 * 864e5 && until - now >= 13 * 864e5 && p && p.email) {
+        await sendEmail({ to: p.email, subject: 'Insurance renews soon — upload your new certificate', html: layout('Your insurance certificate ends in 2 weeks', `<p>Upload the renewed certificate in <a href="${esc(SITE_URL.value())}">My jobs</a> → Insurance to keep your Insured badge.</p>`) });
+      }
+    }
+  });
+
+// Insurance certificate uploaded → admin checks it
+exports.onInsuranceUploaded = onDocumentWritten(
+  { document: 'insurance_docs/{mechDoc}', secrets: [RESEND_API_KEY] },
+  async (event) => {
+    if (!event.data.after.exists) return;
+    const a = event.data.after.data(), b = event.data.before.exists ? event.data.before.data() : {};
+    if (a.uploaded_at === b.uploaded_at) return;
+    await toAdmin('Insurance certificate to check — ' + (a.mechanic_name || event.params.mechDoc), layout('New insurance certificate', rows([['Mechanic', a.mechanic_name], ['Insurer', a.insurer], ['Ends', a.expires]]) + '<p>Open Admin → Mechanics to view it and press <strong>Mark insured</strong>.</p>'));
   });
 
 // ── 6. Reviews → the mechanic's public star rating ─────────
@@ -492,7 +567,8 @@ exports.onQuoteWritten = onDocumentWritten(
     const priv = await db.collection('request_private').doc(event.params.rid).get();
     const email = priv.exists ? priv.data().customer_email : '';
     if (!email) return;
-    await sendEmail({ to: email, subject: (before ? 'Updated quote: ' : 'New quote: ') + '$' + (q.total_cents / 100).toFixed(2) + ' from ' + (q.mechanic_name || 'a mechanic'),
+    const priceTxt = q.kind === 'diagnosis' && !q.total_cents ? 'free diagnosis' : '$' + (q.total_cents / 100).toFixed(2) + (q.kind === 'diagnosis' ? ' diagnosis' : '');
+    await sendEmail({ to: email, subject: (before ? 'Updated quote: ' : 'New quote: ') + priceTxt + ' from ' + (q.mechanic_name || 'a mechanic'),
       html: layout('You have a quote', rows([['Mechanic', q.mechanic_name], ['Price', '$' + (q.total_cents / 100).toFixed(2) + ' (labor $' + (q.labor_cents / 100).toFixed(2) + ' + parts $' + (q.parts_cents / 100).toFixed(2) + ')'], ['Can come', q.date_iso + ' at ' + q.time], ['Note', q.note]])
         + `<p>Compare and accept in <a href="${esc(site())}">WrenchNow</a> → tap your initials → My bookings.</p>`) });
   });
@@ -573,6 +649,7 @@ async function chargeJob(ref) {
   const p = await mechanicPrivate(slug);
   const acct = p && p.stripe_account;
   const mechDoc = b.mechanic_doc ? (await db.collection('mechanics').doc(b.mechanic_doc).get()).data() : null;
+  if (!amount && b.booking_kind === 'diagnosis') { await ref.update({ payment_status: 'no_charge' }); return; }   // free diagnosis, no repair approved
   if (!amount || !pay || !acct || !(mechDoc && mechDoc.payouts_ready)) {
     const why = !amount ? 'no price on the booking' : !pay ? 'no saved card' : 'mechanic payouts are not set up';
     await ref.update({ payment_status: 'payment_failed', payment_error: why });

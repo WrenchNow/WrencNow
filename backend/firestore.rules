@@ -32,7 +32,8 @@ service cloud.firestore {
       allow update: if isAdmin()
         // A linked mechanic may edit their own public details (rate, bio, photo, travel area, pause)
         || (signedIn() && resource.data.owner_uid == request.auth.uid
-            && changes().hasOnly(['bio', 'photo', 'rate_num', 'rate_display', 'available_now', 'avail_label', 'zip', 'radius_mi', 'geo_lat', 'geo_lng', 'updated_at'])
+            && changes().hasOnly(['bio', 'photo', 'rate_num', 'rate_display', 'available_now', 'avail_label', 'zip', 'radius_mi', 'geo_lat', 'geo_lng', 'diag_fee_cents', 'updated_at'])
+            && (!changes().hasAny(['diag_fee_cents']) || request.resource.data.diag_fee_cents == null || (request.resource.data.diag_fee_cents is int && request.resource.data.diag_fee_cents >= 0 && request.resource.data.diag_fee_cents <= 50000))
             && (!changes().hasAny(['rate_num']) || (request.resource.data.rate_num is int && request.resource.data.rate_num >= 20 && request.resource.data.rate_num <= 500))
             && (!changes().hasAny(['bio']) || (request.resource.data.bio is string && request.resource.data.bio.size() <= 1500))
             && (!changes().hasAny(['photo']) || (request.resource.data.photo is string && request.resource.data.photo.size() <= 120000))
@@ -102,6 +103,15 @@ service cloud.firestore {
             && resource.data.status == 'completed' && resource.data.payment_status == 'card_saved'
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['payment_status', 'payment_requested_at', 'dispute_note', 'disputed_at'])
             && request.resource.data.payment_status in ['charge_now', 'disputed'])
+        // Customer: the mechanic never came (the server only accepts it after the appointment time has passed)
+        || (signedIn() && resource.data.customer_id == request.auth.uid
+            && resource.data.status == 'confirmed' && request.resource.data.status == 'no_show'
+            && request.resource.data.status_by == 'customer'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'no_show_at', 'status_by']))
+        // Customer: "my mechanic asked me to pay outside the app"
+        || (signedIn() && resource.data.customer_id == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['offapp_report', 'offapp_report_at'])
+            && request.resource.data.offapp_report is string && request.resource.data.offapp_report.size() > 0 && request.resource.data.offapp_report.size() <= 1000)
         // Customer: approve or reject the mechanic's revised price
         || (signedIn() && resource.data.customer_id == request.auth.uid
             && resource.data.get('revision', {}).get('status', '') == 'pending'
@@ -198,7 +208,9 @@ service cloud.firestore {
             && request.resource.data.status in ['sent', 'withdrawn']
             && request.resource.data.total_cents is int
             && request.resource.data.total_cents == request.resource.data.labor_cents + request.resource.data.parts_cents
-            && request.resource.data.total_cents >= 500 && request.resource.data.total_cents <= 2000000
+            && request.resource.data.get('kind', 'job') in ['job', 'diagnosis']
+            && (request.resource.data.total_cents >= 500 || (request.resource.data.get('kind', 'job') == 'diagnosis' && request.resource.data.total_cents >= 0))
+            && request.resource.data.total_cents <= 2000000
             && (!paymentsOn() || get(/databases/$(database)/documents/mechanics/$(request.resource.data.mechanic_doc)).data.get('payouts_ready', false) == true);
         }
         function mayQuote() {
@@ -228,6 +240,16 @@ service cloud.firestore {
                     || get(/databases/$(database)/documents/requests/$(rid)).data.get('accepted_mechanic_uid', '') == request.auth.uid));
       allow update: if signedIn() && resource.data.customer_id == request.auth.uid
                     && request.resource.data.customer_id == request.auth.uid;
+    }
+
+    // Insurance certificate a mechanic uploads for you to check. Only that mechanic and admins can see it.
+    match /insurance_docs/{mechDoc} {
+      function owns() { return signedIn() && get(/databases/$(database)/documents/mechanics/$(mechDoc)).data.get('owner_uid', '') == request.auth.uid; }
+      allow read: if isAdmin() || owns();
+      allow write: if isAdmin() || (owns()
+                    && request.resource.data.image is string && request.resource.data.image.size() <= 400000
+                    && request.resource.data.expires is string && request.resource.data.expires.size() == 10
+                    && request.resource.data.keys().hasOnly(['image', 'expires', 'insurer', 'mechanic_name', 'uploaded_at']));
     }
 
     // stripe_customers / booking_payments: server only (no client rule = no access)

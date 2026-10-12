@@ -84,7 +84,7 @@ Quotes work as soon as the new rules are published. Customers request, mechanics
 1. Stripe dashboard → **Connect** → Get started → choose **Platform / marketplace** and **Express** accounts. Fill in your platform profile.
 2. Make sure the webhook from step 4 includes `account.updated` with "connected accounts" ticked.
 3. Deploy functions: `firebase deploy --only functions`. It asks for two new values:
-   - `PLATFORM_FEE_PCT`: your cut of each job, taken from the mechanic's side. Use `0` at launch; `10` means 10%.
+   - `PLATFORM_FEE_PCT`: your cut of each job, taken from the mechanic's side. Press Enter to keep the default `5` (5%).
    - `CUSTOMER_FEE_CENTS`: an optional flat fee added to the customer's charge. `0` means none; `299` means $2.99.
    - `PROCESSING_FEE_PCT` / `PROCESSING_FEE_CENTS`: Stripe charges **your** account about 2.9% + 30¢ per card payment and 0.25% + 25¢ per mechanic payout. The defaults (`3.2` and `55`) take that out of the mechanic's share, so jobs don't cost you money. Connect also bills you **$2 a month per mechanic who gets paid that month**; that is only covered once you set a platform fee above 0.
    You can change any of these later with another deploy.
@@ -117,3 +117,21 @@ Your customers, accounts, bookings and reviews live in **Firebase**, not in the 
 3. **Preview, then publish.** On Netlify, open **Deploys**, drag the new folder in, and check it. If you have auto-publishing on, lock it first: **Deploys → Lock to stop auto publishing**. Then click the new deploy and choose **Publish deploy**.
 4. **Undo.** If something's wrong, go to Netlify → Deploys, pick the previous deploy and choose **Publish deploy**. That's an instant rollback, and your data is unaffected.
 5. **Installed apps update themselves.** Each version uses a new cache name in `sw.js`, so phones pick up the update the next time the app opens.
+
+
+## 13. Reviews, reliability and ranking (no setup needed)
+- **Best match** (the default sort) ranks mechanics by reviews first, using a weighted average so one 5-star review doesn't beat forty 4.8s. It also counts showing up, jobs done, Verified, Insured and distance. Featured mechanics stay pinned on top.
+- **No-shows:** after a confirmed appointment time has passed by 30 minutes, the customer can press "Mechanic didn't show up". Nothing is charged, it shows on the mechanic's profile, and both of you are emailed. If the mechanic proves they were there, use **Undo no-show** in Admin → Bookings.
+- **Late cancellations:** a mechanic cancelling within 24 hours of a job is counted against them. Use **Excuse late cancellation** for real emergencies.
+- **Only real jobs count:** jobs that were refunded or charged back don't count toward a mechanic's total.
+
+## 14. Diagnosis visits
+Full-service mechanics choose in My jobs → Your profile: **Free diagnosis**, a **diagnosis fee**, or quote per job. "Not sure what's wrong" requests get a diagnosis quote ($0 is allowed). On site, the mechanic presses **Send repair price**; the customer gets an alert on their phone and must approve before the work starts.
+
+## 15. Insurance badge
+Mechanics upload their liability insurance certificate in My jobs → Insurance. You get an email; open Admin → Mechanics → **View insurance certificate**, check the name, coverage and dates, and press **Certificate checks out — mark insured**. The badge turns itself off on the end date, and mechanics are reminded 14 days before.
+
+## 16. Keeping jobs in the app
+- Only jobs paid through WrenchNow count toward a mechanic's reviews, job total and ranking.
+- Customers can press "Asked to pay outside WrenchNow?" on a booking; you get an email and it shows in Admin → Bookings.
+- "Book again" on a finished job makes rebooking the same mechanic through the app the easy path.
