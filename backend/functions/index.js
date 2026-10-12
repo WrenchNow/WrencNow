@@ -49,7 +49,7 @@ const CHECKR_STATE          = defineString('CHECKR_STATE', { default: 'CO' });  
 const ADMIN_EMAIL           = defineString('ADMIN_EMAIL');                       // where your own alerts go
 const EMAIL_FROM            = defineString('EMAIL_FROM', { default: 'WrenchNow <onboarding@resend.dev>' });
 const SITE_URL              = defineString('SITE_URL', { default: 'https://getwrenchnow.com' });
-const VERIFY_PAYMENT_LINK   = defineString('VERIFY_PAYMENT_LINK', { default: '' }); // same live link as in the site file
+const VERIFY_PAYMENT_LINK   = defineString('VERIFY_PAYMENT_LINK', { default: 'https://buy.stripe.com/dRm28s1FDggCb3ucKG6oo01' }); // same live link as in the site file
 const PLATFORM_FEE_PCT      = defineString('PLATFORM_FEE_PCT', { default: '5' });    // your cut of each job paid through WrenchNow, taken from the mechanic's share
 const CUSTOMER_FEE_CENTS    = defineString('CUSTOMER_FEE_CENTS', { default: '0' });  // optional flat service fee added to the customer's charge, in cents
 // Stripe bills YOUR account for card processing (~2.9% + 30¢) and Connect payouts (~0.25% + 25¢) on every job.
