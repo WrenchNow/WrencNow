@@ -20,7 +20,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css"/>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin/>
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin/>
+<link rel="preload" as="style" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css" onload="this.onload=null;this.rel='stylesheet'"/>
+<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css"/></noscript>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -2530,7 +2533,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
           <div class="badge-live" id="badgeLive" style="display:none"></div>
         </div>
         <h1 class="display" style="font-size:82px;margin-bottom:1.25rem">SKIP THE<br>SHOP.<br><span class="ore">WE COME<br>TO YOU.</span></h1>
-        <p class="hero-sub">The mobile mechanic marketplace. Real mechanics, real prices, real reviews — at your driveway, parking lot, or office. No waiting rooms. No surprises.</p>
+        <p class="hero-sub">The mobile mechanic marketplace. Background-checked mechanics, upfront quotes, and reviews only from real jobs — at your driveway, parking lot, or office. No waiting rooms. No surprises.</p>
         <div class="hero-actions">
           <button class="btn-ore" onclick="document.getElementById('search-section').scrollIntoView({behavior:'smooth'})">
             <i class="ti ti-search" aria-hidden="true"></i> Find My Mechanic — Free
@@ -2673,7 +2676,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
         <div class="step">
           <div class="step-dot">02</div>
           <div class="step-title">Compare quotes</div>
-          <div class="step-desc">Ask up to 3 mechanics, or everyone nearby. Each sends a price and a time. Your address stays private until you accept one.</div>
+          <div class="step-desc">Pick up to 3 mechanics yourself, or send your request to every mechanic near you. Each sends a price and a time. Your address stays private until you accept one.</div>
         </div>
         <div class="step">
           <div class="step-dot">03</div>
@@ -2693,7 +2696,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
   <div class="trust-bar">
     <div class="trust-item">
       <div class="trust-icon"><i class="ti ti-shield-check" aria-hidden="true"></i></div>
-      <div><div class="trust-title">Verified means checked</div><div class="trust-desc">Mechanics with the Verified badge have passed a background check, a driving-record check, and an ASE or reference check, and have insurance on file.</div></div>
+      <div><div class="trust-title">Verified means checked</div><div class="trust-desc">Mechanics with the Verified badge have passed a third-party background and driving-record check and an ASE or reference check. Insured mechanics carry a separate Insured badge. Checks reduce risk but can't guarantee future conduct (see Terms).</div></div>
     </div>
     <div class="trust-item">
       <div class="trust-icon"><i class="ti ti-star" aria-hidden="true"></i></div>
@@ -2711,7 +2714,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
 
   <!-- FEAR BUSTERS -->
   <div class="fear-section">
-    <div class="tag">No fine print</div>
+    <div class="tag">Straight answers</div>
     <div style="font-family:var(--font-display);font-size:44px;font-weight:900;color:#f5f0e8;line-height:1;margin-bottom:.4rem">QUESTIONS WE GET A LOT</div>
     <p style="color:#6b6660;font-size:15px;margin-bottom:2rem">We know car repairs feel risky. Here's the honest truth.</p>
     <div class="fear-grid">
@@ -2787,8 +2790,8 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
         <button class="btn-ghost" onclick="showPanel('dashboard')">View mechanic dashboard →</button>
       </div>
       <div class="hero-stats-row">
-        <div><div class="hstat-num" style="color:var(--green)">0%</div><div class="hstat-label">Fee during launch <span style="font-size:9px;color:var(--muted)">(15% later)</span></div></div>
-        <div><div class="hstat-num" data-fee>$49</div><div class="hstat-label">Verification fee, one time</div></div>
+        <div><div class="hstat-num" style="color:var(--green)">5%</div><div class="hstat-label">Platform fee per job</div></div>
+        <div><div class="hstat-num" data-fee>$49</div><div class="hstat-label">To join (background check)</div></div>
         <div><div class="hstat-num">$29<span style="font-size:15px;font-weight:600">/mo</span></div><div class="hstat-label">Optional: Featured placement</div></div>
       </div>
     </div>
@@ -2799,11 +2802,11 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
           <div class="ec-change">Simple math, not a promise</div>
         </div>
         <div class="ec-amount" id="calcOut">$0</div>
-        <div class="ec-period">per month, before parts, fuel and taxes</div>
+        <div class="ec-period">per month after WrenchNow's 5% and card processing (~3%), before parts, fuel and taxes</div>
         <div class="calc-row"><label for="calcHours">Booked hours per week <b id="calcHoursV">15</b></label><input type="range" id="calcHours" min="2" max="50" value="15" oninput="updateCalc()"/></div>
         <div class="calc-row"><label for="calcRate">Your hourly rate <b id="calcRateV">$70</b></label><input type="range" id="calcRate" min="30" max="150" step="5" value="70" oninput="updateCalc()"/></div>
         <div class="ec-stats" style="margin-top:1rem">
-          <div class="ec-stat"><div class="ec-stat-label">Platform fee</div><div class="ec-stat-val" style="color:var(--green)">0% now<span class="strikethrough" style="margin-left:4px">15%</span></div></div>
+          <div class="ec-stat"><div class="ec-stat-label">Platform fee</div><div class="ec-stat-val" style="color:var(--green)">5% per job</div></div>
           <div class="ec-stat"><div class="ec-stat-label">You get paid</div><div class="ec-stat-val">On completion</div></div>
         </div>
         <div style="font-size:11px;color:var(--muted);margin-top:.75rem;line-height:1.5">Hours × rate × 4.33 weeks. How many hours you actually book depends on demand in your area. We can't guarantee work.</div>
@@ -2842,7 +2845,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
       <div>
         <div class="tag">Who can join</div>
         <div style="font-family:var(--font-display);font-size:44px;font-weight:900;line-height:.95;margin-bottom:1rem">WHAT YOU<br><span class="ore">NEED TO</span><br>GET STARTED</div>
-        <p style="color:var(--muted);font-size:14px;max-width:340px;line-height:1.7">We verify every mechanic before their profile goes live — usually 3–5 business days. <strong style="color:var(--green)">One-time <span data-fee>$49</span> verification fee.</strong></p>
+        <p style="color:var(--muted);font-size:14px;max-width:340px;line-height:1.7">Every mechanic passes a background and driving-record check before their profile goes live, usually within 3–5 business days. <strong style="color:var(--green)">Joining: <span data-fee>$49</span></strong> <span style="font-size:12px">(founding mechanics repay a $50 onboarding fee from their first jobs instead: up to $10 a job)</span>.</p>
         <button class="btn-ore" style="margin-top:1.5rem;box-shadow:0 4px 20px rgba(46,199,122,0.2)" onclick="openApply()"><i class="ti ti-clipboard-check" aria-hidden="true"></i> Start My Application</button>
       </div>
       <div>
@@ -3296,8 +3299,9 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
   <div class="footer-inner">
     <div class="footer-top">
       <div>
-        <div class="footer-logo">WRENCH<span>NOW</span></div>
+        <div class="footer-logo">WRENCH <span>NOW</span></div>
         <div class="footer-tagline">Mobile mechanics, on demand. We bring the garage to you — driveway, parking lot, anywhere your car is.</div>
+        <div class="footer-tagline" style="margin-top:.6rem">WrenchNow · Denver, Colorado<br><a href="mailto:hello@getwrenchnow.com" style="color:inherit">hello@getwrenchnow.com</a></div>
         </div>
       <div>
         <div class="footer-col-title">For Customers</div>
@@ -3319,17 +3323,17 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
       <div>
         <div class="footer-col-title">Legal</div>
         <div class="footer-links">
-          <a href="#" onclick="openLegal('privacyOverlay');return false">Privacy Policy</a>
-          <a href="#" onclick="openLegal('tosOverlay');return false">Terms of Service</a>
-          <a href="#" onclick="openLegal('mechAgreementOverlay');return false">Mechanic Agreement</a>
+          <a href="/privacy.html" onclick="openLegal('privacyOverlay');return false">Privacy Policy</a>
+          <a href="/terms.html" onclick="openLegal('tosOverlay');return false">Terms of Service</a>
+          <a href="/mechanic-agreement.html" onclick="openLegal('mechAgreementOverlay');return false">Mechanic Agreement</a>
           <a href="#" onclick="openContact();return false">Contact Us</a>
-          <a href="#" onclick="showInstallHelp();return false">Get the app</a>
+          <a href="#" onclick="showInstallHelp();return false">Add to home screen</a>
         </div>
       </div>
     </div>
     <div class="footer-bottom">
-      <div class="footer-copy">© 2026 WrenchNow Inc. · <button class="legal-footer-link" onclick="openLegal('privacyOverlay')">Privacy Policy</button> · <button class="legal-footer-link" onclick="openLegal('tosOverlay')">Terms of Service</button> · <button class="legal-footer-link" onclick="openLegal('mechAgreementOverlay')">Mechanic Agreement</button></div>
-      <div style="font-size:12px;color:var(--muted)">Available wherever you are</div>
+      <div class="footer-copy">© 2026 WrenchNow · <button class="legal-footer-link" onclick="openLegal('privacyOverlay')">Privacy Policy</button> · <button class="legal-footer-link" onclick="openLegal('tosOverlay')">Terms of Service</button> · <button class="legal-footer-link" onclick="openLegal('mechAgreementOverlay')">Mechanic Agreement</button></div>
+      <div style="font-size:12px;color:var(--muted)">Launching in Denver · expanding nationwide</div>
     </div>
   </div>
 </footer>
@@ -4744,9 +4748,8 @@ let isAdmin = false;
 const ADMIN_CHECKS = [
   ['fee_paid',   'Verification fee paid (or waived)'],
   ['background', 'Background + driving record clear'],
-  ['skills',     'ASE or references checked'],
-  ['insurance',  'Insurance certificate on file']
-];
+  ['skills',     'ASE or references checked']
+];   // insurance is optional and shown as its own Insured badge
 
 async function checkAdmin(){
   isAdmin = false;
@@ -4963,7 +4966,7 @@ function updateCalc(){
   const h = +document.getElementById('calcHours').value, r = +document.getElementById('calcRate').value;
   document.getElementById('calcHoursV').textContent = h;
   document.getElementById('calcRateV').textContent = '$' + r;
-  document.getElementById('calcOut').textContent = '$' + (Math.round(h * r * 4.33 / 10) * 10).toLocaleString();
+  document.getElementById('calcOut').textContent = '$' + (Math.round(h * r * 4.33 * 0.92 / 10) * 10).toLocaleString();   // after 5% + ~3% processing
 }
 updateCalc();
 
@@ -7316,7 +7319,7 @@ auth.onAuthStateChanged((user) => {
     <div class="legal-head">
       <div>
         <div class="legal-title">Terms of Service</div>
-        <div class="legal-updated">Last updated: September 13, 2026</div>
+        <div class="legal-updated">Last updated: October 12, 2026</div>
       </div>
       <button class="legal-close" onclick="closeLegal('tosOverlay')" aria-label="Close"><i class="ti ti-x" aria-hidden="true"></i></button>
     </div>
@@ -7327,7 +7330,7 @@ auth.onAuthStateChanged((user) => {
       </div>
 
       <h2>1. About WrenchNow</h2>
-      <p>WrenchNow Inc. ("WrenchNow," "we," "us," or "our") operates an online marketplace platform that connects vehicle owners ("Customers") with independent, self-employed automotive service providers ("Mechanics"). WrenchNow is a technology platform only — we do not employ Mechanics, perform automotive services, or guarantee the quality of any work performed.</p>
+      <p>WrenchNow ("WrenchNow," "we," "us," or "our") operates an online marketplace platform that connects vehicle owners ("Customers") with independent, self-employed automotive service providers ("Mechanics"). WrenchNow is a technology platform only — we do not employ Mechanics, perform automotive services, or guarantee the quality of any work performed.</p>
       <p>By accessing or using WrenchNow, you confirm that you are at least 18 years of age, have the legal authority to enter into these Terms, and agree to be bound by them.</p>
 
       <h2>2. Marketplace — Not an Employer</h2>
@@ -7381,20 +7384,20 @@ auth.onAuthStateChanged((user) => {
       <p>By submitting a review or any other content to the platform, you grant WrenchNow a non-exclusive, worldwide, royalty-free licence to use, reproduce, modify, and display that content. You represent that your content is truthful and does not violate any third party's rights. WrenchNow reserves the right to remove any content at its sole discretion.</p>
 
       <h2>11. Intellectual Property</h2>
-      <p>All content on the WrenchNow platform, including but not limited to text, graphics, logos, icons, and software, is the property of WrenchNow Inc. or its licensors and is protected by applicable intellectual property laws. You may not copy, reproduce, distribute, or create derivative works without express written permission.</p>
+      <p>All content on the WrenchNow platform, including but not limited to text, graphics, logos, icons, and software, is the property of WrenchNow or its licensors and is protected by applicable intellectual property laws. You may not copy, reproduce, distribute, or create derivative works without express written permission.</p>
 
       <h2>12. Privacy</h2>
       <p>Your use of the platform is also governed by our Privacy Policy, which is incorporated into these Terms by reference. By using WrenchNow, you consent to the collection and use of your information as described in our Privacy Policy.</p>
 
       <h2>13. Indemnification</h2>
-      <p>You agree to indemnify, defend, and hold harmless WrenchNow Inc. and its officers, directors, employees, agents, and affiliates from and against any and all claims, liabilities, damages, losses, costs, and expenses (including reasonable legal fees) arising out of or relating to your use of the platform, your violation of these Terms, or your violation of any rights of another person or entity.</p>
+      <p>You agree to indemnify, defend, and hold harmless WrenchNow and its officers, directors, employees, agents, and affiliates from and against any and all claims, liabilities, damages, losses, costs, and expenses (including reasonable legal fees) arising out of or relating to your use of the platform, your violation of these Terms, or your violation of any rights of another person or entity.</p>
 
       <h2>14. Dispute Resolution and Arbitration</h2>
       <p>Any dispute, claim, or controversy arising out of or relating to these Terms or your use of the platform shall be resolved by binding arbitration administered by a mutually agreed arbitration organisation, rather than in court, except that you may assert claims in small claims court if they qualify.</p>
       <p><strong>You waive any right to a jury trial and any right to participate in a class action lawsuit or class-wide arbitration.</strong></p>
 
       <h2>15. Governing Law</h2>
-      <p>These Terms shall be governed by and construed in accordance with the laws of the jurisdiction in which WrenchNow Inc. is incorporated, without regard to its conflict of law provisions.</p>
+      <p>These Terms shall be governed by and construed in accordance with the laws of the State of Colorado, United States, without regard to its conflict of law provisions.</p>
 
       <h2>16. Changes to Terms</h2>
       <p>WrenchNow reserves the right to modify these Terms at any time. We will provide notice of material changes by updating the "Last updated" date at the top of this page. Your continued use of the platform after changes are posted constitutes your acceptance of the revised Terms.</p>
@@ -7423,7 +7426,7 @@ auth.onAuthStateChanged((user) => {
     <div class="legal-head">
       <div>
         <div class="legal-title">Privacy Policy</div>
-        <div class="legal-updated">Last updated: September 13, 2026</div>
+        <div class="legal-updated">Last updated: October 12, 2026</div>
       </div>
       <button class="legal-close" onclick="closeLegal('privacyOverlay')" aria-label="Close"><i class="ti ti-x" aria-hidden="true"></i></button>
     </div>
@@ -7530,14 +7533,14 @@ auth.onAuthStateChanged((user) => {
     <div class="legal-head">
       <div>
         <div class="legal-title">Mechanic Independent Contractor Agreement</div>
-        <div class="legal-updated">Last updated: September 13, 2026</div>
+        <div class="legal-updated">Last updated: October 12, 2026</div>
       </div>
       <button class="legal-close" onclick="closeLegal('mechAgreementOverlay')" aria-label="Close"><i class="ti ti-x" aria-hidden="true"></i></button>
     </div>
     <div class="legal-body">
 
       <div class="legal-note">
-        By submitting an application to join WrenchNow and by performing any services through the platform, you ("Mechanic") agree to this Independent Contractor Agreement with WrenchNow Inc. ("WrenchNow").
+        By submitting an application to join WrenchNow and by performing any services through the platform, you ("Mechanic") agree to this Independent Contractor Agreement with WrenchNow ("WrenchNow").
       </div>
 
       <h2>1. Independent Contractor Status</h2>
@@ -7611,7 +7614,7 @@ auth.onAuthStateChanged((user) => {
 
       <h2>7. Liability and Indemnification</h2>
       <p><strong>You are solely responsible for any damage, injury, loss, or claim arising from the services you perform through WrenchNow.</strong> WrenchNow assumes no liability for your work, your vehicle, your tools, or your conduct.</p>
-      <p>You agree to indemnify, defend, and hold harmless WrenchNow Inc. and its officers, directors, employees, and agents from and against any and all claims, liabilities, damages, losses, costs, and expenses (including reasonable legal fees) arising out of or relating to:</p>
+      <p>You agree to indemnify, defend, and hold harmless WrenchNow and its officers, directors, employees, and agents from and against any and all claims, liabilities, damages, losses, costs, and expenses (including reasonable legal fees) arising out of or relating to:</p>
       <ul>
         <li>Any service you perform or fail to perform</li>
         <li>Any damage to a customer's vehicle or property</li>
@@ -7642,7 +7645,7 @@ auth.onAuthStateChanged((user) => {
       <p>Any dispute between you and WrenchNow arising out of this Agreement shall be resolved by binding arbitration on an individual basis. You waive any right to participate in class action proceedings.</p>
 
       <h2>12. Governing Law</h2>
-      <p>This Agreement shall be governed by applicable law in the jurisdiction where WrenchNow Inc. is incorporated.</p>
+      <p>This Agreement shall be governed by applicable law in the jurisdiction where WrenchNow is incorporated.</p>
 
       <h2>13. Entire Agreement</h2>
       <p>This Agreement, together with WrenchNow's Terms of Service and Privacy Policy, constitutes the entire agreement between you and WrenchNow regarding your participation as a Mechanic on the platform.</p>

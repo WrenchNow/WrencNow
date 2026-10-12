@@ -2,7 +2,7 @@
 // Pages always come from the network when online (so updates show right away);
 // the saved copy is only used when there's no connection. Database and payment
 // traffic is never cached.
-const CACHE = 'wrenchnow-v18n';
+const CACHE = 'wrenchnow-v18o';
 const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
