@@ -85,7 +85,7 @@ service cloud.firestore {
                     && quote().mechanic_doc == request.resource.data.mechanic_doc
                     && request.resource.data.payment_status == (paymentsOn() ? 'needs_card' : 'pay_mechanic')
                     && !('final_cents' in request.resource.data) && !('paid_cents' in request.resource.data)
-                    && request.resource.data.service is string && request.resource.data.service.size() <= 300
+                    && request.resource.data['service'] is string && request.resource.data['service'].size() <= 300
                     && request.resource.data.address is string && request.resource.data.address.size() <= 300;
       allow read: if isAdmin() || (signedIn() && (resource.data.customer_id == request.auth.uid
                                                   || (resource.data.mechanic_uid != '' && resource.data.mechanic_uid == request.auth.uid)));
@@ -114,7 +114,7 @@ service cloud.firestore {
             && request.resource.data.offapp_report is string && request.resource.data.offapp_report.size() > 0 && request.resource.data.offapp_report.size() <= 1000)
         // Customer: approve or reject the mechanic's revised price
         || (signedIn() && resource.data.customer_id == request.auth.uid
-            && resource.data.get('revision', {}).get('status', '') == 'pending'
+            && 'revision' in resource.data && resource.data.revision.status == 'pending'
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['final_cents', 'revision'])
             && request.resource.data.revision.total_cents == resource.data.revision.total_cents
             && ((request.resource.data.revision.status == 'approved' && request.resource.data.final_cents == resource.data.revision.total_cents)
@@ -190,7 +190,7 @@ service cloud.firestore {
                     && request.resource.data.status == 'open'
                     && request.resource.data.mode in ['open', 'picked']
                     && request.resource.data.invited_uids is list && request.resource.data.invited_uids.size() <= 3
-                    && request.resource.data.service is string && request.resource.data.service.size() <= 300
+                    && request.resource.data['service'] is string && request.resource.data['service'].size() <= 300
                     && (!('photos' in request.resource.data) || (request.resource.data.photos is list && request.resource.data.photos.size() <= 3))
                     && !('accepted_mechanic_uid' in request.resource.data)
                     && request.resource.data.created_at == request.time;
