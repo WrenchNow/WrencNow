@@ -3841,7 +3841,8 @@ async function geocode(q){
     const res = await fetch(GEOCODER_URL + encodeURIComponent(q), { headers: { 'Accept-Language': 'en' } });
     const rows = await res.json();
     if(!Array.isArray(rows) || !rows.length) return null;
-    const hit = { lat: Number(rows[0].lat), lng: Number(rows[0].lon), zip: (rows[0].address && /^\d{5}/.test(rows[0].address.postcode || '')) ? rows[0].address.postcode.slice(0, 5) : '' };
+    const ad = rows[0].address || {}, iso = String(ad['ISO3166-2-lvl4'] || '');
+    const hit = { lat: Number(rows[0].lat), lng: Number(rows[0].lon), zip: /^\d{5}/.test(ad.postcode || '') ? ad.postcode.slice(0, 5) : '', state: /^US-[A-Z]{2}$/.test(iso) ? iso.slice(3) : '' };
     if(isNaN(hit.lat) || isNaN(hit.lng)) return null;
     cache[q.toLowerCase()] = hit; try { sessionStorage.setItem('ww_geo_cache', JSON.stringify(cache)); } catch(e){}
     return hit;
@@ -5142,6 +5143,7 @@ async function sendRequest(){
       zip, approx_lat: g ? Math.round(g.lat * 100) / 100 : null, approx_lng: g ? Math.round(g.lng * 100) / 100 : null,
       pref_dates: Array.from(REQ.days).sort(), pref_parts: ['morning', 'afternoon', 'evening'].filter(p => REQ.parts.has(p)),
       mode: REQ.mode,
+      tz: (Intl.DateTimeFormat().resolvedOptions().timeZone || '').slice(0, 64),
       invited_uids: picked.map(k => MECHANICS[k].ownerUid).filter(Boolean),
       invited_docs: picked.map(k => MECHANICS[k].id), invited_names: picked.map(k => MECHANICS[k].name),
       status: 'open', expires_at: expires,
@@ -5259,7 +5261,7 @@ async function acceptQuote(){
       booking_date_iso: q.date_iso, booking_date: dayLabel(q.date_iso) === 'Today' || dayLabel(q.date_iso) === 'Tomorrow' ? new Date(isoMs(q.date_iso)).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : dayLabel(q.date_iso),
       booking_time: q.time,
       mechanic_slug: q.mechanic_slug || raw.slug || '', mechanic_name: q.mechanic_name || '', mechanic_doc: q.mechanic_doc, mechanic_uid: q.mechanic_uid,
-      slot_id: slotId, request_id: r.id, quote_uid: q.mechanic_uid, booking_kind: q.kind === 'diagnosis' ? 'diagnosis' : 'job',
+      slot_id: slotId, request_id: r.id, quote_uid: q.mechanic_uid, tz: r.tz || (Intl.DateTimeFormat().resolvedOptions().timeZone || ''), booking_kind: q.kind === 'diagnosis' ? 'diagnosis' : 'job',
       price_cents: q.total_cents, labor_cents: q.labor_cents, parts_cents: q.parts_cents, quote_note: q.note || '', ...(q.book_hours ? { book_hours: q.book_hours } : {}),
       rate_num: raw.rate_num || 0,
       agreed_to_terms: true, agreed_at: new Date().toISOString(),
@@ -6516,11 +6518,12 @@ async function submitApplication() {
 
   try {
     // Saved as PENDING. A profile is only published from the Admin tab after verification.
+    let appState = ''; try { const g = zip ? await geocode(zip + ', USA') : null; appState = (g && g.state) || ''; } catch(e){}
     const ref = await db.collection('mechanic_applications').add({
       name: name.slice(0, 80), email: email.slice(0, 120), phone: phone.slice(0, 30), city: city.slice(0, 80),
       years_experience: Math.min(parseInt(years) || 0, 60),
       rate_num: rateNum,
-      zip, radius_mi: Number(document.getElementById('applyRadius').value) || 25,
+      zip, state: appState, radius_mi: Number(document.getElementById('applyRadius').value) || 25,
       service_level: applyLevel,
       specialties: specs.slice(0, 300),
       specialties_list: services,

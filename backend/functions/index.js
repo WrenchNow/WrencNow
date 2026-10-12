@@ -45,7 +45,7 @@ const STRIPE_SECRET_KEY     = defineSecret('STRIPE_SECRET_KEY');
 const STRIPE_WEBHOOK_SECRET = defineSecret('STRIPE_WEBHOOK_SECRET');
 const CHECKR_API_KEY        = defineSecret('CHECKR_API_KEY');        // set to the word none until Checkr approves your account
 const CHECKR_PACKAGE        = defineString('CHECKR_PACKAGE', { default: '' });   // package slug from your Checkr dashboard
-const CHECKR_STATE          = defineString('CHECKR_STATE', { default: 'CO' });   // state your mechanics work in
+const CHECKR_STATE          = defineString('CHECKR_STATE', { default: 'CO' });   // fallback when an application has no state
 const ADMIN_EMAIL           = defineString('ADMIN_EMAIL');                       // where your own alerts go
 const EMAIL_FROM            = defineString('EMAIL_FROM', { default: 'WrenchNow <hello@getwrenchnow.com>' });
 const SITE_URL              = defineString('SITE_URL', { default: 'https://getwrenchnow.com' });
@@ -253,7 +253,7 @@ exports.onApplicationUpdated = onDocumentUpdated(
     }
     try {
       const candidate = await checkr('/candidates', { email: a.email, phone: a.phone || undefined, custom_id: event.params.id });
-      await checkr('/invitations', { candidate_id: candidate.id, package: CHECKR_PACKAGE.value(), work_locations: [{ country: 'US', state: CHECKR_STATE.value() }] });
+      await checkr('/invitations', { candidate_id: candidate.id, package: CHECKR_PACKAGE.value(), work_locations: [{ country: 'US', state: /^[A-Z]{2}$/.test(a.state || '') ? a.state : CHECKR_STATE.value() }] });
       await event.data.after.ref.update({ checkr_candidate_id: candidate.id, background_status: 'invited', background_updated_at: new Date().toISOString() });
     } catch (err) {
       console.error('Checkr invite failed:', err.message);
@@ -398,7 +398,7 @@ exports.onBookingUpdated = onDocumentUpdated(
 
     // Customer says the mechanic never came. Only counts once the appointment time (+30 min) has passed.
     if (after.status === 'no_show' && after.status_by === 'customer') {
-      const when = apptMs(after.booking_date_iso, after.booking_time);
+      const when = apptMs(after.booking_date_iso, after.booking_time, after.tz);
       if (when && Date.now() < when + 30 * 60 * 1000) { await ref.update({ status: before.status, status_by: 'system', no_show_at: null }); return; }
       if (after.slot_id) { try { await db.collection('slots').doc(after.slot_id).delete(); } catch (e) {} }
       if (['needs_card', 'card_saved'].includes(after.payment_status)) await ref.update({ payment_status: 'no_charge' });
@@ -413,7 +413,7 @@ exports.onBookingUpdated = onDocumentUpdated(
 
     // Mechanic cancelling within 24 hours of the appointment counts against their reliability
     if (after.status === 'cancelled' && after.status_by === 'mechanic' && before.status === 'confirmed') {
-      const when = apptMs(after.booking_date_iso, after.booking_time);
+      const when = apptMs(after.booking_date_iso, after.booking_time, after.tz);
       if (when && when - Date.now() < 24 * 3600 * 1000) { await ref.update({ late_cancel: true }); await recomputeMechStats(after.mechanic_slug); }
     }
 
@@ -446,13 +446,14 @@ exports.onBookingUpdated = onDocumentUpdated(
     await recomputeSavings();
   });
 
+function validTz(tz) { try { if (tz) { new Intl.DateTimeFormat('en-US', { timeZone: tz }); return tz; } } catch (e) {} return 'America/Denver'; }
 // Appointment time as epoch ms (bookings are stored as local Denver date + "2:00 PM")
-function apptMs(iso, time) {
+function apptMs(iso, time, tz) {
   const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ''), t = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i.exec(time || '');
   if (!d || !t) return 0;
   let h = Number(t[1]) % 12; if (/pm/i.test(t[3])) h += 12;
   const wall = Date.UTC(+d[1], +d[2] - 1, +d[3], h, +t[2]);
-  const fmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const fmt = new Intl.DateTimeFormat('en-US', { timeZone: validTz(tz), hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
   const offsetAt = ms => { const parts = fmt.formatToParts(new Date(ms)); const g = k => Number(parts.find(p => p.type === k).value); return Date.UTC(g('year'), g('month') - 1, g('day'), g('hour') % 24, g('minute')) - ms; };
   let ms = wall - offsetAt(wall);
   ms = wall - offsetAt(ms);   // second pass gets daylight-saving change days right
