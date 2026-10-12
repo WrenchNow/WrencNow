@@ -30,7 +30,7 @@ firebase deploy --only functions
 ```
 The deploy asks for three values:
 - `ADMIN_EMAIL` – where your own alerts go
-- `EMAIL_FROM` – leave the default until your domain is verified in Resend. The default sender only delivers to your own Resend account address, so verify a domain before real customers rely on it.
+- `EMAIL_FROM` – press Enter to keep `WrenchNow <hello@getwrenchnow.com>` (getwrenchnow.com is verified in Resend).
 - `VERIFY_PAYMENT_LINK` – the same live Stripe link you paste into the site file
 
 If the CLI offers to delete an older `sendEmail` function, say yes. The site no longer calls it, and it let any visitor send email from your account.
