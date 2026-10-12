@@ -79,7 +79,7 @@ Addresses are turned into map positions with OpenStreetMap's free Nominatim serv
 
 
 ## 10. Quotes and online payments (v18)
-Quotes work as soon as the new rules are published. Customers request, mechanics quote, and the customer accepts. The address is shared only with the accepted mechanic. **Online payments stay OFF until you finish these steps.** Until then, customers pay the mechanic directly.
+**Every job is paid through WrenchNow and Stripe. There is no pay-the-mechanic-directly option.** Customers can browse and request quotes right away, but mechanics can't quote until they've set up Stripe payouts, and customers can't accept a quote until these steps are done.
 
 1. Stripe dashboard → **Connect** → Get started → choose **Platform / marketplace** and **Express** accounts. Fill in your platform profile.
 2. Make sure the webhook from step 4 includes `account.updated` with "connected accounts" ticked.
@@ -88,9 +88,9 @@ Quotes work as soon as the new rules are published. Customers request, mechanics
    - `CUSTOMER_FEE_CENTS`: an optional flat fee added to the customer's charge. `0` means none; `299` means $2.99.
    - `PROCESSING_FEE_PCT` / `PROCESSING_FEE_CENTS`: Stripe charges **your** account about 2.9% + 30¢ per card payment and 0.25% + 25¢ per mechanic payout. The defaults (`3.2` and `55`) take that out of the mechanic's share, so jobs don't cost you money. Connect also bills you **$2 a month per mechanic who gets paid that month**; that is only covered once you set a platform fee above 0.
    You can change any of these later with another deploy.
-4. On your site → **Admin** → **Online payments** → turn **On**.
+4. Check Admin → **Payments**: it shows how many mechanics have finished payout setup.
 
-Once payments are on:
+How payments work:
 - Mechanics must press **Set up payouts** in My jobs before they can quote. Stripe pays them directly, and you never hold their money.
 - When a customer accepts a quote, Stripe saves their card. Nothing is charged yet.
 - The mechanic can revise the price, and the customer must approve the change.

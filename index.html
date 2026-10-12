@@ -2682,7 +2682,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
         <div class="step">
           <div class="step-dot">04</div>
           <div class="step-title">Pay when you're happy</div>
-          <div class="step-desc" id="howPayStep">Review what was done, then pay your mechanic. You agreed the price before work started, and any change needs your OK first.</div>
+          <div class="step-desc" id="howPayStep">Your card is saved when you accept a quote and charged only after the job is done. You agreed the price up front, and any change needs your OK first.</div>
         </div>
       </div>
     </div>
@@ -2830,7 +2830,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
       <div class="perk"><div class="perk-icon" style="color:var(--amber)"><i class="ti ti-star" aria-hidden="true"></i></div><div class="perk-title">Go Featured — $29/mo</div><div class="perk-desc">Optional. Featured mechanics are pinned to the top of search results with a gold badge, so customers see you first. Cancel anytime.<br><button class="btn-ghost" style="margin-top:.75rem;padding:8px 14px;font-size:13px" onclick="openProUpgrade(this)">Get Featured</button></div></div>
       <div class="perk"><div class="perk-icon"><i class="ti ti-shield-check" aria-hidden="true"></i></div><div class="perk-title">A badge customers trust</div><div class="perk-desc">Pass verification and your profile carries the Verified badge — the first thing customers look for before letting someone work on their car.</div></div>
       <div class="perk"><div class="perk-icon"><i class="ti ti-calendar-stats" aria-hidden="true"></i></div><div class="perk-title">You set the schedule</div><div class="perk-desc">Take the requests that suit you and pass on the ones that don't. No quotas, no penalties.</div></div>
-      <div class="perk"><div class="perk-icon"><i class="ti ti-cash" aria-hidden="true"></i></div><div class="perk-title">Your rate, paid on completion</div><div class="perk-desc">You set your hourly rate. During launch the customer pays you directly once they've approved your estimate and the job is done.</div></div>
+      <div class="perk"><div class="perk-icon"><i class="ti ti-cash" aria-hidden="true"></i></div><div class="perk-title">Your rate, paid on completion</div><div class="perk-desc">You set your prices. The customer's card is saved when they accept your quote and charged when the job is done. Stripe sends your share straight to your bank, no chasing payments.</div></div>
       <div class="perk"><div class="perk-icon"><i class="ti ti-star" aria-hidden="true"></i></div><div class="perk-title">Build your reputation</div><div class="perk-desc">Every completed job adds to your profile. Ratings appear as soon as you have real jobs behind them.</div></div>
     </div>
   </div>
@@ -4967,16 +4967,17 @@ updateCalc();
 const REQ = { mechs: [], mode: 'open', photos: [], days: new Set(), parts: new Set() };
 const COMPARE = new Set();
 let SITE_CONFIG = { payments_on: false };
-function paymentsOn(){ return SITE_CONFIG.payments_on === true && !!FUNCTIONS_BASE; }
+// Every job is paid through WrenchNow + Stripe (no paying the mechanic directly)
+function paymentsOn(){ return !!FUNCTIONS_BASE; }
 (async () => { try { const d = await db.collection('config').doc('site').get(); if(d.exists) SITE_CONFIG = Object.assign({ payments_on: false }, d.data()); } catch(e){} applyPaymentCopy(); })();
 (async () => { try { const d = await db.collection('config').doc('stats').get(); if(d.exists){ const x = d.data(); SAVINGS = { total_cents: Math.max(0, parseInt(x.saved_cents) || 0), jobs: Math.max(0, parseInt(x.saved_jobs) || 0) }; renderSavingsStat(); } } catch(e){} })();
 function applyPaymentCopy(){
   const on = SITE_CONFIG.payments_on === true;
   const h = document.getElementById('howPayStep');
   if(h) h.textContent = on ? "Your card is saved when you accept a quote and charged only after the job is done. You agreed the price up front, and any change needs your OK first."
-                           : "Review what was done, then pay your mechanic directly. You agreed the price up front, and any change needs your OK first.";
+                           : "Your card is saved when you accept a quote and charged only after the job is done. You agreed the price up front, and any change needs your OK first.";
   const l = document.getElementById('heroPayLine');
-  if(l) l.textContent = 'Free to browse · Compare quotes · ' + (on ? 'Card charged only when the job is done' : 'Pay your mechanic when the job is done');
+  if(l) l.textContent = 'Free to browse · Compare quotes · ' + 'Card charged only when the job is done';
 }
 function money(c){ c = Math.round(Number(c) || 0); return '$' + (c % 100 ? (c / 100).toFixed(2) : (c / 100).toLocaleString()); }
 function dayLabel(iso){ const ms = isoMs(iso); if(!ms) return iso || ''; const d = new Date(ms), t = new Date(); t.setHours(0,0,0,0); const diff = Math.round((ms - t.getTime()) / DAY); return diff === 0 ? 'Today' : diff === 1 ? 'Tomorrow' : d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }); }
@@ -5226,7 +5227,7 @@ async function showAcceptAgreement(r, q){
   set('agMechName', q.mechanic_name || '—'); set('agService', r.service || '—'); set('agVehicle', r.vehicle || '—');
   set('agAddress', (priv.address || '—') + ' (shared with ' + (q.mechanic_name || 'them').split(' ')[0] + ' when you accept)');
   set('agDateTime', dayLabel(q.date_iso) + ' · ' + (q.time || ''));
-  set('agRate', money(q.total_cents) + ' total (labor ' + money(q.labor_cents) + ' + parts ' + money(q.parts_cents) + ')' + (paymentsOn() ? ' · card saved now, charged when the job is done' : ' · pay your mechanic when the job is done'));
+  set('agRate', money(q.total_cents) + ' total (labor ' + money(q.labor_cents) + ' + parts ' + money(q.parts_cents) + ')' + (paymentsOn() ? ' · card saved now, charged when the job is done' : ' · card saved now, charged when the job is done'));
   const cb = document.getElementById('agreementCheck'); if(cb) cb.checked = false;
   toggleAgreementBtn();
   document.getElementById('agreementOverlay').classList.add('on');
@@ -5949,24 +5950,16 @@ function adminMessages(msgs){
   return sec;
 }
 
-// Online payments switch. Off: customers pay mechanics directly. On: cards are saved at acceptance
+// Payments: every job goes through Stripe. Cards are saved at acceptance
 // and charged through Stripe; mechanics must finish Stripe payouts before they can quote.
 function adminPayments(mechs){
-  const sec = adminSection('Online payments', paymentsOn() ? 'ON' : 'OFF');
+  const sec = adminSection('Payments', 'every job through Stripe');
   const card = document.createElement('div'); card.className = 'admin-card';
   const t = document.createElement('div'); t.className = 'admin-meta';
   const ready = mechs.filter(m => m.payouts_ready).length;
-  t.textContent = paymentsOn()
-    ? 'Customers save a card when they accept a quote and are charged after the job. You keep 5% of each job (set by PLATFORM_FEE_PCT); card processing comes out of the mechanic\'s share. Mechanics must finish Stripe payouts before quoting (' + ready + ' of ' + mechs.length + ' have).'
-    : "Off: customers pay mechanics directly. Turn on only after the payment functions are deployed, your Stripe account is live with Connect switched on, and the Stripe webhook is added (see SETUP.md). Once on, mechanics without Stripe payouts can't quote.";
+  t.textContent = 'Every job is paid through WrenchNow: customers save a card when they accept a quote and are charged the final approved price after the job. You keep 5% (PLATFORM_FEE_PCT); card processing comes out of the mechanic\'s share. Mechanics must finish Stripe payout setup before they can quote — ' + ready + ' of ' + mechs.length + ' have. Bookings need the payment functions deployed, Stripe Connect on and the Stripe webhook added (SETUP.md §10).';
   card.appendChild(t);
-  const acts = document.createElement('div'); acts.className = 'admin-actions'; acts.style.marginTop = '.7rem';
-  acts.appendChild(adminBtn(paymentsOn() ? 'Turn online payments off' : 'Turn online payments on', paymentsOn() ? '' : 'primary', async () => {
-    const on = !paymentsOn();
-    if(on && !confirm('Turn on online payments? Mechanics without Stripe payouts set up will stop being able to quote.')) return;
-    await db.collection('config').doc('site').set({ payments_on: on, updated_at: new Date().toISOString() }, { merge: true });
-    SITE_CONFIG.payments_on = on;
-  }));
+  const acts = document.createElement('div');
   card.appendChild(acts); sec.appendChild(card);
   // "Typical dealer" comparison shown on quotes
   const sc = document.createElement('div'); sc.className = 'admin-card';
@@ -7274,7 +7267,7 @@ auth.onAuthStateChanged((user) => {
 
       <h2>7. Payment Terms</h2>
       <p><strong>Quotes.</strong> Mechanics send a price (labor and parts) before any work is booked. The Customer accepts or declines. If the Mechanic finds more work is needed, they send a revised price, and nothing changes unless the Customer approves it; if the Customer declines, the original price stands.</p>
-      <p><strong>When online payment is offered</strong>, the Customer's card is saved through Stripe, Inc. when they accept a quote and is charged the agreed (or approved revised) price when the Customer confirms the job is done, or 48 hours after the Mechanic marks it done unless the Customer reports a problem first. Reporting a problem holds the payment while WrenchNow looks into it. Payments are processed by Stripe and paid out to the Mechanic through Stripe; WrenchNow never stores card numbers. Card processing costs and WrenchNow's 5% platform fee are deducted from the Mechanic's share and shown in their Stripe account. <strong>When online payment is not offered</strong>, the Customer pays the Mechanic directly and WrenchNow does not handle the money.</p>
+      <p><strong>Payment.</strong> All jobs booked on WrenchNow are paid through WrenchNow. The Customer's card is saved through Stripe, Inc. when they accept a quote and is charged the agreed (or approved revised) price when the Customer confirms the job is done, or 48 hours after the Mechanic marks it done unless the Customer reports a problem first. Reporting a problem holds the payment while WrenchNow looks into it. Payments are processed by Stripe and paid out to the Mechanic through Stripe; WrenchNow never stores card numbers. Card processing costs and WrenchNow's 5% platform fee are deducted from the Mechanic's share and shown in their Stripe account.</p>
       <p>Refunds are decided case by case after hearing from both sides. Payment problems must be raised within 30 days of the job.</p>
 
       <h2>8. Dispute Resolution Between Customers and Mechanics</h2>
@@ -7284,7 +7277,7 @@ auth.onAuthStateChanged((user) => {
       <p>You agree not to:</p>
       <ul>
         <li>Use the platform for any unlawful purpose or in violation of any applicable laws</li>
-        <li>Take a job found on WrenchNow off the platform to avoid its payment process, when online payment is offered</li>
+        <li>Pay a Mechanic outside WrenchNow for a job found on WrenchNow</li>
         <li>Submit false, fraudulent, or misleading information</li>
         <li>Harass, threaten, or harm any Mechanic or other user</li>
         <li>Interfere with the platform's operation or security</li>
@@ -7507,7 +7500,7 @@ auth.onAuthStateChanged((user) => {
         <li>Perform services while impaired by alcohol, drugs, or any substance</li>
         <li>Misrepresent your qualifications, experience, or the services you provide</li>
         <li>Charge amounts beyond those agreed with the customer and disclosed on the platform</li>
-        <li>Take payment outside WrenchNow for a job found on WrenchNow when online payment is offered</li>
+        <li>Take payment outside WrenchNow for a job found on WrenchNow, including cash, Venmo, Zelle or similar</li>
         <li>Harass, intimidate, or behave inappropriately toward any customer</li>
         <li>Share customer personal information with any third party</li>
         <li>Use WrenchNow for any unlawful purpose</li>
@@ -7520,7 +7513,7 @@ auth.onAuthStateChanged((user) => {
       <p><strong>Platform fee and verification fee.</strong> WrenchNow's platform fee is 5% of the job price on jobs paid through WrenchNow. Applicants pay a one-time verification fee of <span data-fee>$49</span>, which covers a third-party background and driving-record check and is not refunded once the check has been ordered.</p>
       <p>You will get at least 30 days' notice by email before the platform fee changes, and a change never applies to jobs already accepted.</p>
       <p><strong>Quotes and price changes.</strong> You set your price for each job as a quote (labor and parts). If you find more work is needed, send a revised price through WrenchNow before doing the extra work; the customer must approve it, and if they don't, the original price stands.</p>
-      <p><strong>Getting paid.</strong> When online payment is offered, you must complete Stripe payout setup (Stripe Connect) before sending quotes. The customer's payment goes to your Stripe account, less card processing costs (about 3.2% + 55¢ per job, covering Stripe's card and payout fees) and the 5% platform fee. Payment is taken when the customer confirms the job, or 48 hours after you mark it done unless the customer reports a problem first. If a customer reports a problem or disputes the charge with their bank, payment may be held, and if a refund is issued, the amount paid to you for that job may be reversed. When online payment is not offered, the customer pays you directly.</p>
+      <p><strong>Getting paid.</strong> All jobs are paid through WrenchNow. You must complete Stripe payout setup (Stripe Connect) before sending quotes. The customer's payment goes to your Stripe account, less card processing costs (about 3.2% + 55¢ per job, covering Stripe's card and payout fees) and the 5% platform fee. Payment is taken when the customer confirms the job, or 48 hours after you mark it done unless the customer reports a problem first. If a customer reports a problem or disputes the charge with their bank, payment may be held, and if a refund is issued, the amount paid to you for that job may be reversed.</p>
       <p>Payments are processed through Stripe Connect. WrenchNow is not responsible for delays or failures in payment processing caused by Stripe or by errors in your account information.</p>
 
       <h2>7. Liability and Indemnification</h2>
@@ -7618,7 +7611,7 @@ auth.onAuthStateChanged((user) => {
         <div class="agreement-section-title">Service terms</div>
         <div class="agreement-terms">
           <strong style="color:var(--cream)">Before work begins:</strong> Your mechanic will provide a written estimate before starting any work. You must approve the final price before work begins. You may cancel at no charge before work starts.<br><br>
-          <strong style="color:var(--cream)">Payment:</strong> You agree to the quoted price. If online payment is on, your card is saved securely by Stripe now and charged the final approved price after your mechanic marks the job done: you can confirm and pay straight away or report a problem within 48 hours, otherwise it is charged automatically. If your mechanic finds more work, they must send a revised price for you to approve first. If online payment is not on yet, you pay your mechanic directly when the job is done.<br><br>
+          <strong style="color:var(--cream)">Payment:</strong> You agree to the quoted price. Your card is saved securely by Stripe now and charged the final approved price after your mechanic marks the job done: you can confirm and pay straight away or report a problem within 48 hours, otherwise it is charged automatically. If your mechanic finds more work, they must send a revised price for you to approve first.<br><br>
           <strong style="color:var(--cream)">Disputes:</strong> If you're unhappy with the work, contact the mechanic directly first. WrenchNow offers a mediation process if needed but does not guarantee any specific outcome or remedy.<br><br>
           <strong style="color:var(--cream)">Independent contractor:</strong> The mechanic performing this service is an independent contractor, not an employee of WrenchNow. WrenchNow is a marketplace platform and is not liable for the quality of work performed.<br><br>
           <strong style="color:var(--cream)">Cancellation:</strong> Cancel any time before the mechanic arrives at no charge. Cancellations after arrival may incur a call-out fee.<br><br>

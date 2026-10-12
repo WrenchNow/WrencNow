@@ -8,11 +8,9 @@ service cloud.firestore {
       return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
-    // Online payments on? (Admin tab switch.) When on, only mechanics with Stripe payouts can quote.
-    function paymentsOn() {
-      return exists(/databases/$(database)/documents/config/site)
-          && get(/databases/$(database)/documents/config/site).data.get('payments_on', false) == true;
-    }
+    // Every job is paid through WrenchNow + Stripe: bookings must save a card, and only mechanics
+    // with finished Stripe payouts can quote.
+    function paymentsOn() { return true; }
 
     match /config/{doc} {
       allow read: if true;
