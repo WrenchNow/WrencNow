@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Builds the WrenchNow site into an output folder:
    marketing pages at the root, the existing app at /app/, legal pages generated from the app's own legal text."""
-import hashlib, os, re, shutil, sys
+import json, hashlib, os, re, shutil, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 APP_SRC = sys.argv[1] if len(sys.argv) > 1 else '/home/claude/site/wrenchnow_app_v19.html'
@@ -38,6 +38,11 @@ I = {
 NAV = [('/how-it-works', 'How it works'), ('/mechanics', 'For mechanics'), ('/pricing', 'Pricing'), ('/about', 'About')]
 APP_HASHES = ['card-saved=', 'card-cancelled=', 'payouts-done', 'payouts-retry', 'mechanic=', 'quote', 'jobs', 'apply']
 
+LD = '<script type="application/ld+json">' + json.dumps([
+    {"@context": "https://schema.org", "@type": "WebSite", "name": "WrenchNow", "alternateName": ["Wrench Now", "WrenchNow mobile mechanics", "getwrenchnow"], "url": SITE + "/"},
+    {"@context": "https://schema.org", "@type": "Organization", "name": "WrenchNow", "alternateName": "Wrench Now", "url": SITE + "/", "logo": SITE + "/icon-512.png", "email": "hello@getwrenchnow.com", "areaServed": "US"},
+]) + '</script>'
+
 def page(path, title, desc, body, active=''):
     links = ''.join(f'<a href="{h}"{" aria-current=page" if h == active else ""}>{t}</a>' for h, t in NAV)
     canon = SITE + (path if path != '/index' else '/')
@@ -56,7 +61,8 @@ def page(path, title, desc, body, active=''):
 <meta property="og:type" content="website">
 <meta property="og:url" content="{canon}">
 <meta property="og:image" content="{SITE}/icon-512.png">
-<link rel="icon" href="/icon-192.png">
+<meta property="og:site_name" content="WrenchNow">
+{LD if path == '/index' else ''}<link rel="icon" href="/icon-192.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
 <script>{fwd}</script>
@@ -372,7 +378,7 @@ about = '''
 </div></section>'''
 
 pages = [
-  ('index', '/index', 'WrenchNow: Mobile mechanics who come to you', 'Get upfront quotes from background-checked mobile mechanics who fix your car at home or work. Compare prices, approve changes, and pay after the job.', home, ''),
+  ('index', '/index', 'WrenchNow (Wrench Now): Mobile mechanics who come to you', 'Wrench Now sends background-checked mobile mechanics to fix your car at home or work, with upfront quotes. Compare prices, approve changes, and pay after the job.', home, ''),
   ('how-it-works', '/how-it-works', 'How it works · WrenchNow', 'How WrenchNow works for drivers and mechanics: request quotes, compare, book, approve price changes and pay after the job.', how, '/how-it-works'),
   ('mechanics', '/mechanics', 'For mechanics · WrenchNow', 'Join WrenchNow as a mobile mechanic. Set your own prices, 5% platform fee, free to join, paid to your bank through Stripe.', mech, '/mechanics'),
   ('pricing', '/pricing', 'Pricing · WrenchNow', 'What drivers and mechanics pay on WrenchNow: free quotes for drivers, a 5% platform fee for mechanics, and every other fee in full.', pricing, '/pricing'),
