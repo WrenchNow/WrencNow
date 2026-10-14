@@ -49,6 +49,7 @@ const CHECKR_STATE          = defineString('CHECKR_STATE', { default: 'CO' });  
 const ADMIN_EMAIL           = defineString('ADMIN_EMAIL');                       // where your own alerts go
 const EMAIL_FROM            = defineString('EMAIL_FROM', { default: 'WrenchNow <hello@getwrenchnow.com>' });
 const SITE_URL              = defineString('SITE_URL', { default: 'https://getwrenchnow.com' });
+const appUrl = () => SITE_URL.value().replace(/\/$/, '') + '/app/';   // the logged-in app (marketing pages live at the root)
 const VERIFY_PAYMENT_LINK   = defineString('VERIFY_PAYMENT_LINK', { default: 'https://buy.stripe.com/dRm28s1FDggCb3ucKG6oo01' }); // same live link as in the site file
 const PLATFORM_FEE_PCT      = defineString('PLATFORM_FEE_PCT', { default: '5' });    // your cut of each job paid through WrenchNow, taken from the mechanic's share
 const CUSTOMER_FEE_CENTS    = defineString('CUSTOMER_FEE_CENTS', { default: '0' });  // optional flat service fee added to the customer's charge, in cents
@@ -332,7 +333,7 @@ exports.onMechanicPublished = onDocumentCreated(
         `<p>Your checks cleared and your profile is now live with the <strong>Verified</strong> badge.</p>
          <p>Booking requests will arrive by email with the customer's details. Reply to the customer to confirm the time.</p>
          <p>Want to be seen first? Featured mechanics are pinned to the top of search results for $29/month.</p>
-         <p><a href="${esc(SITE_URL.value())}">See your profile</a></p>`),
+         <p><a href="${esc(appUrl())}">See your profile</a></p>`),
       replyTo: ADMIN_EMAIL.value()
     });
   });
@@ -353,7 +354,7 @@ exports.onBookingCreated = onDocumentCreated(
         html: layout('New booking request',
           `<p>${esc(b.customer_name || 'A customer')} would like to book you.</p>${details}
            <p><strong>Reply to this email</strong> to confirm the time with the customer, or to suggest the closest time you can do.</p>
-           <p>Or log in at <a href="${esc(SITE_URL.value())}">${esc(SITE_URL.value())}</a> with the email you applied with and open <strong>My jobs</strong> to confirm it there.</p>`)
+           <p>Or log in at <a href="${esc(appUrl())}">${esc(appUrl())}</a> with the email you applied with and open <strong>My jobs</strong> to confirm it there.</p>`)
       });
     }
     await sendEmail({
@@ -402,12 +403,12 @@ exports.onBookingUpdated = onDocumentUpdated(
     if (after.status === 'completed' && before.status !== 'completed' && after.payment_status === 'card_saved' && !after.charge_after) {
       await event.data.after.ref.update({ charge_after: new Date(Date.now() + 48 * 3600 * 1000).toISOString() });
       await sendEmail({ to: after.customer_email, replyTo: ADMIN_EMAIL.value(), subject: 'Your job is done — confirm & pay, or report a problem',
-        html: layout((after.mechanic_name || 'Your mechanic') + ' marked the job done', `<p>Your card will be charged <strong>$${(((after.final_cents || after.price_cents) || 0) / 100).toFixed(2)}</strong> in 48 hours. If anything's wrong, open <a href="${esc(SITE_URL.value())}">My bookings</a> and press <strong>Report a problem</strong> before then and we'll hold the payment.</p>`) });
+        html: layout((after.mechanic_name || 'Your mechanic') + ' marked the job done', `<p>Your card will be charged <strong>$${(((after.final_cents || after.price_cents) || 0) / 100).toFixed(2)}</strong> in 48 hours. If anything's wrong, open <a href="${esc(appUrl())}">My bookings</a> and press <strong>Report a problem</strong> before then and we'll hold the payment.</p>`) });
     }
     const rb = before.revision || {}, ra = after.revision || {};
     if (ra.status === 'pending' && (rb.status !== 'pending' || rb.total_cents !== ra.total_cents)) {
       await sendEmail({ to: after.customer_email, replyTo: ADMIN_EMAIL.value(), subject: 'Approve a price change from ' + (after.mechanic_name || 'your mechanic'),
-        html: layout('Your mechanic revised the price', rows([['New price', '$' + (ra.total_cents / 100).toFixed(2)], ['Was', '$' + (((after.final_cents || after.price_cents) || 0) / 100).toFixed(2)], ['Reason', ra.reason]]) + `<p>Nothing changes unless you approve it in <a href="${esc(SITE_URL.value())}">My bookings</a>. If you reject it, the original price stands.</p>`) });
+        html: layout('Your mechanic revised the price', rows([['New price', '$' + (ra.total_cents / 100).toFixed(2)], ['Was', '$' + (((after.final_cents || after.price_cents) || 0) / 100).toFixed(2)], ['Reason', ra.reason]]) + `<p>Nothing changes unless you approve it in <a href="${esc(appUrl())}">My bookings</a>. If you reject it, the original price stands.</p>`) });
     }
     if (rb.status === 'pending' && (ra.status === 'approved' || ra.status === 'rejected')) {
       const mp = await mechanicPrivate(after.mechanic_slug);
@@ -465,7 +466,7 @@ exports.onBookingUpdated = onDocumentUpdated(
     if (after.status !== 'completed' || !after.mechanic_slug) return;
     if (after.status_by !== 'customer') {
       await sendEmail({ to: after.customer_email, replyTo: ADMIN_EMAIL.value(), subject: 'How did it go with ' + (after.mechanic_name || 'your mechanic') + '?',
-        html: layout('Your job is marked complete', `<p>Thanks for using WrenchNow. A quick star rating helps the next customer choose, and helps good mechanics get more work.</p><p><a href="${esc(SITE_URL.value())}">Open WrenchNow</a>, tap your initials, then My bookings to rate this job.</p>`) });
+        html: layout('Your job is marked complete', `<p>Thanks for using WrenchNow. A quick star rating helps the next customer choose, and helps good mechanics get more work.</p><p><a href="${esc(appUrl())}">Open WrenchNow</a>, tap your initials, then My bookings to rate this job.</p>`) });
     }
 
     await recomputeMechStats(after.mechanic_slug);
@@ -531,9 +532,9 @@ exports.insuranceCheck = onSchedule(
       const p = await mechanicPrivate(m.slug);
       if (until < now) {
         await d.ref.update({ insured: false });
-        if (p && p.email) await sendEmail({ to: p.email, subject: 'Your Insured badge has expired', html: layout('Upload your new insurance certificate', `<p>Your certificate on file ended ${esc(m.insured_until)}, so the Insured badge is off your profile. Upload the new one in <a href="${esc(SITE_URL.value())}">My jobs</a> → Insurance.</p>`) });
+        if (p && p.email) await sendEmail({ to: p.email, subject: 'Your Insured badge has expired', html: layout('Upload your new insurance certificate', `<p>Your certificate on file ended ${esc(m.insured_until)}, so the Insured badge is off your profile. Upload the new one in <a href="${esc(appUrl())}">My jobs</a> → Insurance.</p>`) });
       } else if (until - now < 14 * 864e5 && until - now >= 13 * 864e5 && p && p.email) {
-        await sendEmail({ to: p.email, subject: 'Insurance renews soon — upload your new certificate', html: layout('Your insurance certificate ends in 2 weeks', `<p>Upload the renewed certificate in <a href="${esc(SITE_URL.value())}">My jobs</a> → Insurance to keep your Insured badge.</p>`) });
+        await sendEmail({ to: p.email, subject: 'Insurance renews soon — upload your new certificate', html: layout('Your insurance certificate ends in 2 weeks', `<p>Upload the renewed certificate in <a href="${esc(appUrl())}">My jobs</a> → Insurance to keep your Insured badge.</p>`) });
       }
     }
   });
@@ -599,7 +600,7 @@ exports.onRequestCreated = onDocumentCreated(
     for (const docId of (r.invited_docs || [])) {
       const p = await mechanicPrivate(await mechanicSlugByDoc(docId));
       if (p && p.email) await sendEmail({ to: p.email, subject: 'Quote request — ' + (r.service || 'a job'),
-        html: layout(r.customer_first + ' asked you for a quote', details + `<p>Log in at <a href="${esc(site())}">${esc(site())}</a> and open <strong>My jobs</strong> to send your price. The customer's address is shared only if they accept your quote.</p>`) });
+        html: layout(r.customer_first + ' asked you for a quote', details + `<p>Log in at <a href="${esc(appUrl())}">${esc(appUrl())}</a> and open <strong>My jobs</strong> to send your price. The customer's address is shared only if they accept your quote.</p>`) });
     }
     await toAdmin('New quote request — ' + (r.service || ''), layout('New quote request', details + `<p>${r.mode === 'open' ? 'Open to all nearby mechanics.' : 'Sent to ' + esc((r.invited_names || []).join(', '))}</p>`));
   });
@@ -617,7 +618,7 @@ exports.onQuoteWritten = onDocumentWritten(
     const priceTxt = q.kind === 'diagnosis' && !q.total_cents ? 'free diagnosis' : '$' + (q.total_cents / 100).toFixed(2) + (q.kind === 'diagnosis' ? ' diagnosis' : '');
     await sendEmail({ to: email, subject: (before ? 'Updated quote: ' : 'New quote: ') + priceTxt + ' from ' + (q.mechanic_name || 'a mechanic'),
       html: layout('You have a quote', rows([['Mechanic', q.mechanic_name], ['Price', '$' + (q.total_cents / 100).toFixed(2) + ' (labor $' + (q.labor_cents / 100).toFixed(2) + ' + parts $' + (q.parts_cents / 100).toFixed(2) + ')'], ['Can come', q.date_iso + ' at ' + q.time], ['Note', q.note]])
-        + `<p>Compare and accept in <a href="${esc(site())}">WrenchNow</a> → tap your initials → My bookings.</p>`) });
+        + `<p>Compare and accept in <a href="${esc(appUrl())}">WrenchNow</a> → tap your initials → My bookings.</p>`) });
   });
 
 // Accepted quote → Stripe-hosted page to save the customer's card (nothing is charged here)
@@ -638,7 +639,7 @@ exports.createCardSetup = onRequest(
       if (!cust) { const c = await stripe.customers.create({ email: user.email, metadata: { uid: user.uid } }); cust = { id: c.id }; await custRef.set(cust); }
       const session = await stripe.checkout.sessions.create({
         mode: 'setup', customer: cust.id, currency: 'usd', payment_method_types: ['card'],
-        success_url: site() + '/#card-saved=' + bookingId, cancel_url: site() + '/#card-cancelled=' + bookingId,
+        success_url: appUrl() + '#card-saved=' + bookingId, cancel_url: appUrl() + '#card-cancelled=' + bookingId,
         metadata: { booking_id: bookingId, uid: user.uid }
       });
       res.json({ url: session.url });
@@ -665,7 +666,7 @@ exports.connectOnboard = onRequest(
         acct = a.id;
         await privRef.set({ stripe_account: acct }, { merge: true });
       }
-      const link = await stripe.accountLinks.create({ account: acct, type: 'account_onboarding', refresh_url: site() + '/#payouts-retry', return_url: site() + '/#payouts-done' });
+      const link = await stripe.accountLinks.create({ account: acct, type: 'account_onboarding', refresh_url: appUrl() + '#payouts-retry', return_url: appUrl() + '#payouts-done' });
       res.json({ url: link.url });
     } catch (err) { console.error('connectOnboard', err); fail(res, err); }
   });
@@ -729,7 +730,7 @@ async function chargeJob(ref) {
       const sess = await stripe.checkout.sessions.create({ mode: 'payment', customer: pay.customer,
         line_items: [{ quantity: 1, price_data: { currency: 'usd', unit_amount: total, product_data: { name: 'WrenchNow: ' + (b.service || 'mobile mechanic') } } }],
         payment_intent_data: { ...transfer, metadata: { booking_id: id } }, metadata: { booking_id: id },
-        success_url: site() + '/#card-saved=' + id, cancel_url: site() + '/#card-cancelled=' + id });
+        success_url: appUrl() + '#card-saved=' + id, cancel_url: appUrl() + '#card-cancelled=' + id });
       url = sess.url;
     } catch (e) { console.error('pay link failed', e.message); }
     await ref.update({ payment_status: 'payment_failed', payment_error: String(err.message || 'card declined').slice(0, 200), pay_url: url });
@@ -826,7 +827,7 @@ exports.serviceReminders = onSchedule(
         to: p.email, replyTo: ADMIN_EMAIL.value(),
         subject: (p.vehicle ? p.vehicle + ': ' : 'Your car: ') + due.length + ' thing' + (due.length === 1 ? '' : 's') + ' due',
         html: layout('Time for some car care', '<ul>' + due.map(it => `<li><strong>${esc(it.name)}</strong> — ${it.overdue ? 'overdue' : 'due soon'}</li>`).join('') + '</ul>'
-          + `<p><a href="${esc(SITE_URL.value())}">Book a mobile mechanic</a> and they'll come to you. Tap your initials → My car to see the full schedule or turn these emails off.</p>`
+          + `<p><a href="${esc(appUrl())}">Book a mobile mechanic</a> and they'll come to you. Tap your initials → My car to see the full schedule or turn these emails off.</p>`
           + "<p style=\"font-size:12px;color:#888\">These are typical intervals. Your owner's manual and your mechanic's advice come first.</p>")
       });
       const stamp = new Date().toISOString(); const upd = {};

@@ -1,12 +1,11 @@
-// WrenchNow service worker: makes the site installable and opens instantly.
-// Pages always come from the network when online (so updates show right away);
-// the saved copy is only used when there's no connection. Database and payment
-// traffic is never cached.
-const CACHE = 'wrenchnow-v18o';
-const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png'];
+// WrenchNow service worker: makes the app installable and lets visited pages open offline.
+// Pages always come from the network when online (so updates show right away); saved copies are
+// only used when there's no connection. Database and payment traffic is never cached.
+const CACHE = 'wrenchnow-v19a';
+const SHELL = ['/', '/app/', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).catch(() => {}).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
@@ -15,13 +14,14 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
-  // page loads: network first, fall back to the saved copy offline
   if (req.mode === 'navigate') {
-    e.respondWith(fetch(req).then(res => { const copy = res.clone(); caches.open(CACHE).then(c => c.put('/index.html', copy)); return res; })
-      .catch(() => caches.match('/index.html')));
+    const key = url.origin + url.pathname;   // one saved copy per page, ignoring ?query and #hash
+    e.respondWith(fetch(req).then(res => {
+      if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(key, copy)); }
+      return res;
+    }).catch(() => caches.match(key).then(hit => hit || caches.match(url.pathname.startsWith('/app') ? '/app/' : '/'))));
     return;
   }
-  // our own icons/manifest, fonts and icon font: cache first
   const cacheable = url.origin === self.location.origin || /fonts\.(googleapis|gstatic)\.com$/.test(url.hostname) || url.hostname === 'cdn.jsdelivr.net';
   if (!cacheable) return;
   e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(res => {
