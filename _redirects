@@ -1,3 +1,15 @@
+/services/mobile-oil-change  /services/mobile-oil-change.html  200
+/services/mobile-brake-repair  /services/mobile-brake-repair.html  200
+/services/car-battery-replacement  /services/car-battery-replacement.html  200
+/services/check-engine-light-diagnostic  /services/check-engine-light-diagnostic.html  200
+/services/starter-alternator-replacement  /services/starter-alternator-replacement.html  200
+/services/pre-purchase-inspection  /services/pre-purchase-inspection.html  200
+/services/cooling-system-repair  /services/cooling-system-repair.html  200
+/services/suspension-repair  /services/suspension-repair.html  200
+/services/ac-and-heat-repair  /services/ac-and-heat-repair.html  200
+/services/tire-rotation  /services/tire-rotation.html  200
+/services/serpentine-belt-replacement  /services/serpentine-belt-replacement.html  200
+/services/tune-up  /services/tune-up.html  200
 /how-it-works  /how-it-works.html  200
 /mechanics  /mechanics.html  200
 /pricing  /pricing.html  200
@@ -6,3 +18,4 @@
 /privacy  /privacy.html  200
 /mechanic-agreement  /mechanic-agreement.html  200
 /app  /app/  301
+/services  /services/  301

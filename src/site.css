@@ -191,7 +191,7 @@ p{max-width:68ch}
 
 /* footer */
 .foot{padding:56px 0 40px;color:var(--muted);font-size:15px}
-.foot .wrap{display:grid;grid-template-columns:1.4fr repeat(3,minmax(0,1fr));gap:32px}
+.foot .wrap{display:grid;grid-template-columns:1.4fr repeat(4,minmax(0,1fr));gap:32px}
 .foot h4{font:600 14px var(--body);color:var(--soft);margin-bottom:12px}
 .foot ul{list-style:none;display:grid;gap:8px}
 .foot a{text-decoration:none}
@@ -225,3 +225,13 @@ p{max-width:68ch}
   .foot .wrap{grid-template-columns:1fr}
 }
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+
+/* services */
+.crumbs{margin-bottom:14px}
+.crumbs a{text-decoration:none;color:var(--muted)}
+.crumbs a:hover{color:var(--text)}
+.svc-list{list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:14px}
+.svc-list a{display:grid;gap:6px;height:100%;padding:20px 22px;background:var(--panel);border:1px solid var(--line);border-radius:12px;text-decoration:none;color:var(--muted);font-size:15px;line-height:1.5}
+.svc-list a b{font:700 22px/1.1 var(--display);color:var(--text);text-transform:uppercase;letter-spacing:.01em}
+.svc-list a:hover{border-color:var(--orange)}
+.svc-list a:focus-visible{outline:2px solid var(--orange-text);outline-offset:2px}

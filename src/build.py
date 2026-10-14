@@ -2,6 +2,8 @@
 """Builds the WrenchNow site into an output folder:
    marketing pages at the root, the existing app at /app/, legal pages generated from the app's own legal text."""
 import json, hashlib, os, re, shutil, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import services_content as SC
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 APP_SRC = sys.argv[1] if len(sys.argv) > 1 else '/home/claude/site/wrenchnow_app_v19.html'
@@ -35,7 +37,7 @@ I = {
   'menu': ic('<path d="M4 7h16M4 12h16M4 17h16"/>'),
 }
 
-NAV = [('/how-it-works', 'How it works'), ('/mechanics', 'For mechanics'), ('/pricing', 'Pricing'), ('/about', 'About')]
+NAV = [('/services/', 'Services'), ('/how-it-works', 'How it works'), ('/mechanics', 'For mechanics'), ('/pricing', 'Pricing'), ('/about', 'About')]
 APP_HASHES = ['card-saved=', 'card-cancelled=', 'payouts-done', 'payouts-retry', 'mechanic=', 'quote', 'jobs', 'apply']
 
 LD = '<script type="application/ld+json">' + json.dumps([
@@ -43,7 +45,7 @@ LD = '<script type="application/ld+json">' + json.dumps([
     {"@context": "https://schema.org", "@type": "Organization", "name": "WrenchNow", "alternateName": "Wrench Now", "url": SITE + "/", "logo": SITE + "/icon-512.png", "email": "hello@getwrenchnow.com", "areaServed": "US"},
 ]) + '</script>'
 
-def page(path, title, desc, body, active=''):
+def page(path, title, desc, body, active='', head=''):
     links = ''.join(f'<a href="{h}"{" aria-current=page" if h == active else ""}>{t}</a>' for h, t in NAV)
     canon = SITE + (path if path != '/index' else '/')
     fwd = "(function(){function f(){var h=location.hash.slice(1);if(!h)return;var k=" + str(APP_HASHES).replace("'", '"') + ";for(var i=0;i<k.length;i++){if(h===k[i]||(k[i].slice(-1)==='='&&h.indexOf(k[i])===0)){location.replace('/app/'+location.search+'#'+h);return}}}f();addEventListener('hashchange',f)})();"
@@ -62,7 +64,7 @@ def page(path, title, desc, body, active=''):
 <meta property="og:url" content="{canon}">
 <meta property="og:image" content="{SITE}/icon-512.png">
 <meta property="og:site_name" content="WrenchNow">
-{LD if path == '/index' else ''}<link rel="icon" href="/icon-192.png">
+{LD if path == '/index' else ''}{head}<link rel="icon" href="/icon-192.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
 <script>{fwd}</script>
@@ -91,6 +93,7 @@ def page(path, title, desc, body, active=''):
       <p style="margin-top:14px">WrenchNow, Denver, Colorado<br><a href="mailto:hello@getwrenchnow.com">hello@getwrenchnow.com</a></p>
     </div>
     <div><h4>Drivers</h4><ul><li><a href="/app/">Get quotes</a></li><li><a href="/how-it-works">How it works</a></li><li><a href="/pricing">Pricing</a></li><li><a href="/app/">My bookings</a></li></ul></div>
+    <div><h4>Services</h4><ul>{''.join(f'<li><a href="/services/{x["slug"]}">{x["name"]}</a></li>' for x in SC.SERVICES[:6])}<li><a href="/services/">All services</a></li></ul></div>
     <div><h4>Mechanics</h4><ul><li><a href="/mechanics">Why join</a></li><li><a href="/app/#apply">Apply</a></li><li><a href="/app/#jobs">My jobs</a></li><li><a href="/pricing#mechanics">Fees</a></li></ul></div>
     <div><h4>Company</h4><ul><li><a href="/about">About</a></li><li><a href="/terms">Terms of Service</a></li><li><a href="/privacy">Privacy Policy</a></li><li><a href="/mechanic-agreement">Mechanic Agreement</a></li></ul></div>
     <div class="legalline">© 2026 WrenchNow. Launching in Denver, with more cities as mechanics join.</div>
@@ -133,13 +136,14 @@ def ticket_payout(title='A $200 job, paid through the app'):
   <figcaption class="t-note">Card processing is 3.2% + 55¢ and covers Stripe's card and payout costs. The onboarding fee repays your background check: up to $10 a job, never more than 15% of a job, $50 in total.</figcaption>
 </figure>'''
 
-FAQ = [
+FAQ = SC.HOME_FAQ_EXTRA[:1] + [
  ("Does it cost anything to ask for quotes?", "No. Requesting and comparing quotes is free. You pay the price you accept, and nothing more unless you approve a change."),
  ("When is my card charged?", "Your card is saved securely by Stripe when you accept a quote. It's charged the final approved price after the job: when you press Confirm and pay, or 48 hours after your mechanic marks the job done. Report a problem before then and the payment is held."),
  ("What if the mechanic finds more work?", "They send a revised price through the app with the reason. You approve or reject it on your phone. If you reject it, the original price stands."),
  ("Who sees my address?", "Mechanics who quote see your ZIP code and rough area only. Your street address and phone go to the one mechanic whose quote you accept."),
  ("How are mechanics checked?", "Every mechanic passes a third-party background and driving-record check before their profile goes live. Full-service mechanics also show ASE certification or references. Mechanics with verified liability insurance carry an Insured badge. Checks lower the risk but can't guarantee future conduct; the Terms of Service explain the details."),
  ("What if the mechanic doesn't show up?", "Report it from My bookings after the appointment time. You aren't charged, and missed appointments appear on the mechanic's profile and lower their ranking."),
+ *SC.HOME_FAQ_EXTRA[1:],
  ("Where is WrenchNow available?", "We're launching in the Denver area and adding cities as mechanics join. Each mechanic sets how far they travel, and you'll only see mechanics who cover your address."),
 ]
 def faq_html(items):
@@ -194,8 +198,8 @@ home = f'''
 <section class="section">
   <div class="wrap svc-wrap">
     <div>
-      <div class="section-head" style="margin-bottom:24px"><h2>What mechanics do at your door</h2><p>Maintenance and most repairs that don't need a lift.</p></div>
-      <ul class="svc">{''.join(f'<li><a href="/app/?service={s.replace(" ", "+")}">{s}</a></li>' for s in SERVICES)}</ul>
+      <div class="section-head" style="margin-bottom:24px"><h2>Mobile mechanic services</h2><p>On-site car maintenance and repair: most jobs that don't need a lift, done at your home, office or wherever the car is parked.</p></div>
+      <ul class="svc">{''.join(f'<li><a href="/services/{x["slug"]}">{x["name"]}</a></li>' for x in SC.SERVICES)}</ul>
     </div>
     <div class="unsure">
       <h3>Not sure what's wrong?</h3>
@@ -377,15 +381,58 @@ about = '''
   <p>Our <a href="/terms">Terms of Service</a>, <a href="/privacy">Privacy Policy</a> and <a href="/mechanic-agreement">Mechanic Agreement</a> are governed by the laws of the State of Colorado.</p>
 </div></section>'''
 
+def ld(obj): return '<script type="application/ld+json">' + json.dumps(obj) + '</script>'
+FAQ_LD = ld({"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}} for q, a in FAQ]})
+
 pages = [
-  ('index', '/index', 'WrenchNow (Wrench Now): Mobile mechanics who come to you', 'Wrench Now sends background-checked mobile mechanics to fix your car at home or work, with upfront quotes. Compare prices, approve changes, and pay after the job.', home, ''),
+  ('index', '/index', 'Mobile Mechanic Near You | WrenchNow (Wrench Now): Car Repair at Home', 'Wrench Now is a mobile mechanic service. Background-checked mechanics come to your home or work for oil changes, brakes, batteries, diagnostics and more. Upfront quotes, pay after the job.', home, '', FAQ_LD),
   ('how-it-works', '/how-it-works', 'How it works · WrenchNow', 'How WrenchNow works for drivers and mechanics: request quotes, compare, book, approve price changes and pay after the job.', how, '/how-it-works'),
   ('mechanics', '/mechanics', 'For mechanics · WrenchNow', 'Join WrenchNow as a mobile mechanic. Set your own prices, 5% platform fee, free to join, paid to your bank through Stripe.', mech, '/mechanics'),
   ('pricing', '/pricing', 'Pricing · WrenchNow', 'What drivers and mechanics pay on WrenchNow: free quotes for drivers, a 5% platform fee for mechanics, and every other fee in full.', pricing, '/pricing'),
   ('about', '/about', 'About · WrenchNow', 'WrenchNow is a Denver company connecting drivers with independent mobile mechanics, with upfront quotes and payment through the app.', about, '/about'),
 ]
-for fn, path, title, desc, body, active in pages:
-    open(f'{OUT}/{fn}.html', 'w').write(page(path, title, desc, body, active))
+for fn, path, title, desc, body, active, *hd in pages:
+    open(f'{OUT}/{fn}.html', 'w').write(page(path, title, desc, body, active, *hd))
+
+# ── services hub + one page per service ──
+os.makedirs(OUT + '/services')
+def li(items): return '<ul>' + ''.join(f'<li>{x}</li>' for x in items) + '</ul>'
+for x in SC.SERVICES:
+    rel = ''.join(f'<li><a href="/services/{r}">{SC.BY_SLUG[r]["name"]}</a></li>' for r in x['related'])
+    q = x['app'].replace(' ', '+').replace("'", '%27')
+    body = f'''
+<section class="page-head"><div class="wrap"><p class="small crumbs"><a href="/">Home</a> / <a href="/services/">Services</a></p><h1>{x['h1']}</h1><p class="lede">{x['lede']}</p>
+<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:26px"><a class="btn btn-primary" href="/app/?service={q}">Get {x['name'].lower()} quotes</a><a class="btn btn-quiet" href="/how-it-works">How it works</a></div></div></section>
+<section class="section"><div class="wrap prose">
+  <h2 style="margin-top:0">Signs you need it</h2>{li(x['signs'])}
+  <h2>What the mobile mechanic does on site</h2>{li(x['onsite'])}
+  <p><strong>Good to know:</strong> {x['note']}</p>
+  <h2>How booking works</h2>
+  <p>Describe the job and your car, and background-checked mobile mechanics near you send upfront quotes with labor, parts and a time. Each quote shows an estimate of the dealer price next to it. Pick one, and the mechanic comes to your home or work. Your card is charged after the job, and any change in price needs your approval in the app first.</p>
+  <h2>Related services</h2><ul>{rel}<li><a href="/services/">All mobile mechanic services</a></li></ul>
+</div></section>
+<section class="close-cta"><div class="wrap"><h2>{x['name']}, without the waiting room.</h2><div class="actions"><a class="btn btn-primary" href="/app/?service={q}">Get quotes</a></div></div></section>'''
+    head = ld([{"@context": "https://schema.org", "@type": "Service", "name": x['name'], "serviceType": x['name'], "description": x['desc'], "areaServed": "US",
+                "provider": {"@type": "Organization", "name": "WrenchNow", "url": SITE + "/"}, "url": f"{SITE}/services/{x['slug']}"},
+               {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+                 {"@type": "ListItem", "position": 1, "name": "Home", "item": SITE + "/"},
+                 {"@type": "ListItem", "position": 2, "name": "Services", "item": SITE + "/services/"},
+                 {"@type": "ListItem", "position": 3, "name": x['name'], "item": f"{SITE}/services/{x['slug']}"}]}])
+    open(f"{OUT}/services/{x['slug']}.html", 'w').write(page(f"/services/{x['slug']}", x['title'], x['desc'], body, '/services/', head))
+
+cards = ''.join(f'<li><a href="/services/{x["slug"]}"><b>{x["name"]}</b><span>{x["desc"].split(". ")[0]}.</span></a></li>' for x in SC.SERVICES)
+hub = f'''
+<section class="page-head"><div class="wrap"><h1>Mobile mechanic services</h1><p class="lede">Car maintenance and repair at your home, office or wherever your car is parked. Background-checked mobile mechanics near you send upfront quotes, and you pay after the job.</p></div></section>
+<section class="section"><div class="wrap"><ul class="svc-list">{cards}</ul></div></section>
+<section class="section"><div class="wrap svc-wrap"><div class="prose">
+  <h2 style="margin-top:0">Why use a mobile mechanic?</h2>
+  <p>A mobile mechanic brings the shop to you. There's no drive to a garage, no waiting room and no ride to arrange. Because independent mobile mechanics don't pay shop rent, their prices are often well below a dealer's, and every WrenchNow quote shows the dealer estimate beside it.</p>
+  <p>Mobile auto repair covers most maintenance and many repairs. Jobs that need a lift or heavy equipment, like transmission rebuilds or wheel alignment, still need a shop, and your mechanic will tell you before quoting.</p>
+</div>
+<div class="unsure"><h3>Not sure what's wrong?</h3><p>Describe what you hear, see or smell. Mechanics quote a diagnosis visit, and some offer it free.</p><a class="btn btn-primary" href="/services/check-engine-light-diagnostic">Get a diagnosis</a></div></div></section>'''
+open(f'{OUT}/services/index.html', 'w').write(page('/services/', 'Mobile Mechanic Services: Car Repair at Home or Work | WrenchNow',
+  'Mobile mechanic services from WrenchNow: oil changes, brake repair, battery replacement, diagnostics, starters, alternators, inspections and more, at your home or work.', hub, '/services/'))
+
 
 # ── legal pages from the app's own legal text ──
 app = open(APP_SRC).read()
@@ -418,9 +465,9 @@ open(f'{OUT}/404.html', 'w').write(html404)
 shutil.copy(APP_SRC, f'{OUT}/app/index.html')
 shutil.copytree(HERE + '/fonts', f'{OUT}/fonts')
 for f in os.listdir(PWA): shutil.copy(f'{PWA}/{f}', OUT)
-urls = ['/', '/how-it-works', '/mechanics', '/pricing', '/about', '/terms', '/privacy', '/mechanic-agreement']
+urls = ['/', '/services/'] + [f"/services/{x['slug']}" for x in SC.SERVICES] + ['/how-it-works', '/mechanics', '/pricing', '/about', '/terms', '/privacy', '/mechanic-agreement']
 open(f'{OUT}/sitemap.xml', 'w').write('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + ''.join(f'  <url><loc>{SITE}{u}</loc><lastmod>2026-10-13</lastmod></url>\n' for u in urls) + '</urlset>\n')
 open(f'{OUT}/robots.txt', 'w').write(f'User-agent: *\nAllow: /\nSitemap: {SITE}/sitemap.xml\n')
-open(f'{OUT}/_redirects', 'w').write(''.join(f'{u}  {u}.html  200\n' for u in urls[1:]) + '/app  /app/  301\n')
+open(f'{OUT}/_redirects', 'w').write(''.join(f'{u}  {u}.html  200\n' for u in urls[1:] if not u.endswith('/')) + '/app  /app/  301\n/services  /services/  301\n')
 open(f'{OUT}/_headers', 'w').write('/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n/fonts/*\n  Cache-Control: public, max-age=2592000\n/*.png\n  Cache-Control: public, max-age=604800\n/sw.js\n  Cache-Control: no-cache\n')
 print('built', OUT, sorted(os.listdir(OUT)))
