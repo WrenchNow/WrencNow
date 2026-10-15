@@ -146,3 +146,19 @@ Quotes and finished jobs show "Typical dealer ≈ $X · you save about $Y": labo
 - Every job: **5% platform fee** (`PLATFORM_FEE_PCT`) + processing pass-through (`PROCESSING_FEE_PCT` 3.2 + `PROCESSING_FEE_CENTS` 55) that covers Stripe's card and payout fees.
 - Change the onboarding amounts with `ONBOARDING_TOTAL_CENTS` (5000), `ONBOARDING_PER_JOB_CENTS` (1000) and `ONBOARDING_MAX_PCT` (15) at deploy time. If you change them, update §6 of the Mechanic Agreement to match.
 - **Admin → Earnings** shows each month's jobs, your 5% fees, onboarding fees, estimated Stripe costs and your net. Checkr bills your card separately for background checks.
+
+## 19. Requests nobody can take yet (match by hand)
+- When no mechanic is listed near a customer, the search page asks them to **Send my request** instead of showing an empty list.
+- Open requests are emailed to every verified mechanic who travels to that area and does that level of work. The customer gets a "We got your request" email either way.
+- If nobody could be reached, your admin email is titled **MATCH BY HAND**. In Admin → Open quote requests you'll see the customer's name, email and phone, a **Needs a mechanic** tag, a **Send to a mechanic** picker (that mechanic is emailed) and an **Email customer** button.
+- Every morning at 9:05 (Denver), requests that ran out without a quote are closed and the customer is told, so nobody is left waiting.
+
+## 20. Sponsored placement (was "Featured")
+- The $29/month option is now called **Sponsored placement** everywhere, including the Stripe product name. Sponsored mechanics show in a row labeled "Sponsored" (max 3) above the results, only when they match the search. Regular results are ordered by Best match. The database field is still `is_featured`, so nothing needs migrating.
+
+## 21. Warranty, old parts, receipts (Colorado Motor Vehicle Repair Act)
+- Mechanics set their warranty (none / 30 / 90 days / 6 / 12 months) under My jobs → Your profile. It shows on their card, profile and the customer's receipt.
+- Customers can tick **Give me my old parts back** when requesting; the mechanic sees it on the request and the job.
+- The receipt email is itemized: labor, parts, total, vehicle, address, mechanic, warranty, reference.
+- The Mechanic Agreement now asks mechanics to follow the Colorado Motor Vehicle Repair Act. Have a Colorado attorney review the Terms and Mechanic Agreement before you scale.
+- **Rules changed:** paste `firestore_rules_to_paste.txt` into Firebase → Firestore → Rules → Publish (adds the `warranty_days` field).

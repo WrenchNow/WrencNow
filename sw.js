@@ -1,7 +1,7 @@
 // WrenchNow service worker: makes the app installable and lets visited pages open offline.
 // Pages always come from the network when online (so updates show right away); saved copies are
 // only used when there's no connection. Database and payment traffic is never cached.
-const CACHE = 'wrenchnow-v19a';
+const CACHE = 'wrenchnow-v19b';
 const SHELL = ['/', '/app/', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {

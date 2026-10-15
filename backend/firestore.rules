@@ -30,7 +30,8 @@ service cloud.firestore {
       allow update: if isAdmin()
         // A linked mechanic may edit their own public details (rate, bio, photo, travel area, pause)
         || (signedIn() && resource.data.owner_uid == request.auth.uid
-            && changes().hasOnly(['bio', 'photo', 'rate_num', 'rate_display', 'available_now', 'avail_label', 'zip', 'radius_mi', 'geo_lat', 'geo_lng', 'diag_fee_cents', 'updated_at'])
+            && changes().hasOnly(['bio', 'photo', 'rate_num', 'rate_display', 'available_now', 'avail_label', 'zip', 'radius_mi', 'geo_lat', 'geo_lng', 'diag_fee_cents', 'warranty_days', 'updated_at'])
+            && (!changes().hasAny(['warranty_days']) || request.resource.data.warranty_days == null || request.resource.data.warranty_days in [0, 30, 90, 180, 365])
             && (!changes().hasAny(['diag_fee_cents']) || request.resource.data.diag_fee_cents == null || (request.resource.data.diag_fee_cents is int && request.resource.data.diag_fee_cents >= 0 && request.resource.data.diag_fee_cents <= 50000))
             && (!changes().hasAny(['rate_num']) || (request.resource.data.rate_num is int && request.resource.data.rate_num >= 20 && request.resource.data.rate_num <= 500))
             && (!changes().hasAny(['bio']) || (request.resource.data.bio is string && request.resource.data.bio.size() <= 1500))

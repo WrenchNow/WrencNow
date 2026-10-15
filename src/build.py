@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Builds the WrenchNow site into an output folder:
    marketing pages at the root, the existing app at /app/, legal pages generated from the app's own legal text."""
-import json, hashlib, os, re, shutil, sys
+import json, hashlib, os, re, shutil, sys, datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import services_content as SC
 
@@ -95,7 +95,7 @@ def page(path, title, desc, body, active='', head=''):
     <div><h4>Drivers</h4><ul><li><a href="/app/">Get quotes</a></li><li><a href="/how-it-works">How it works</a></li><li><a href="/pricing">Pricing</a></li><li><a href="/app/">My bookings</a></li></ul></div>
     <div><h4>Services</h4><ul>{''.join(f'<li><a href="/services/{x["slug"]}">{x["name"]}</a></li>' for x in SC.SERVICES[:6])}<li><a href="/services/">All services</a></li></ul></div>
     <div><h4>Mechanics</h4><ul><li><a href="/mechanics">Why join</a></li><li><a href="/app/#apply">Apply</a></li><li><a href="/app/#jobs">My jobs</a></li><li><a href="/pricing#mechanics">Fees</a></li></ul></div>
-    <div><h4>Company</h4><ul><li><a href="/about">About</a></li><li><a href="/terms">Terms of Service</a></li><li><a href="/privacy">Privacy Policy</a></li><li><a href="/mechanic-agreement">Mechanic Agreement</a></li></ul></div>
+    <div><h4>Company</h4><ul><li><a href="/about">About</a></li><li><a href="/fleet">Business vehicles</a></li><li><a href="/terms">Terms of Service</a></li><li><a href="/privacy">Privacy Policy</a></li><li><a href="/mechanic-agreement">Mechanic Agreement</a></li></ul></div>
     <div class="legalline">© 2026 WrenchNow. Launching in Denver, with more cities as mechanics join.</div>
   </div>
 </footer>
@@ -123,7 +123,7 @@ def ticket_payout(title='A $200 job, paid through the app'):
     return f'''<figure class="ticket" aria-label="Payout example">
   <div class="t-head">
     <div><div class="t-kind">Payout example</div><div class="t-job">{title}</div><div class="t-car">Paid to your bank by Stripe</div></div>
-    <div class="t-stamp">No monthly fee</div>
+    <div class="t-stamp">No required monthly fee</div>
   </div>
   <ul class="t-rows num">
     <li><span>Customer pays</span><span>$200.00</span></li>
@@ -144,7 +144,10 @@ FAQ = SC.HOME_FAQ_EXTRA[:1] + [
  ("How are mechanics checked?", "Every mechanic passes a third-party background and driving-record check before their profile goes live. Full-service mechanics also show ASE certification or references. Mechanics with verified liability insurance carry an Insured badge. Checks lower the risk but can't guarantee future conduct; the Terms of Service explain the details."),
  ("What if the mechanic doesn't show up?", "Report it from My bookings after the appointment time. You aren't charged, and missed appointments appear on the mechanic's profile and lower their ranking."),
  *SC.HOME_FAQ_EXTRA[1:],
- ("Where is WrenchNow available?", "We're launching in the Denver area and adding cities as mechanics join. Each mechanic sets how far they travel, and you'll only see mechanics who cover your address."),
+ ("Can I cancel?", "Yes, free, any time before work starts, and your card isn't charged. If you booked a paid diagnosis and the mechanic has already done it, the diagnosis price is still due."),
+ ("Who pays for parts?", "Parts are included in the quote unless it says otherwise, and the mechanic brings them. If you'd rather supply your own, say so in your request. You can also ask to keep the old parts that are replaced."),
+ ("Is the work guaranteed?", "Each mechanic sets their own warranty on parts and labor, shown on their profile and your receipt. If something goes wrong, report it in the app before you're charged and the payment is held while we sort it out."),
+ ("Where is WrenchNow available?", "We're launching in the Denver area and adding cities as mechanics join. Each mechanic sets how far they travel, and you'll only see mechanics who cover your address. If none do yet, send your request anyway and we'll try to find you one."),
 ]
 def faq_html(items):
     return '<div class="faq">' + ''.join(f'<details><summary>{q}</summary><p>{a}</p></details>' for q, a in items) + '</div>'
@@ -213,7 +216,7 @@ home = f'''
   <div class="wrap band">
     <div>
       <h2>Mechanics keep more of every job</h2>
-      <p class="lede">Set your own prices, pick your jobs and get paid to your bank. No shop rent, no lead fees, no monthly fee.</p>
+      <p class="lede">Set your own prices, pick your jobs and get paid to your bank. No shop rent, no lead fees, no required monthly fee.</p>
       <ul class="checks">
         <li>{I['check']}<span>5% platform fee per job, plus card processing</span></li>
         <li>{I['check']}<span>Free to join: your background check is repaid from your first jobs</span></li>
@@ -290,9 +293,9 @@ mech = f'''
       <li><span>Platform fee<small>On each job paid through WrenchNow</small></span><span>5%</span></li>
       <li><span>Card processing<small>Covers Stripe's card and payout costs</small></span><span>3.2% + 55¢</span></li>
       <li><span>Onboarding<small>Repays your background check from your first paid jobs: up to $10 a job, never more than 15% of a job</small></span><span>$50 total</span></li>
-      <li><span>Featured placement<small>Optional. Pinned to the top of search with a Featured badge. Cancel anytime.</small></span><span>$29/mo</span></li>
+      <li><span>Sponsored placement<small>Optional. Shown in a row labeled Sponsored above results when you match the search. Cancel anytime.</small></span><span>$29/mo</span></li>
     </ul>
-    <p class="small" style="margin-top:14px">No monthly fee, no lead fees, no charge to quote. All fees are set out in the Mechanic Agreement.</p>
+    <p class="small" style="margin-top:14px">No required monthly fee, no lead fees, no charge to quote. All fees are set out in the Mechanic Agreement.</p>
   </div>
   <div>
     <h2>What you could make</h2>
@@ -322,7 +325,7 @@ mech = f'''
       <li>{I['check']}<span>Liability insurance is optional, and earns an Insured badge that ranks you higher</span></li>
     </ul>
     <h3 style="margin-top:28px">How you rank</h3>
-    <p class="small" style="font-size:16px;color:var(--soft)">Best match weighs your reviews most, then showing up for booked jobs, jobs completed, verification and insurance. Only jobs paid through WrenchNow count. Missed appointments and cancellations within 24 hours are shown on your profile.</p>
+    <p class="small" style="font-size:16px;color:var(--soft)">Best match weighs your reviews most, then showing up for booked jobs, jobs completed, verification and insurance. Only jobs paid through WrenchNow count. Missed appointments and cancellations within 24 hours are shown on your profile. Sponsored placement is labeled and shown separately; it never changes your best-match rank.</p>
   </div>
 </div></section>
 <section class="close-cta"><div class="wrap"><h2>Start getting jobs near you.</h2><div class="actions"><a class="btn btn-primary" href="/app/#apply">Apply now</a></div></div></section>'''
@@ -339,6 +342,7 @@ pricing = f'''
       <li><span>Booking fee</span><span>$0</span></li>
       <li><span>Diagnosis visit<small>Free or a set fee, shown on the mechanic's profile and quote</small></span><span>Varies</span></li>
       <li><span>Price changes<small>Only if you approve them in the app</small></span><span>Your call</span></li>
+      <li><span>Cancelling<small>Any time before work starts. A completed paid diagnosis is still due.</small></span><span>$0</span></li>
     </ul>
     <p class="small" style="margin-top:16px">Your card is charged after the job. Quotes include an estimate of what a typical dealer would charge for the same work.</p>
   </div>
@@ -349,7 +353,7 @@ pricing = f'''
       <li><span>Platform fee per job</span><span>5%</span></li>
       <li><span>Card processing<small>Stripe's card and payout costs</small></span><span>3.2% + 55¢</span></li>
       <li><span>Onboarding<small>From your first paid jobs, up to $10 each, max 15% of a job</small></span><span>$50 total</span></li>
-      <li><span>Featured placement<small>Optional</small></span><span>$29/mo</span></li>
+      <li><span>Sponsored placement<small>Optional, cancel anytime</small></span><span>$29/mo</span></li>
     </ul>
     <p class="small" style="margin-top:16px">When the founding offer ends, new mechanics pay a one-time $49 verification fee instead of the onboarding fee.</p>
   </div>
@@ -359,6 +363,23 @@ pricing = f'''
   {ticket_payout('A $200 brake job')}
 </div></section>
 <section class="close-cta"><div class="wrap"><h2>No surprises on either side.</h2><div class="actions"><a class="btn btn-primary" href="/app/">Get quotes</a><a class="btn btn-quiet" href="/app/#apply">Apply as a mechanic</a></div></div></section>'''
+
+# ── fleet ──
+fleet = '''
+<section class="page-head"><div class="wrap"><h1>Mobile mechanics for business vehicles</h1><p class="lede">Keep your work trucks, vans and company cars on the road. Mechanics come to your lot or job site, so vehicles aren't sitting at a shop and drivers aren't sitting in a waiting room.</p>
+<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:26px"><a class="btn btn-primary" href="mailto:hello@getwrenchnow.com?subject=Fleet%20maintenance">Email us about your vehicles</a><a class="btn btn-quiet" href="/app/">Book a single job</a></div></div></section>
+<section class="section"><div class="wrap prose">
+  <h2 style="margin-top:0">What it covers</h2>
+  <ul>
+    <li><strong>Routine maintenance on site:</strong> oil changes, filters, batteries, brakes, tire rotations and inspections, done at your lot.</li>
+    <li><strong>Repairs where the vehicle is:</strong> starters, alternators, belts, cooling and diagnostics, without a tow when the job allows it.</li>
+    <li><strong>Upfront prices:</strong> every job is quoted before work starts, and any change needs your approval in the app.</li>
+    <li><strong>Itemized receipts:</strong> each job comes with an emailed receipt listing labor and parts, for your books.</li>
+  </ul>
+  <h2>How it works</h2>
+  <p>Tell us how many vehicles you run, what they are and where they're parked. We'll line up background-checked mobile mechanics near you who do that work. Each job is quoted and paid through WrenchNow, the same as any booking.</p>
+  <p>We're starting in the Denver area. Email <a href="mailto:hello@getwrenchnow.com?subject=Fleet%20maintenance">hello@getwrenchnow.com</a> with your vehicles and location.</p>
+</div></section>'''
 
 # ── about ──
 about = '''
@@ -389,6 +410,7 @@ pages = [
   ('how-it-works', '/how-it-works', 'How it works · WrenchNow', 'How WrenchNow works for drivers and mechanics: request quotes, compare, book, approve price changes and pay after the job.', how, '/how-it-works'),
   ('mechanics', '/mechanics', 'For mechanics · WrenchNow', 'Join WrenchNow as a mobile mechanic. Set your own prices, 5% platform fee, free to join, paid to your bank through Stripe.', mech, '/mechanics'),
   ('pricing', '/pricing', 'Pricing · WrenchNow', 'What drivers and mechanics pay on WrenchNow: free quotes for drivers, a 5% platform fee for mechanics, and every other fee in full.', pricing, '/pricing'),
+  ('fleet', '/fleet', 'Mobile Fleet Maintenance for Business Vehicles | WrenchNow', 'Mobile mechanics for work trucks, vans and company cars in the Denver area. On-site maintenance and repair at your lot, with upfront quotes and itemized receipts.', fleet, '/fleet'),
   ('about', '/about', 'About · WrenchNow', 'WrenchNow is a Denver company connecting drivers with independent mobile mechanics, with upfront quotes and payment through the app.', about, '/about'),
 ]
 for fn, path, title, desc, body, active, *hd in pages:
@@ -465,8 +487,8 @@ open(f'{OUT}/404.html', 'w').write(html404)
 shutil.copy(APP_SRC, f'{OUT}/app/index.html')
 shutil.copytree(HERE + '/fonts', f'{OUT}/fonts')
 for f in os.listdir(PWA): shutil.copy(f'{PWA}/{f}', OUT)
-urls = ['/', '/services/'] + [f"/services/{x['slug']}" for x in SC.SERVICES] + ['/how-it-works', '/mechanics', '/pricing', '/about', '/terms', '/privacy', '/mechanic-agreement']
-open(f'{OUT}/sitemap.xml', 'w').write('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + ''.join(f'  <url><loc>{SITE}{u}</loc><lastmod>2026-10-13</lastmod></url>\n' for u in urls) + '</urlset>\n')
+urls = ['/', '/services/'] + [f"/services/{x['slug']}" for x in SC.SERVICES] + ['/how-it-works', '/mechanics', '/pricing', '/fleet', '/about', '/terms', '/privacy', '/mechanic-agreement']
+open(f'{OUT}/sitemap.xml', 'w').write('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + ''.join(f'  <url><loc>{SITE}{u}</loc><lastmod>{datetime.date.today().isoformat()}</lastmod></url>\n' for u in urls) + '</urlset>\n')
 open(f'{OUT}/robots.txt', 'w').write(f'User-agent: *\nAllow: /\nSitemap: {SITE}/sitemap.xml\n')
 open(f'{OUT}/_redirects', 'w').write(''.join(f'{u}  {u}.html  200\n' for u in urls[1:] if not u.endswith('/')) + '/app  /app/  301\n/services  /services/  301\n')
 open(f'{OUT}/_headers', 'w').write('/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n/fonts/*\n  Cache-Control: public, max-age=2592000\n/*.png\n  Cache-Control: public, max-age=604800\n/sw.js\n  Cache-Control: no-cache\n')

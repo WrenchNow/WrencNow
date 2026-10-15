@@ -1347,6 +1347,9 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
   padding: 4rem 2.5rem;
   max-width: 1200px; margin: 0 auto;
 }
+.parts-back{display:flex;gap:10px;align-items:flex-start;margin:-.25rem 0 1rem;font-size:13px;color:var(--cream);cursor:pointer;line-height:1.4}
+.parts-back input{margin-top:2px;width:18px;height:18px;accent-color:var(--ore);flex-shrink:0}
+.parts-back small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
 .fear-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -2267,6 +2270,8 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
 .admin-checks label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink); cursor: pointer; }
 .admin-checks input { accent-color: var(--ore); width: 16px; height: 16px; }
 .admin-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.admin-input { background: var(--surface); border: 0.5px solid var(--border-med); border-radius: 8px; padding: 7px 10px; color: var(--cream); font-family: var(--font-body); font-size: 13px; max-width: 100%; }
+a.admin-btn { text-decoration: none; display: inline-flex; align-items: center; }
 .admin-btn { font-family: var(--font-body); font-size: 12.5px; font-weight: 600; border-radius: 9px; padding: 8px 14px; cursor: pointer; border: 0.5px solid var(--border-med); background: transparent; color: var(--ink); }
 .admin-btn:hover { border-color: var(--ore); color: var(--cream); }
 .admin-btn.primary { background: var(--ore); border-color: var(--ore); color: #fff; }
@@ -2464,6 +2469,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
 @media (display-mode: standalone) { .nav { padding-top: env(safe-area-inset-top) !important; } }
 
 
+@media (max-width: 700px){ .footer-bottom{flex-direction:column;align-items:flex-start;gap:10px} }
 /* v19: desktop cards sit three-across (~360px), so let the head and foot wrap instead of crushing the name */
 @media (min-width: 701px) {
   .mcard-head { flex-wrap: wrap; align-items: center; gap: 6px 10px; }
@@ -2510,7 +2516,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
   <div class="nav-pills">
     <button class="npill on" onclick="showPanel('customer')">Find a Mechanic</button>
     <button class="npill" onclick="showPanel('mechanic')">For Mechanics</button>
-    <button class="npill" onclick="showPanel('dashboard')">Dashboard</button>
+    <button class="npill" onclick="showPanel('dashboard')">Mechanic login</button>
     <button class="npill" id="adminPill" style="display:none" onclick="showPanel('admin')">Admin</button>
   </div>
   <div class="nav-right" id="navRight">
@@ -2545,7 +2551,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
         <p class="hero-sub">Tell us what your car needs and where it is. Background-checked mechanics send upfront quotes, and you pay after the job.</p>
         <div class="hero-actions">
           <button class="btn-ore" onclick="document.getElementById('search-section').scrollIntoView({behavior:'smooth'})">
-            <i class="ti ti-search" aria-hidden="true"></i> Find My Mechanic — Free
+            <i class="ti ti-search" aria-hidden="true"></i> Get free quotes
           </button>
           <button class="btn-ghost" onclick="document.getElementById('how-section').scrollIntoView({behavior:'smooth'})">
             See how it works →
@@ -2599,14 +2605,6 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
           <p style="text-align:center;font-size:11px;color:#8a867c;margin-top:.85rem" id="heroPayLine">Free to browse · Compare quotes · Pay when the job is done</p>
         </div>
       </div>
-    </div>
-  </div>
-
-  <!-- CITY BAND -->
-  <div class="city-band" aria-hidden="true">
-    <div class="city-scroll">
-      <span>YOUR DRIVEWAY</span>·<span>YOUR PARKING LOT</span>·<span>YOUR OFFICE</span>·<span>YOUR SCHEDULE</span>·<span>YOUR TERMS</span>·<span>YOUR CITY</span>·<span>YOUR MECHANIC</span>·<span>YOUR DOOR</span>·<span>YOUR TIMELINE</span>·<span>YOUR RULES</span>·
-      <span>YOUR DRIVEWAY</span>·<span>YOUR PARKING LOT</span>·<span>YOUR OFFICE</span>·<span>YOUR SCHEDULE</span>·<span>YOUR TERMS</span>·<span>YOUR CITY</span>·<span>YOUR MECHANIC</span>·<span>YOUR DOOR</span>·<span>YOUR TIMELINE</span>·<span>YOUR RULES</span>·
     </div>
   </div>
 
@@ -2667,7 +2665,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
 
     <!-- Bottom nudge -->
     <div style="text-align:center;padding:1.5rem 0 .5rem">
-      <p style="font-size:13px;color:#8a867c">Not sure which to pick? <button onclick="openBooking(null)" style="background:none;border:none;color:var(--ore);cursor:pointer;font-size:13px;font-family:var(--font-body);text-decoration:underline;text-underline-offset:3px">Let us match you</button> — tell us the job and we'll assign a verified mechanic who does that kind of work.</p>
+      <p style="font-size:13px;color:#8a867c">Not sure which to pick? <button onclick="openBooking(null)" style="background:none;border:none;color:var(--ore);cursor:pointer;font-size:13px;font-family:var(--font-body);text-decoration:underline;text-underline-offset:3px">Send one request</button> and it goes to every verified mechanic nearby who does that kind of work.</p>
     </div>
   </div>
 
@@ -2694,7 +2692,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
         </div>
         <div class="step">
           <div class="step-dot">04</div>
-          <div class="step-title">Pay when you're happy</div>
+          <div class="step-title">Pay after the job</div>
           <div class="step-desc" id="howPayStep">Your card is saved when you accept a quote and charged only after the job is done. You agreed the price up front, and any change needs your OK first.</div>
         </div>
       </div>
@@ -2731,38 +2729,52 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
         <div class="fear-icon"><i class="ti ti-currency-dollar" aria-hidden="true"></i></div>
         <div>
           <div class="fear-q">"How do I know the price is fair?"</div>
-          <div class="fear-a">Every mechanic's rate is posted upfront. Before work starts, you get a written estimate. You approve it or cancel — no charge.</div>
+          <div class="fear-a">Every quote lists labor and parts before you book, next to an estimate of what a dealer would charge. Nothing changes unless you approve a revised price in the app.</div>
         </div>
       </div>
       <div class="fear-card">
         <div class="fear-icon"><i class="ti ti-shield-check" aria-hidden="true"></i></div>
         <div>
-          <div class="fear-q">"Are these mechanics actually any good?"</div>
-          <div class="fear-a">Look for the Verified badge. It means we ran a background and driving-record check, confirmed their ASE certification or called their references, and have their liability insurance on file. Star ratings only appear once a mechanic has completed jobs here.</div>
+          <div class="fear-q">"Are these mechanics any good?"</div>
+          <div class="fear-a">Every mechanic passes a background and driving-record check before going live, and full-service mechanics show ASE certification or references. Mechanics who upload liability insurance carry an Insured badge. Star ratings come only from paid jobs booked here.</div>
         </div>
       </div>
       <div class="fear-card">
-        <div class="fear-icon"><i class="ti ti-tools" aria-hidden="true"></i></div>
+        <div class="fear-icon"><i class="ti ti-calendar-x" aria-hidden="true"></i></div>
         <div>
-          <div class="fear-q">"What if I have no idea what's wrong with my car?"</div>
-          <div class="fear-a">Most customers don't — and that's exactly why we built this. Just describe what you're experiencing ("weird noise," "won't start," "yellow light on"). Your mechanic diagnoses it on-site and walks you through everything in plain English before touching a thing.</div>
+          <div class="fear-q">"Can I cancel?"</div>
+          <div class="fear-a">Yes. Cancel free any time before work starts, and your card is never charged. If you booked a paid diagnosis and the mechanic has already done it, the diagnosis fee is due even if you skip the repair.</div>
+        </div>
+      </div>
+      <div class="fear-card">
+        <div class="fear-icon"><i class="ti ti-package" aria-hidden="true"></i></div>
+        <div>
+          <div class="fear-q">"Who pays for parts?"</div>
+          <div class="fear-a">Parts are in the quote unless it says otherwise, and your mechanic brings them. Want to supply your own? Say so in your request; the mechanic can decline or adjust, and their warranty may not cover parts you supply. You can ask to keep your old parts.</div>
         </div>
       </div>
       <div class="fear-card">
         <div class="fear-icon"><i class="ti ti-rotate" aria-hidden="true"></i></div>
         <div>
           <div class="fear-q">"What if the problem comes back?"</div>
-          <div class="fear-a">If the same issue returns after your service, contact the mechanic directly first — most will come back and make it right. If that doesn't settle it, tell us and we'll help mediate between you.</div>
+          <div class="fear-a">Each mechanic sets their own warranty on parts and labor, shown on their profile. Contact them first. If that doesn't settle it, tell us; if you report a problem before you're charged, the payment is held while we look into it.</div>
+        </div>
+      </div>
+      <div class="fear-card">
+        <div class="fear-icon"><i class="ti ti-map-pin" aria-hidden="true"></i></div>
+        <div>
+          <div class="fear-q">"Where do you work?"</div>
+          <div class="fear-a">We're launching in the Denver area and adding cities as mechanics join. You'll only see mechanics who travel to your address. If none do yet, send your request anyway and we'll try to find one.</div>
         </div>
       </div>
     </div>
   </div>
 
   <!-- TESTIMONIALS -->
-  <div class="testi-section">
+  <div class="testi-section" id="testiSection" style="display:none">
     <div class="tag">Real customers</div>
     <div style="font-family:var(--font-display);font-size:44px;font-weight:900;margin-bottom:.5rem">EARNING YOUR TRUST</div>
-    <p style="color:var(--muted);font-size:15px;margin-bottom:2rem">We only publish reviews after a verified, completed job. No fake stars, no incentivized reviews — just honest feedback from real Denver drivers.</p>
+    <p style="color:var(--muted);font-size:15px;margin-bottom:2rem">We only publish reviews after a verified, completed job. No fake stars, no incentivized reviews — just honest feedback from customers.</p>
     <div class="testi-list" id="testiList"></div>
     <div id="testiEmpty" style="background:var(--raised);border:0.5px solid var(--border);border-radius:20px;padding:3.5rem 2rem;text-align:center;max-width:560px;margin:0 auto">
       <div style="font-size:40px;margin-bottom:1rem">⭐</div>
@@ -2791,17 +2803,17 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
 
   <div class="mhero-wrap">
     <div>
-      <div class="launch-tag">🎉 Founding Mechanic — 0% Platform Fee During Launch</div>
+      <div class="launch-tag"><span data-when="founding">Founding mechanics join free</span><span data-when="paid">5% per job, no required monthly fee</span></div>
       <div class="mhero-title">STOP<br>SPLITTING WITH<br><span class="ore">THE SHOP.</span></div>
-      <p class="hero-sub"><strong style="color:var(--green)">Free to join. Just 5% per job.</strong> Set your own prices. We keep 5% of each job, card processing (about 3%) comes out, and the rest goes straight to your bank. Your first jobs also include a small onboarding fee (up to $10 a job, $50 total) that covers your background check. No monthly fee. One <span data-fee>$49</span> verification fee covers your background check.</p>
+      <p class="hero-sub"><strong style="color:var(--green)">5% per job. Nothing else required.</strong> You set your prices. When a job is paid, WrenchNow keeps 5%, card processing (3.2% + 55¢) comes out, and the rest goes to your bank. <span data-when="founding">Joining is free: your $50 background check is repaid from your first paid jobs, up to $10 a job.</span><span data-when="paid">Joining costs a one-time <span data-fee>$49</span> for your background check.</span></p>
       <div class="hero-actions" style="margin-bottom:2rem">
-        <button class="btn-ore" onclick="openApply()" style="box-shadow:0 4px 20px rgba(46,199,122,0.25)"><i class="ti ti-clipboard-check" aria-hidden="true"></i> Apply — Founding Mechanic Spot</button>
-        <button class="btn-ghost" onclick="showPanel('dashboard')">View mechanic dashboard →</button>
+        <button class="btn-ore" onclick="openApply()" style="box-shadow:0 4px 20px rgba(46,199,122,0.25)"><i class="ti ti-clipboard-check" aria-hidden="true"></i> Apply as a mechanic</button>
+        <button class="btn-ghost" onclick="showPanel('dashboard')">Mechanic login</button>
       </div>
       <div class="hero-stats-row">
         <div><div class="hstat-num" style="color:var(--green)">5%</div><div class="hstat-label">Platform fee per job</div></div>
-        <div><div class="hstat-num" data-fee>$49</div><div class="hstat-label">To join (background check)</div></div>
-        <div><div class="hstat-num">$29<span style="font-size:15px;font-weight:600">/mo</span></div><div class="hstat-label">Optional: Featured placement</div></div>
+        <div><div class="hstat-num"><span data-when="founding">$0</span><span data-when="paid" data-fee>$49</span></div><div class="hstat-label">To join</div></div>
+        <div><div class="hstat-num">$29<span style="font-size:15px;font-weight:600">/mo</span></div><div class="hstat-label">Optional: Sponsored placement</div></div>
       </div>
     </div>
     <div>
@@ -2811,7 +2823,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
           <div class="ec-change">Simple math, not a promise</div>
         </div>
         <div class="ec-amount" id="calcOut">$0</div>
-        <div class="ec-period">per month after WrenchNow's 5% and card processing (~3%), before parts, fuel and taxes</div>
+        <div class="ec-period">per month after WrenchNow's 5% and card processing, before parts, fuel and taxes</div>
         <div class="calc-row"><label for="calcHours">Booked hours per week <b id="calcHoursV">15</b></label><input type="range" id="calcHours" min="2" max="50" value="15" oninput="updateCalc()"/></div>
         <div class="calc-row"><label for="calcRate">Your hourly rate <b id="calcRateV">$70</b></label><input type="range" id="calcRate" min="30" max="150" step="5" value="70" oninput="updateCalc()"/></div>
         <div class="ec-stats" style="margin-top:1rem">
@@ -2823,13 +2835,13 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
     </div>
   </div>
 
-  <!-- FREE LAUNCH BANNER -->
+  <!-- FEES, IN ONE PLACE -->
   <div style="padding:0 2.5rem;max-width:1200px;margin:0 auto">
     <div class="launch-banner">
-      <div class="launch-banner-icon">🚀</div>
+      <div class="launch-banner-icon">💵</div>
       <div>
-        <div class="launch-banner-title">Founding mechanics — 5% flat, no monthly fee</div>
-        <div class="launch-banner-sub">A shop takes a big cut of every job. We take <strong style="color:var(--green)">5%</strong>, plus card processing (about 3%). Your background check is paid back from your first jobs (up to $10 a job, $50 total). The only other cost is a one-time <span data-fee>$49</span> verification fee for your background check. Want more jobs? Go Featured for $29/month and get pinned to the top of search results.</div>
+        <div class="launch-banner-title">Every fee, in one place</div>
+        <div class="launch-banner-sub"><strong style="color:var(--green)">5%</strong> platform fee on each paid job, plus card processing of 3.2% + 55¢. <span data-when="founding">Founding mechanics join free; the $50 background-check cost is repaid from your first paid jobs at up to $10 a job and never more than 15% of a job.</span><span data-when="paid">A one-time <span data-fee>$49</span> verification fee covers your background check.</span> Sponsored placement is optional at $29/month. No lead fees, no fee to quote, no required monthly fee.</div>
       </div>
     </div>
   </div>
@@ -2839,8 +2851,8 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
     <div class="tag">Why mechanics choose us</div>
     <div style="font-family:var(--font-display);font-size:44px;font-weight:900;margin-bottom:1.5rem">BUILT FOR<br>WORKING MECHANICS</div>
     <div class="perks">
-      <div class="perk" style="border-color:rgba(46,199,122,0.3);background:linear-gradient(160deg,rgba(46,199,122,0.05),transparent)"><div class="perk-icon" style="color:var(--green)"><i class="ti ti-gift" aria-hidden="true"></i></div><div class="perk-title">5% platform fee <span class="free-badge">flat</span></div><div class="perk-desc">Keep about 92% of every job after our 5% and card processing. Free to join: your background check is repaid from your first jobs (up to $10 each, $50 total). No monthly fee, no lead fees, no paying to quote.</div></div>
-      <div class="perk"><div class="perk-icon" style="color:var(--amber)"><i class="ti ti-star" aria-hidden="true"></i></div><div class="perk-title">Go Featured — $29/mo</div><div class="perk-desc">Optional. Featured mechanics are pinned to the top of search results with a gold badge, so customers see you first. Cancel anytime.<br><button class="btn-ghost" style="margin-top:.75rem;padding:8px 14px;font-size:13px" onclick="openProUpgrade(this)">Get Featured</button></div></div>
+      <div class="perk" style="border-color:rgba(46,199,122,0.3);background:linear-gradient(160deg,rgba(46,199,122,0.05),transparent)"><div class="perk-icon" style="color:var(--green)"><i class="ti ti-gift" aria-hidden="true"></i></div><div class="perk-title">5% platform fee <span class="free-badge">flat</span></div><div class="perk-desc">On a $200 job you keep $183.05 after our 5% and card processing. No required monthly fee, no lead fees, no paying to quote.</div></div>
+      <div class="perk"><div class="perk-icon" style="color:var(--amber)"><i class="ti ti-star" aria-hidden="true"></i></div><div class="perk-title">Sponsored placement — $29/mo</div><div class="perk-desc">Optional. Sponsored mechanics appear in a row labeled “Sponsored” above the search results, when they do the customer’s job and travel to them. Cancel anytime.<br><button class="btn-ghost" style="margin-top:.75rem;padding:8px 14px;font-size:13px" onclick="openProUpgrade(this)">Get Sponsored placement</button></div></div>
       <div class="perk"><div class="perk-icon"><i class="ti ti-shield-check" aria-hidden="true"></i></div><div class="perk-title">A badge customers trust</div><div class="perk-desc">Pass verification and your profile carries the Verified badge — the first thing customers look for before letting someone work on their car.</div></div>
       <div class="perk"><div class="perk-icon"><i class="ti ti-calendar-stats" aria-hidden="true"></i></div><div class="perk-title">You set the schedule</div><div class="perk-desc">Take the requests that suit you and pass on the ones that don't. No quotas, no penalties.</div></div>
       <div class="perk"><div class="perk-icon"><i class="ti ti-cash" aria-hidden="true"></i></div><div class="perk-title">Your rate, paid on completion</div><div class="perk-desc">You set your prices. The customer's card is saved when they accept your quote and charged when the job is done. Stripe sends your share straight to your bank, no chasing payments.</div></div>
@@ -2854,7 +2866,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
       <div>
         <div class="tag">Who can join</div>
         <div style="font-family:var(--font-display);font-size:44px;font-weight:900;line-height:.95;margin-bottom:1rem">WHAT YOU<br><span class="ore">NEED TO</span><br>GET STARTED</div>
-        <p style="color:var(--muted);font-size:14px;max-width:340px;line-height:1.7">Every mechanic passes a background and driving-record check before their profile goes live, usually within 3–5 business days. <strong style="color:var(--green)">Joining: <span data-fee>$49</span></strong> <span style="font-size:12px">(founding mechanics repay a $50 onboarding fee from their first jobs instead: up to $10 a job)</span>.</p>
+        <p style="color:var(--muted);font-size:14px;max-width:340px;line-height:1.7">Every mechanic passes a background and driving-record check before their profile goes live, usually within 3–5 business days. <strong style="color:var(--green)"><span data-when="founding">Joining is free for founding mechanics.</span><span data-when="paid">Joining: <span data-fee>$49</span>.</span></strong></p>
         <button class="btn-ore" style="margin-top:1.5rem;box-shadow:0 4px 20px rgba(46,199,122,0.2)" onclick="openApply()"><i class="ti ti-clipboard-check" aria-hidden="true"></i> Start My Application</button>
       </div>
       <div>
@@ -2862,9 +2874,9 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
           <li class="req-item"><i class="ti ti-circle-check" aria-hidden="true"></i> Valid driver's license + clean driving record</li>
           <li class="req-item"><i class="ti ti-circle-check" aria-hidden="true"></i> Basic maintenance: no certification needed. Full-service repair: ASE certification or 3+ years</li>
           <li class="req-item"><i class="ti ti-circle-check" aria-hidden="true"></i> Your own tools and transport vehicle</li>
-          <li class="req-item"><i class="ti ti-circle-check" aria-hidden="true"></i> Proof of general liability insurance</li>
+          <li class="req-item"><i class="ti ti-circle-check" aria-hidden="true"></i> Liability insurance is recommended, not required. Upload proof to earn the Insured badge</li>
           <li class="req-item"><i class="ti ti-circle-check" aria-hidden="true"></i> A phone and email you check — booking requests come to you there</li>
-          <li class="req-item"><i class="ti ti-circle-check" aria-hidden="true"></i> Pass a background and driving-record check (one-time <span data-fee>$49</span> fee)</li>
+          <li class="req-item"><i class="ti ti-circle-check" aria-hidden="true"></i> Pass a background and driving-record check</li>
           <li class="req-item"><i class="ti ti-circle-check" aria-hidden="true"></i> Two work references we can call, if you are not ASE certified</li>
         </ul>
       </div>
@@ -2874,7 +2886,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
   <!-- MECHANIC CTA -->
   <div class="cta-band">
     <h2>READY TO<br><span class="ore">GO MOBILE?</span></h2>
-    <p>Keep more of what you earn. Set your own rate, choose your own jobs, work when you want. Customers come to you — no shop overhead, no boss taking a cut.</p>
+    <p>Set your own rate, choose your own jobs and work when you want. No shop overhead, and every job is paid through the app.</p>
     <div class="cta-band-actions">
       <button class="btn-ore" onclick="openApply()"><i class="ti ti-clipboard-check" aria-hidden="true"></i> Apply as a Mechanic</button>
       <button class="btn-ghost" onclick="showPanel('customer')">Looking for a mechanic? →</button>
@@ -2892,7 +2904,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
   <div class="dash-wrap" id="dashDemo">
     <div class="dash-topbar">
       <div class="dash-greeting">
-        <h2>Your dashboard <span style="font-size:12px;font-weight:500;color:var(--green);background:rgba(46,199,122,0.1);border:0.5px solid rgba(46,199,122,0.2);border-radius:6px;padding:2px 8px;margin-left:6px">0% fee · Launch period</span></h2>
+        <h2>Your dashboard </h2>
         <p id="dashDate"></p>
       </div>
       <div class="dash-actions">
@@ -2937,15 +2949,15 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
         <div class="panel-card">
                   <!-- PRO UPGRADE CARD -->
         <div class="pro-upgrade-card" id="proUpgradeCard">
-          <div class="pro-upgrade-title">⭐ Go Featured</div>
-          <div class="pro-upgrade-price">$29/month · Cancel anytime · <span style="color:var(--green);font-weight:600">Free platform membership during launch</span></div>
+          <div class="pro-upgrade-title">Sponsored placement</div>
+          <div class="pro-upgrade-price">$29/month · Cancel anytime · <span style="color:var(--green);font-weight:600">5% platform fee per job, as always</span></div>
           <ul class="pro-upgrade-features">
-            <li>Gold "Featured" badge on your profile</li>
-            <li>Pinned to the top of search results</li>
+            <li>Shown in the labeled Sponsored row</li>
+            <li>Only for searches you match</li>
             <li>Highlighted profile card — stands out instantly</li>
           </ul>
           <button class="pro-upgrade-btn" onclick="openProUpgrade(this)">
-            <i class="ti ti-star" aria-hidden="true"></i> Upgrade to Featured — $29/mo
+            <i class="ti ti-star" aria-hidden="true"></i> Get Sponsored placement — $29/mo
           </button>
         </div>
 
@@ -3052,7 +3064,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
 <div class="panel" id="panel-admin">
   <div class="admin-wrap">
     <div class="admin-h">ADMIN</div>
-    <div class="admin-sub">Verify applicants, keep bookings moving, and manage who is live and featured.</div>
+    <div class="admin-sub">Verify applicants, match requests, keep bookings moving, and manage who is live and sponsored.</div>
     <div id="adminBody"></div>
   </div>
 </div>
@@ -3144,6 +3156,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
           <label class="field-label" for="modalNotes">Any other details? (optional)</label>
           <textarea class="field-input" id="modalNotes" placeholder="Sounds, symptoms, warning lights, recent work done…" style="resize:none;height:60px;line-height:1.5"></textarea>
         </div>
+        <label class="parts-back"><input type="checkbox" id="modalPartsBack"/> <span>Give me my old parts back <small>The mechanic leaves the parts they replace with you (except warranty-exchange parts).</small></span></label>
         <div class="field">
           <label class="field-label" for="reqPhotos">📷 Photos (optional, up to 3)</label>
           <input type="file" id="reqPhotos" accept="image/*" multiple onchange="pickReqPhotos(this)" style="font-size:12px;color:var(--muted);max-width:100%"/>
@@ -3316,9 +3329,9 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
         <div class="footer-col-title">For Customers</div>
         <div class="footer-links">
           <a href="#" onclick="showPanel('customer');return false">Find a Mechanic</a>
-          <a href="#" onclick="showPanel('customer');setTimeout(()=>document.getElementById('how-section').scrollIntoView({behavior:'smooth'}),100);return false">How It Works</a>
-          <a href="#" onclick="showPanel('customer');setTimeout(()=>document.getElementById('mechs-section').scrollIntoView({behavior:'smooth'}),100);return false">Supported Services</a>
-          <a href="#" onclick="showPanel('customer');setTimeout(()=>document.querySelector('.testi-section').scrollIntoView({behavior:'smooth'}),100);return false">Customer Reviews</a>
+          <a href="/how-it-works">How it works</a>
+          <a href="/services/">Services</a>
+          <a href="/pricing">Pricing</a>
         </div>
       </div>
       <div>
@@ -3326,7 +3339,7 @@ footer{border-top:0.5px solid var(--border);padding:3rem 2.5rem 2rem;background:
         <div class="footer-links">
           <a href="#" onclick="showPanel('mechanic');openApply();return false">Apply Now</a>
           <a href="#" onclick="showPanel('mechanic');return false">Why Join</a>
-          <a href="#" onclick="showPanel('dashboard');return false">Dashboard Preview</a>
+          <a href="#" onclick="showPanel('dashboard');return false">Mechanic login</a>
         </div>
       </div>
       <div>
@@ -3393,7 +3406,6 @@ const FEATURED_PAYMENT_LINK = 'https://buy.stripe.com/cNieVe8413tQ1sUcKG6oo02'; 
 // ─── RESEND CONFIG ──────────────────────────────────────
 // Emails fire via Firebase Cloud Functions (free tier)
 // Deploy: firebase deploy --only functions
-const RESEND_FROM = 'WrenchNow <noreply@wrenchnow.com>';
 
 let MECHANICS = {};
 
@@ -3423,7 +3435,7 @@ function mechToLookup(m) {
     id: m.id || m.slug,
     ownerUid: m.owner_uid || '',
     photo: safePhoto(m.photo),
-    insured: m.insured === true, diag: diagLabel(m), noShows: m.no_shows || 0, lateCancels: m.late_cancels || 0,
+    insured: m.insured === true, diag: diagLabel(m), warranty: m.warranty_days > 0 ? warrantyLabel(m) : '', noShows: m.no_shows || 0, lateCancels: m.late_cancels || 0,
     bookBtn: 'Get a quote from ' + m.name.split(' ')[0]
   };
 }
@@ -3479,20 +3491,21 @@ function renderMechCard(m) {
   else if(m.badge_type === 'top'){ badge.className = badgeMap.top[0]; badge.textContent = badgeMap.top[1]; }
   else { badge.className = 'mbadge mbadge-unverified'; badge.textContent = 'Not yet verified'; }
 
-  // Featured card styling
-  if(m.is_featured) {
+  // Sponsored card styling (only in the capped Sponsored row)
+  let sponBadge = null;
+  if(m._spon) {
     card.classList.add('featured-card');
-    const crownBadge = document.createElement('div');
-    crownBadge.className = 'mbadge mbadge-featured';
-    crownBadge.innerHTML = '<span class="featured-crown">★</span> Featured';
-    badge.replaceWith(crownBadge);
+    sponBadge = document.createElement('div');
+    sponBadge.className = 'mbadge mbadge-featured';
+    sponBadge.textContent = 'Sponsored';
   }
 
   // Head row
   const head = document.createElement('div');
   head.className = 'mcard-head';
   head.appendChild(avatar); head.appendChild(meta);
-  head.appendChild(m.is_featured ? head.querySelector('.mbadge-featured') || badge : badge);
+  head.appendChild(badge);
+  if(sponBadge) head.appendChild(sponBadge);
 
   // Stars
   const stars = document.createElement('div');
@@ -3510,6 +3523,7 @@ function renderMechCard(m) {
   const trust = (txt, cls) => { const t = document.createElement('span'); t.className = 'mtag ' + cls; t.textContent = txt; tagsEl.appendChild(t); };
   if(m.insured) trust('✓ Insured', 'mtag-ok');
   if(diagLabel(m)) trust(diagLabel(m), m.diag_fee_cents === 0 ? 'mtag-ok' : 'mtag-level');
+  if(m.warranty_days > 0) trust(warrantyLabel(m), 'mtag-ok');
   if(m.no_shows > 0) trust(m.no_shows + ' no-show' + (m.no_shows === 1 ? '' : 's'), 'mtag-warn');
   const tagList = (m.specialties||[]).slice(0,4);
   const extra = (m.specialties||[]).length - 4;
@@ -3629,7 +3643,7 @@ async function loadMechanics() {
     if(!data){
       data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       // Sort by featured first, then rating
-      data.sort((a,b) => { if(a.is_featured && !b.is_featured) return -1; if(!a.is_featured && b.is_featured) return 1; return (b.rating||0)-(a.rating||0); });
+      data.sort((a,b) => (b.rating||0)-(a.rating||0));
       try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), rows: data })); } catch(e){}
     }
 
@@ -3671,8 +3685,9 @@ async function loadMechanics() {
         w.appendChild(n); w.appendChild(l); statsRow.appendChild(w);
       };
       const totalJobs = data.reduce((sum, m) => sum + (m.jobs_completed||0), 0);
-      if(data.length > 0) addStat(String(data.length), 'Mechanic' + (data.length !== 1 ? 's' : '') + ' on WrenchNow');
-      if(totalJobs > 0) addStat(totalJobs.toLocaleString(), 'Job' + (totalJobs !== 1 ? 's' : '') + ' completed');
+      // small numbers read as 'empty', so counts only show once they're meaningful
+      if(data.length >= 10) addStat(String(data.length), 'Mechanics on WrenchNow');
+      if(totalJobs >= 25) addStat(totalJobs.toLocaleString(), 'Job' + (totalJobs !== 1 ? 's' : '') + ' completed');
       renderSavingsStat();
     }
 
@@ -3755,6 +3770,7 @@ function normalizeMech(m){
     service_level: m.service_level === 'basic' ? 'basic' : 'full', photo: safePhoto(m.photo), payouts_ready: m.payouts_ready === true,
     hidden: m.hidden === true,
     diag_fee_cents: Number.isInteger(m.diag_fee_cents) && m.diag_fee_cents >= 0 && m.diag_fee_cents <= 50000 ? m.diag_fee_cents : null,
+    warranty_days: [0, 30, 90, 180, 365].includes(m.warranty_days) ? m.warranty_days : null,
     insured: m.insured === true && (!m.insured_until || !(Date.parse(m.insured_until) < Date.now())), insured_until: str(m.insured_until, 10),
     no_shows: Math.max(0, parseInt(m.no_shows) || 0), late_cancels: Math.max(0, parseInt(m.late_cancels) || 0),
     owner_uid: str(m.owner_uid, 128), zip: str(m.zip, 10),
@@ -3805,6 +3821,7 @@ function savingsLine(x, mech, paid){
   return 'Typical dealer ≈ ' + money(Math.round(est / 500) * 500) + ' · you save about ' + money(Math.round(save / 500) * 500) + ' (' + Math.round(save / est * 100) + '%)';
 }
 function priceLabel(b){ const c = b.final_cents || b.price_cents || 0; return b.booking_kind === 'diagnosis' && !c ? 'Free diagnosis' : money(c) + (b.booking_kind === 'diagnosis' && !b.final_cents ? ' diagnosis' : ''); }
+function warrantyLabel(m){ const d = m && m.warranty_days; if(d == null) return ''; if(d === 0) return 'No warranty'; return d === 365 ? '12-month warranty' : d + '-day warranty'; }
 function diagLabel(m){ if(!m || mechLevel(m) === 'basic' || m.diag_fee_cents == null) return ''; return m.diag_fee_cents === 0 ? 'Free diagnosis' : 'Diagnosis ' + money(m.diag_fee_cents); }
 function isDiagnosisJob(text){ return /not sure|diagnos|check engine|warning light|weird noise|won'?t start|inspection/i.test(text || ''); }
 // Best match: reviews matter most (more reviews = more trust), then showing up, then experience, verification and insurance
@@ -3968,9 +3985,9 @@ function renderGrid(){
   }
   if(!ALL_MECHS.length){
     if(meta) meta.textContent = '';
-    grid.appendChild(gridEmpty("We're just getting started",
-      "We're signing up our first mechanics right now. Check back soon — or if you turn wrenches yourself, grab a founding spot.",
-      [['Are you a mechanic? Join us →', 'btn-ore', () => showPanel('mechanic')]]));
+    grid.appendChild(gridEmpty("Tell us what you need. We'll find you a mechanic.",
+      "We're still adding mechanics, so none are listed for your search yet. Send your request (it's free) and we'll line up a mechanic near you. Quotes come to your email, and nothing is charged until a job is done.",
+      [['Send my request', 'btn-ore', () => openBooking(null)], ['I’m a mechanic', 'btn-ghost', () => showPanel('mechanic')]]));
     return;
   }
 
@@ -4004,14 +4021,14 @@ function renderGrid(){
 
   if(!list.length && farCount && !view.terms.length && view.filter === 'all'){
     grid.appendChild(gridEmpty("No mechanics travel to " + (CUSTOMER_GEO.label || 'that address') + " yet",
-      "We're adding mechanics area by area. Send us the job and we'll try to find someone, or check back soon.",
-      [['Show all mechanics', 'btn-ghost', () => { setCustomerGeo(null); resetView(); }], ['Let us match you', 'btn-ore', () => openBooking(null)]]));
+      "We're adding mechanics area by area. Send your request (it's free) and we'll try to line up a mechanic near you. Quotes come to your email.",
+      [['Send my request', 'btn-ore', () => openBooking(null)], ['Show all mechanics', 'btn-ghost', () => { setCustomerGeo(null); resetView(); }]]));
     return;
   }
   if(!list.length){
     grid.appendChild(gridEmpty('No one lists ' + (what || 'that') + ' yet',
-      "Most mechanics can still diagnose it on site. See everyone, or send us the job and we'll match you.",
-      [['Show all mechanics', 'btn-ghost', resetView], ['Let us match you', 'btn-ore', () => openBooking(null)]]));
+      "Most mechanics can still diagnose it on site. Send your request and we'll match you, or see everyone.",
+      [['Send my request', 'btn-ore', () => openBooking(null)], ['Show all mechanics', 'btn-ghost', resetView]]));
     return;
   }
 
@@ -4020,12 +4037,14 @@ function renderGrid(){
     const sp = document.createElement('span'); sp.textContent = text; if(muted) sp.style.color = 'var(--muted)';
     el.appendChild(sp); return el;
   };
-  const featured = list.filter(m => m.is_featured);
-  const regular  = list.filter(m => !m.is_featured);
+  // Paid placement: clearly labeled, capped at 3, and only mechanics who already match this search
+  const featured = list.filter(m => m.is_featured).slice(0, 3);
+  const regular  = list.filter(m => !featured.includes(m));
+  list.forEach(m => { m._spon = featured.includes(m); });
   if(featured.length){
-    grid.appendChild(label('★ Featured mechanics'));
+    grid.appendChild(label('Sponsored'));
     featured.forEach(m => grid.appendChild(renderMechCard(m)));
-    if(regular.length) grid.appendChild(label('All mechanics', true));
+    if(regular.length) grid.appendChild(label(view.sort === 'best' ? 'Best match' : 'All results', true));
   }
   regular.forEach(m => grid.appendChild(renderMechCard(m)));
   highlightSavedMechanic();
@@ -4411,6 +4430,7 @@ function openProfile(mechKey){
     if(m.verified) addBadge('pbadge-verified', 'ti-shield-check', 'Verified — background & driving record');
     if(m.insured) addBadge('pbadge-verified', 'ti-certificate', 'Insured — certificate checked');
     if(m.diag) addBadge('pbadge-insured', 'ti-stethoscope', m.diag);
+    if(m.warranty) addBadge('pbadge-insured', 'ti-certificate', m.warranty);
     if(m.noShows || m.lateCancels) addBadge('pbadge-insured', 'ti-alert-triangle', [m.noShows ? m.noShows + ' no-show' + (m.noShows === 1 ? '' : 's') : '', m.lateCancels ? m.lateCancels + ' last-minute cancellation' + (m.lateCancels === 1 ? '' : 's') : ''].filter(Boolean).join(' · '));
     else addBadge('pbadge-insured', 'ti-clock', 'Verification in progress');
   }
@@ -4684,7 +4704,7 @@ function closeLegalOutside(e, id) {
 function openProUpgrade(btn) {
   // Featured subscription needs its own LIVE Stripe link — set FEATURED_PAYMENT_LINK at the top of this script
   if(FEATURED_PAYMENT_LINK){ window.open(FEATURED_PAYMENT_LINK, '_blank', 'noopener noreferrer'); return; }
-  if(btn){ btn.disabled = true; btn.textContent = 'Featured listings open soon'; }
+  if(btn){ btn.disabled = true; btn.textContent = 'Sponsored placement opens soon'; }
 }
 
 let agreementPending = false; // Flag to track if we're in agreement flow
@@ -4835,7 +4855,7 @@ async function loadAdmin(){
     root.innerHTML = '';
     root.appendChild(adminPayments(mechs));
     root.appendChild(adminApplications(apps.filter(a => (a.status || 'pending') === 'pending'), mechs));
-    root.appendChild(await adminRequests(reqs));
+    root.appendChild(await adminRequests(reqs, mechs));
     root.appendChild(adminBookings(books.slice(0, 40), priv, mechs));
     root.appendChild(adminMessages(msgs));
     root.appendChild(adminMechanics(mechs, priv, done, insDocs));
@@ -4950,6 +4970,7 @@ async function loadHomeReviews(){
     listEl.innerHTML = '';
     good.forEach(r => { const c = document.createElement('div'); c.className = 'testi-card'; c.appendChild(reviewNode(r, true)); listEl.appendChild(c); });
     empty.style.display = good.length ? 'none' : '';
+    const sec = document.getElementById('testiSection'); if(sec) sec.style.display = good.length ? '' : 'none';
   } catch(e){ /* leave the "coming soon" card */ }
 }
 loadHomeReviews();
@@ -4975,7 +4996,7 @@ function updateCalc(){
   const h = +document.getElementById('calcHours').value, r = +document.getElementById('calcRate').value;
   document.getElementById('calcHoursV').textContent = h;
   document.getElementById('calcRateV').textContent = '$' + r;
-  document.getElementById('calcOut').textContent = '$' + (Math.round(h * r * 4.33 * 0.92 / 10) * 10).toLocaleString();   // after 5% + ~3% processing
+  document.getElementById('calcOut').textContent = '$' + (Math.round(h * r * 4.33 * 0.915 / 10) * 10).toLocaleString();   // after 5% + ~3% processing
 }
 updateCalc();
 
@@ -4997,7 +5018,9 @@ function paymentsOn(){ return !!FUNCTIONS_BASE; }
 // Founding offer: free verification for early mechanics (on unless switched off in Admin)
 function feeWaived(){ return SITE_CONFIG.verify_fee_waived !== false; }
 function applyFeeCopy(){
+  document.querySelectorAll('[data-when]').forEach(el => { el.style.display = (el.dataset.when === 'founding') === feeWaived() ? '' : 'none'; });
   document.querySelectorAll('[data-fee]').forEach(el => {
+    if(el.closest('[data-when]')) { el.textContent = '$' + VERIFY_FEE; return; }
     if(el.closest('#applyPayBtn')) { el.textContent = '$' + VERIFY_FEE; return; }
     if(feeWaived()){ el.innerHTML = ''; const st = document.createElement('s'); st.textContent = '$' + VERIFY_FEE; st.style.opacity = '.6'; el.appendChild(st); el.appendChild(document.createTextNode(' FREE')); }
     else el.textContent = '$' + VERIFY_FEE;
@@ -5164,6 +5187,7 @@ async function sendRequest(){
       customer_id: currentUser.uid,
       customer_first: ((currentUser.displayName || '').trim().split(/\s+/)[0] || 'Customer').slice(0, 30),
       service, vehicle, notes, urgency: document.getElementById('modalUrgency').value,
+      parts_back: !!(document.getElementById('modalPartsBack') || {}).checked,
       level_needed: levelNeeded((service + ' ' + notes).toLowerCase()),
       photos: REQ.photos.slice(0, 3),
       zip, approx_lat: g ? Math.round(g.lat * 100) / 100 : null, approx_lng: g ? Math.round(g.lng * 100) / 100 : null,
@@ -5192,10 +5216,15 @@ async function sendRequest(){
   document.getElementById('modalBody').style.display = 'none';
   document.getElementById('bookingHeader').style.display = 'none';
   document.getElementById('successState').style.display = 'block';
-  document.getElementById('successSub').textContent = (picked.length ? 'Sent to ' + picked.map(k => MECHANICS[k].name.split(' ')[0]).join(', ') + '.' : 'Sent to verified mechanics near you who do this work.')
-    + " Quotes show up in My requests as they arrive, and we'll email you. Requests stay open for 3 days.";
+  const nearby = ALL_MECHS.filter(m => m.verified && !m.hidden && (!g || m.geo_lat == null || m.geo_lng == null || milesBetween({ lat: g.lat, lng: g.lng }, { lat: m.geo_lat, lng: m.geo_lng }) <= (m.radius_mi || 25))).length;
+  document.getElementById('successSub').textContent = picked.length
+    ? 'Sent to ' + picked.map(k => MECHANICS[k].name.split(' ')[0]).join(', ') + ". Quotes show up in My bookings as they arrive, and we'll email you. Requests stay open for 3 days."
+    : nearby
+      ? "Sent to verified mechanics near you who do this work. Quotes show up in My bookings as they arrive, and we'll email you. Requests stay open for 3 days."
+      : "There isn't a mechanic listed near you yet, so we're finding one for you. We'll email you when a quote is ready. Nothing is charged unless you accept a quote and the job is done.";
   ['modalService', 'modalNotes'].forEach(id => { document.getElementById(id).value = ''; });
   document.getElementById('modalUrgency').value = 'flexible';
+  const pb = document.getElementById('modalPartsBack'); if(pb) pb.checked = false;
   REQ.photos = []; COMPARE.clear(); renderCompareBar(); renderGrid();
 }
 
@@ -5283,7 +5312,7 @@ async function acceptQuote(){
     batch.set(bookingRef, {
       customer_id: currentUser.uid, customer_email: currentUser.email || '', customer_name: currentUser.displayName || '',
       customer_phone: priv.phone || '', address: priv.address || '',
-      service: r.service || '', vehicle: r.vehicle || '', notes: r.notes || '', urgency: r.urgency || 'flexible',
+      service: r.service || '', vehicle: r.vehicle || '', notes: r.notes || '', urgency: r.urgency || 'flexible', parts_back: r.parts_back === true,
       booking_date_iso: q.date_iso, booking_date: dayLabel(q.date_iso) === 'Today' || dayLabel(q.date_iso) === 'Tomorrow' ? new Date(isoMs(q.date_iso)).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : dayLabel(q.date_iso),
       booking_time: q.time,
       mechanic_slug: q.mechanic_slug || raw.slug || '', mechanic_name: q.mechanic_name || '', mechanic_doc: q.mechanic_doc, mechanic_uid: q.mechanic_uid,
@@ -5368,7 +5397,7 @@ async function checkMechanic(){
     } catch(e){ MY_MECH = null; }
   }
   const pill = document.querySelectorAll('.npill')[2];
-  if(pill) pill.textContent = MY_MECH ? 'My jobs' : 'Dashboard';
+  if(pill) pill.textContent = MY_MECH ? 'My jobs' : 'Mechanic login';
   renderMechGate();
   if(document.getElementById('panel-dashboard').classList.contains('on')) loadMechPortal();
 }
@@ -5378,14 +5407,14 @@ function renderMechGate(){
   if(!gate) return;
   gate.innerHTML = '';
   portal.style.display = MY_MECH ? '' : 'none';
-  demo.style.display = MY_MECH ? 'none' : '';
+  demo.style.display = 'none';
   gate.style.display = MY_MECH ? 'none' : '';
   if(MY_MECH) return;
   const box = document.createElement('div'); box.className = 'mp-gate';
   const p = document.createElement('p'); const actions = document.createElement('div'); actions.className = 'admin-actions';
   const btn = (label, cls, fn) => { const b = document.createElement('button'); b.className = 'admin-btn ' + cls; b.textContent = label; b.addEventListener('click', fn); actions.appendChild(b); return b; };
   if(!currentUser){
-    p.innerHTML = '<strong style="color:var(--cream)">This is a preview with sample data.</strong> Already approved as a mechanic? Log in with the email you applied with to see your real booking requests.';
+    p.innerHTML = '<strong style="color:var(--cream)">Mechanic login.</strong> Approved mechanics: log in with the email you applied with to see your jobs, quotes and payouts.';
     btn('Log in', 'primary', () => openAuth('login'));
     btn('Apply as a mechanic', '', () => { showPanel('mechanic'); openApply(); });
   } else if(!currentUser.emailVerified){
@@ -5393,7 +5422,8 @@ function renderMechGate(){
     btn('Resend the link', '', async e => { try { await currentUser.sendEmailVerification(); e.target.textContent = 'Sent — check your inbox'; } catch(err){ e.target.textContent = 'Try again in a minute'; } });
     btn("I've confirmed", 'primary', async () => { try { await currentUser.reload(); currentUser = auth.currentUser || currentUser; await currentUser.getIdToken(true); } catch(e){} checkMechanic(); });
   } else {
-    p.innerHTML = '<strong style="color:var(--cream)">No mechanic profile is linked to ' + esc(currentUser.email) + '.</strong> If you applied with a different email, log in with that one. If you applied recently, your profile appears here once it is approved.';
+    p.innerHTML = '<strong style="color:var(--cream)">No mechanic profile is linked to ' + esc(currentUser.email) + '.</strong> Looking for your car bookings? They\'re under My bookings. Mechanics: if you applied with a different email, log in with that one; new profiles appear here once approved.';
+    btn('My bookings', 'primary', () => openMyBookings());
     btn('Apply as a mechanic', '', () => { showPanel('mechanic'); openApply(); });
   }
   box.appendChild(p); box.appendChild(actions); gate.appendChild(box);
@@ -5429,7 +5459,7 @@ async function loadMechPortal(){
   });
   head.appendChild(av); head.appendChild(t); head.appendChild(tog);
   if(m.hidden){ const hn = document.createElement('div'); hn.className = 'admin-meta'; hn.style.flexBasis = '100%'; hn.textContent = 'Your profile is hidden from customers right now. Contact WrenchNow to show it again.'; head.appendChild(hn); }
-  if(!m.is_featured){ const f = document.createElement('button'); f.className = 'admin-btn'; f.textContent = 'Get Featured — $29/mo'; f.addEventListener('click', () => openProUpgrade(f)); head.appendChild(f); }
+  if(!m.is_featured){ const f = document.createElement('button'); f.className = 'admin-btn'; f.textContent = 'Get Sponsored placement — $29/mo'; f.addEventListener('click', () => openProUpgrade(f)); head.appendChild(f); }
   root.appendChild(head);
 
   // keep the quote-matching index current (level, location, travel distance)
@@ -5529,6 +5559,8 @@ async function loadMechPortal(){
     const aw = fld('Diagnosis fee ($)', diagAmt).parentNode;
     const showAmt = () => { aw.style.display = diagSel.value === 'fee' ? '' : 'none'; }; diagSel.addEventListener('change', showAmt); showAmt();
   }
+  const war = document.createElement('select'); [['', 'Not set'], ['0', 'No warranty'], ['30', '30 days, parts and labor'], ['90', '90 days, parts and labor'], ['180', '6 months, parts and labor'], ['365', '12 months, parts and labor']].forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; war.appendChild(o); });
+  war.value = m.warranty_days == null ? '' : String(m.warranty_days); fld('Your warranty on work', war);
   const bio = document.createElement('textarea'); bio.rows = 4; bio.maxLength = 1500; bio.value = m.bio || ''; fld('About you', bio, true);
   card.appendChild(grid);
   const sr = document.createElement('div'); sr.className = 'admin-actions'; sr.style.marginTop = '.75rem';
@@ -5539,6 +5571,7 @@ async function loadMechPortal(){
     const patch = { rate_num: r, rate_display: '$' + r, bio: bio.value.trim().slice(0, 1500), radius_mi: Number(rad.value), updated_at: new Date().toISOString() };
     if(zip.value.trim() !== m.zip){ const g = await geocode(zip.value.trim() + ', USA'); patch.zip = zip.value.trim(); patch.geo_lat = g ? g.lat : null; patch.geo_lng = g ? g.lng : null; }
     if(newPhoto) patch.photo = newPhoto;
+    patch.warranty_days = war.value === '' ? null : Number(war.value);
     if(diagSel){
       if(diagSel.value === 'fee'){ const d = Math.round(Number(diagAmt.value) * 100); if(!(d >= 100 && d <= 50000)) throw new Error('Diagnosis fee must be between $1 and $500.'); patch.diag_fee_cents = d; }
       else patch.diag_fee_cents = diagSel.value === 'free' ? 0 : null;
@@ -5569,7 +5602,7 @@ async function quoteRequestCard(r, m){
   const nm = document.createElement('div'); nm.className = 'admin-name'; nm.textContent = r.service || 'Request';
   const meta = document.createElement('div'); meta.className = 'admin-meta';
   const dist = (r.approx_lat != null && m.geo_lat != null) ? milesBetween({ lat: r.approx_lat, lng: r.approx_lng }, { lat: m.geo_lat, lng: m.geo_lng }) : null;
-  meta.textContent = [(r.customer_first || 'Customer') + (r.vehicle ? ' · ' + r.vehicle : ''), (r.zip ? 'ZIP ' + r.zip : 'Area not given') + (dist != null ? ' · ≈ ' + Math.round(dist) + ' mi from you' : ''), 'Prefers ' + (r.pref_dates || []).map(dayLabel).join(', ') + ((r.pref_parts || []).length ? ' · ' + r.pref_parts.join(' / ') : ''), r.urgency && r.urgency !== 'flexible' ? 'Urgency: ' + r.urgency : '', r.notes].filter(Boolean).join('\n');
+  meta.textContent = [(r.customer_first || 'Customer') + (r.vehicle ? ' · ' + r.vehicle : ''), (r.zip ? 'ZIP ' + r.zip : 'Area not given') + (dist != null ? ' · ≈ ' + Math.round(dist) + ' mi from you' : ''), 'Prefers ' + (r.pref_dates || []).map(dayLabel).join(', ') + ((r.pref_parts || []).length ? ' · ' + r.pref_parts.join(' / ') : ''), r.urgency && r.urgency !== 'flexible' ? 'Urgency: ' + r.urgency : '', r.parts_back ? 'Wants their old parts back' : '', r.notes].filter(Boolean).join('\n');
   meta.style.whiteSpace = 'pre-line';
   left.appendChild(nm); left.appendChild(meta);
   if(Array.isArray(r.photos) && r.photos.length){ const ps = document.createElement('div'); ps.className = 'photo-strip'; r.photos.slice(0, 3).forEach(p => { if(typeof p === 'string' && p.indexOf('data:image/jpeg;base64,') === 0){ const a = document.createElement('a'); a.href = p; a.target = '_blank'; const im = document.createElement('img'); im.src = p; im.alt = 'Customer photo'; a.appendChild(im); ps.appendChild(a); } }); left.appendChild(ps); }
@@ -5641,7 +5674,7 @@ function mechBookingCard(b){
   meta.appendChild(document.createTextNode((b.customer_name || 'Customer') + ' ')); meta.appendChild(contactLine('', b.customer_phone));
   meta.appendChild(document.createElement('br'));
   if(b.address){ const a = document.createElement('a'); a.href = mapsLink(b.address); a.target = '_blank'; a.rel = 'noopener'; a.textContent = b.address; meta.appendChild(a); meta.appendChild(document.createElement('br')); }
-  meta.appendChild(document.createTextNode([b.vehicle, b.urgency && b.urgency !== 'flexible' ? 'Urgency: ' + b.urgency : '', b.notes].filter(Boolean).join(' · ')));
+  meta.appendChild(document.createTextNode([b.vehicle, b.urgency && b.urgency !== 'flexible' ? 'Urgency: ' + b.urgency : '', b.parts_back ? 'Leave the old parts with the customer' : '', b.notes].filter(Boolean).join(' · ')));
   if(b.payment_status === 'paid' && b.mechanic_net_cents){ meta.appendChild(document.createElement('br')); meta.appendChild(document.createTextNode('Paid ' + money(b.paid_cents) + ' · you receive ' + money(b.mechanic_net_cents) + ' (5% platform ' + money(b.platform_fee_cents || 0) + ', processing ' + money(b.processing_cents || 0) + (b.onboarding_cents ? ', onboarding ' + money(b.onboarding_cents) : '') + ')')); }
   if(b.price_cents || b.booking_kind === 'diagnosis'){ meta.appendChild(document.createElement('br')); meta.appendChild(document.createTextNode('Agreed: ' + priceLabel(b) + (b.revision && b.revision.status === 'pending' ? ' · revised price ' + money(b.revision.total_cents) + ' waiting for the customer' : '') + (b.revision && b.revision.status === 'rejected' ? ' · revision rejected' : '') + ' · ' + ({ pay_mechanic: 'customer pays you directly', needs_card: 'customer has not added a card yet', card_saved: 'card on file', charge_now: 'payment processing', charging: 'payment processing', paid: 'paid', payment_failed: 'customer payment failed', disputed: 'customer reported a problem' }[b.payment_status] || ''))); }
   left.appendChild(nm); left.appendChild(meta); row.appendChild(left);
@@ -6046,7 +6079,8 @@ function adminPayments(mechs){
   sc.appendChild(sf); sec.appendChild(sc);
   return sec;
 }
-async function adminRequests(reqs){
+async function adminRequests(reqs, mechs){
+  mechs = mechs || [];
   const sec = adminSection('Open quote requests', reqs.length + ' open');
   if(!reqs.length){ const e = document.createElement('div'); e.className = 'admin-empty'; e.textContent = 'No open requests.'; sec.appendChild(e); return sec; }
   for(const r of reqs.slice(0, 25)){
@@ -6059,9 +6093,25 @@ async function adminRequests(reqs){
     const meta = document.createElement('div'); meta.className = 'admin-meta';
     meta.textContent = [(r.customer_first || '') + ' · ' + (r.vehicle || ''), (r.mode === 'open' ? 'Open to nearby' : 'Sent to ' + (r.invited_names || []).join(', ')) + (r.zip ? ' · ZIP ' + r.zip : ''), quotes.length ? 'Quotes: ' + quotes.map(q => (q.mechanic_name || '').split(' ')[0] + ' ' + money(q.total_cents)).join(', ') : 'No quotes yet'].join('\n');
     meta.style.whiteSpace = 'pre-line';
-    left.appendChild(nm); left.appendChild(meta); row.appendChild(left); row.appendChild(adminTag(fmtDate(r.created_at) || 'open'));
+    let priv = {}; try { const ps = await db.collection('request_private').doc(r.id).get(); priv = ps.exists ? ps.data() : {}; } catch(e){}
+    const contact = [priv.customer_name, priv.customer_email, priv.phone].filter(Boolean).join(' · ');
+    if(contact) meta.textContent += '\nCustomer: ' + contact;
+    if(r.parts_back) meta.textContent += '\nWants old parts back';
+    left.appendChild(nm); left.appendChild(meta); row.appendChild(left);
+    row.appendChild(quotes.length ? adminTag(fmtDate(r.created_at) || 'open') : adminTag('Needs a mechanic', 'due'));
     card.appendChild(row);
     const acts = document.createElement('div'); acts.className = 'admin-actions'; acts.style.marginTop = '.6rem';
+    // Match by hand: send this request to a specific mechanic (they're emailed)
+    const pick = document.createElement('select'); pick.className = 'admin-input'; pick.setAttribute('aria-label', 'Send to a mechanic');
+    const o0 = document.createElement('option'); o0.value = ''; o0.textContent = 'Send to a mechanic…'; pick.appendChild(o0);
+    mechs.filter(m => !m.hidden && !(r.invited_docs || []).includes(m.id)).forEach(m => { const o = document.createElement('option'); o.value = m.id; o.textContent = m.name + (m.zip ? ' · ' + m.zip : '') + (m.owner_uid ? '' : ' (not logged in yet)'); pick.appendChild(o); });
+    acts.appendChild(pick);
+    acts.appendChild(adminBtn('Send', 'primary', async () => {
+      const m = mechs.find(x => x.id === pick.value); if(!m) throw new Error('Pick a mechanic first.');
+      const FV = firebase.firestore.FieldValue;
+      await db.collection('requests').doc(r.id).update({ invited_docs: FV.arrayUnion(m.id), invited_names: FV.arrayUnion(m.name), ...(m.owner_uid ? { invited_uids: FV.arrayUnion(m.owner_uid) } : {}) });
+    }));
+    if(priv.customer_email){ const a = document.createElement('a'); a.className = 'admin-btn'; a.textContent = 'Email customer'; a.href = 'mailto:' + priv.customer_email + '?subject=' + encodeURIComponent('Your WrenchNow request: ' + (r.service || '')); acts.appendChild(a); }
     acts.appendChild(adminBtn('Close request', '', async () => { if(confirm('Close this request? Mechanics will no longer see it.')) await db.collection('requests').doc(r.id).update({ status: 'cancelled', closed_by: 'admin' }); }));
     card.appendChild(acts); sec.appendChild(card);
   }
@@ -6190,7 +6240,7 @@ function adminBookings(books, priv, mechs){
     meta.appendChild(document.createTextNode('Mechanic: ' + (b.mechanic_name || 'Unassigned') + ' '));
     const p = priv[b.mechanic_slug]; if(p) meta.appendChild(contactLine(p.email, p.phone));
     meta.appendChild(document.createElement('br'));
-    meta.appendChild(document.createTextNode([b.vehicle, b.address, b.urgency && b.urgency !== 'flexible' ? 'Urgency: ' + b.urgency : '', b.notes].filter(Boolean).join(' · ')));
+    meta.appendChild(document.createTextNode([b.vehicle, b.address, b.urgency && b.urgency !== 'flexible' ? 'Urgency: ' + b.urgency : '', b.parts_back ? 'Wants old parts back' : '', b.notes].filter(Boolean).join(' · ')));
     if(b.price_cents || b.booking_kind === 'diagnosis'){ meta.appendChild(document.createElement('br')); meta.appendChild(document.createTextNode('Price ' + priceLabel(b) + ' · payment: ' + (b.payment_status || 'n/a') + (b.dispute_note ? ' · problem: ' + b.dispute_note : '') + (b.payment_error ? ' · ' + b.payment_error : ''))); }
     left.appendChild(nm); left.appendChild(meta);
     row.appendChild(left);
@@ -6331,7 +6381,7 @@ function adminBroken(broken){
 function adminMechanics(mechs, priv, done, insDocs){
   insDocs = insDocs || {};
   const feat = mechs.filter(m => m.is_featured).length;
-  const sec = adminSection('Mechanics', mechs.length + ' live' + (feat ? ' · ' + feat + ' featured' : ''));
+  const sec = adminSection('Mechanics', mechs.length + ' live' + (feat ? ' · ' + feat + ' sponsored' : ''));
   if(!mechs.length){ const e = document.createElement('div'); e.className = 'admin-empty'; e.textContent = 'No mechanics published yet.'; sec.appendChild(e); return sec; }
   mechs.sort((a,b) => (a.name || '').localeCompare(b.name || '')).forEach(m => {
     const p = priv[m.slug]; const n = done[m.slug] || 0;
@@ -6345,7 +6395,7 @@ function adminMechanics(mechs, priv, done, insDocs){
     left.appendChild(nm); left.appendChild(meta);
     const right = document.createElement('div'); right.style.textAlign = 'right';
     if(m.hidden){ right.appendChild(adminTag('Hidden', 'warn')); right.appendChild(document.createTextNode(' ')); }
-    if(m.is_featured){ right.appendChild(adminTag('Featured', 'due')); right.appendChild(document.createTextNode(' ')); }
+    if(m.is_featured){ right.appendChild(adminTag('Sponsored', 'due')); right.appendChild(document.createTextNode(' ')); }
     right.appendChild(adminTag(m.verified ? 'Verified' : 'Not verified', m.verified ? 'ok' : 'warn'));
     const ins = insDocs[m.id];
     if(m.insured){ right.appendChild(document.createTextNode(' ')); right.appendChild(adminTag('Insured', 'ok')); }
@@ -6357,14 +6407,14 @@ function adminMechanics(mechs, priv, done, insDocs){
 
     const acts = document.createElement('div'); acts.className = 'admin-actions'; acts.style.marginTop = '.7rem'; acts.style.alignItems = 'center';
     const note = document.createElement('div'); note.className = 'admin-meta'; note.style.marginRight = 'auto';
-    note.textContent = m.is_featured ? 'Featured — pinned to the top of search results' : '';
+    note.textContent = m.is_featured ? 'Sponsored: shown in the labeled Sponsored row when they match a search' : '';
     acts.appendChild(note);
     const upd = patch => async () => { await db.collection('mechanics').doc(m.id).update(patch); try { sessionStorage.removeItem('ww_mechanics_cache'); } catch(e){} loadMechanics(); };
     if(!m.verified) acts.appendChild(adminBtn("I've checked them — mark verified", 'good', upd({ verified: true, verified_at: new Date().toISOString(), badge_type: 'verified' })));
     acts.appendChild(adminBtn(mechLevel(m) === 'basic' ? 'Allow Full-service' : 'Limit to Basic', '', upd(mechLevel(m) === 'basic' ? { service_level: 'full' } : { service_level: 'basic', specialties: (m.specialties || []).filter(sv => BASIC_SERVICES.includes(sv)).concat((m.specialties || []).some(sv => BASIC_SERVICES.includes(sv)) ? [] : ['Oil change']) })));
     if(ins && !m.insured) acts.appendChild(adminBtn("Certificate checks out — mark insured", 'good', upd({ insured: true, insured_until: ins.expires, insured_checked_at: new Date().toISOString() })));
     if(m.insured) acts.appendChild(adminBtn('Remove Insured', '', upd({ insured: false })));
-    acts.appendChild(adminBtn(m.is_featured ? 'Remove Featured' : 'Make Featured', m.is_featured ? '' : 'primary', upd({ is_featured: !m.is_featured })));
+    acts.appendChild(adminBtn(m.is_featured ? 'Remove Sponsored' : 'Make Sponsored', m.is_featured ? '' : 'primary', upd({ is_featured: !m.is_featured })));
     acts.appendChild(adminBtn(m.hidden ? 'Show on site' : 'Hide from site', m.hidden ? 'primary' : '', upd(m.hidden ? { hidden: false } : { hidden: true, is_featured: false })));
     acts.appendChild(adminBtn(m.available_now ? 'Pause bookings' : 'Resume bookings', '', upd(m.available_now ? { available_now: false, avail_label: 'Not taking jobs right now' } : { available_now: true, avail_label: 'Taking bookings' })));
     // Edit the public details, or take the profile off the site
@@ -7339,7 +7389,7 @@ auth.onAuthStateChanged((user) => {
     <div class="legal-head">
       <div>
         <div class="legal-title">Terms of Service</div>
-        <div class="legal-updated">Last updated: October 12, 2026</div>
+        <div class="legal-updated">Last updated: October 15, 2026</div>
       </div>
       <button class="legal-close" onclick="closeLegal('tosOverlay')" aria-label="Close"><i class="ti ti-x" aria-hidden="true"></i></button>
     </div>
@@ -7384,9 +7434,13 @@ auth.onAuthStateChanged((user) => {
       <p><strong>Quotes.</strong> Mechanics send a price (labor and parts) before any work is booked. The Customer accepts or declines. If the Mechanic finds more work is needed, they send a revised price, and nothing changes unless the Customer approves it; if the Customer declines, the original price stands.</p>
       <p><strong>Payment.</strong> All jobs booked on WrenchNow are paid through WrenchNow. The Customer's card is saved through Stripe, Inc. when they accept a quote and is charged the agreed (or approved revised) price when the Customer confirms the job is done, or 48 hours after the Mechanic marks it done unless the Customer reports a problem first. Reporting a problem holds the payment while WrenchNow looks into it. Payments are processed by Stripe and paid out to the Mechanic through Stripe; WrenchNow never stores card numbers. Card processing costs and WrenchNow's 5% platform fee are deducted from the Mechanic's share and shown in their Stripe account.</p>
       <p>Refunds are decided case by case after hearing from both sides. Payment problems must be raised within 30 days of the job.</p>
+      <p><strong>Cancellations.</strong> A Customer may cancel a booking at no charge any time before work starts, and the saved card is not charged. If the Customer booked a paid diagnosis and the Mechanic has completed it, the agreed diagnosis price is due even if the Customer declines the repair. A Mechanic who cancels within 24 hours of a job, or does not show up, has it recorded on their profile; the Customer is never charged for a no-show.</p>
+      <p><strong>Parts.</strong> Unless a quote says otherwise, its price includes the parts, and the Mechanic supplies them. A Customer who wants to supply their own parts must say so in the request; the Mechanic may decline or adjust the quote, and the Mechanic's warranty may not cover parts the Customer supplies. A Customer may ask, when requesting the job, for the replaced parts to be returned, except parts that must go back to a supplier or manufacturer under a warranty or exchange.</p>
+      <p><strong>Estimates and receipts.</strong> The accepted quote is the written estimate for the job, and the Customer's acceptance in the app is their authorization. Any additional work needs the Customer's approval of a revised price in the app before it is done. WrenchNow emails a receipt showing the labor, parts and total for each paid job.</p>
+      <p><strong>Sponsored listings.</strong> Mechanics may pay for Sponsored placement. Sponsored listings are labeled "Sponsored", appear only when the Mechanic matches the search, and are limited in number; all other results are ordered by the sort the Customer chooses.</p>
 
       <h2>8. Dispute Resolution Between Customers and Mechanics</h2>
-      <p>WrenchNow provides a dispute mediation process to assist in resolving disagreements between Customers and Mechanics. <strong>WrenchNow does not guarantee the outcome of any dispute, does not guarantee the quality of work performed, and does not offer any warranty or guarantee on automotive services booked through the platform.</strong> Any resolution is at WrenchNow's sole discretion and is provided as a courtesy only. Customers should raise any concerns directly with the Mechanic in the first instance.</p>
+      <p>WrenchNow provides a dispute mediation process to assist in resolving disagreements between Customers and Mechanics. <strong>WrenchNow does not guarantee the outcome of any dispute, does not guarantee the quality of work performed, and does not itself offer any warranty or guarantee on automotive services booked through the platform.</strong> Any warranty on the work is offered by the Mechanic and shown on their profile. Any resolution is at WrenchNow's sole discretion and is provided as a courtesy only. Customers should raise any concerns directly with the Mechanic in the first instance.</p>
 
       <h2>9. Prohibited Conduct</h2>
       <p>You agree not to:</p>
@@ -7401,7 +7455,7 @@ auth.onAuthStateChanged((user) => {
       </ul>
 
       <h2>10. Reviews and Content</h2>
-      <p>By submitting a review or any other content to the platform, you grant WrenchNow a non-exclusive, worldwide, royalty-free licence to use, reproduce, modify, and display that content. You represent that your content is truthful and does not violate any third party's rights. WrenchNow reserves the right to remove any content at its sole discretion.</p>
+      <p>By submitting a review or any other content to the platform, you grant WrenchNow a non-exclusive, worldwide, royalty-free license to use, reproduce, modify, and display that content. You represent that your content is truthful and does not violate any third party's rights. WrenchNow reserves the right to remove any content at its sole discretion.</p>
 
       <h2>11. Intellectual Property</h2>
       <p>All content on the WrenchNow platform, including but not limited to text, graphics, logos, icons, and software, is the property of WrenchNow or its licensors and is protected by applicable intellectual property laws. You may not copy, reproduce, distribute, or create derivative works without express written permission.</p>
@@ -7413,7 +7467,7 @@ auth.onAuthStateChanged((user) => {
       <p>You agree to indemnify, defend, and hold harmless WrenchNow and its officers, directors, employees, agents, and affiliates from and against any and all claims, liabilities, damages, losses, costs, and expenses (including reasonable legal fees) arising out of or relating to your use of the platform, your violation of these Terms, or your violation of any rights of another person or entity.</p>
 
       <h2>14. Dispute Resolution and Arbitration</h2>
-      <p>Any dispute, claim, or controversy arising out of or relating to these Terms or your use of the platform shall be resolved by binding arbitration administered by a mutually agreed arbitration organisation, rather than in court, except that you may assert claims in small claims court if they qualify.</p>
+      <p>Any dispute, claim, or controversy arising out of or relating to these Terms or your use of the platform shall be resolved by binding arbitration administered by a mutually agreed arbitration organization, rather than in court, except that you may assert claims in small claims court if they qualify.</p>
       <p><strong>You waive any right to a jury trial and any right to participate in a class action lawsuit or class-wide arbitration.</strong></p>
 
       <h2>15. Governing Law</h2>
@@ -7432,7 +7486,7 @@ auth.onAuthStateChanged((user) => {
       <p>These Terms, together with our Privacy Policy and any other policies incorporated by reference, constitute the entire agreement between you and WrenchNow regarding your use of the platform.</p>
 
       <h2>20. Contact</h2>
-      <p>For questions about these Terms, please contact us at legal@wrenchnow.com.</p>
+      <p>For questions about these Terms, please contact us at hello@getwrenchnow.com.</p>
 
     </div>
   </div>
@@ -7446,7 +7500,7 @@ auth.onAuthStateChanged((user) => {
     <div class="legal-head">
       <div>
         <div class="legal-title">Privacy Policy</div>
-        <div class="legal-updated">Last updated: October 12, 2026</div>
+        <div class="legal-updated">Last updated: October 15, 2026</div>
       </div>
       <button class="legal-close" onclick="closeLegal('privacyOverlay')" aria-label="Close"><i class="ti ti-x" aria-hidden="true"></i></button>
     </div>
@@ -7494,13 +7548,13 @@ auth.onAuthStateChanged((user) => {
       <ul>
         <li><strong>With Mechanics:</strong> When you ask for quotes, mechanics see your first name, vehicle, the job, any photos you add, and your ZIP code / rough area. Your exact address and phone number are shared only with the one Mechanic whose quote you accept</li>
         <li><strong>With Customers:</strong> Mechanic profiles including name, location, specialties, ratings, and verified job prices are visible to all users</li>
-        <li><strong>With service providers:</strong> We use Google Firebase (database and sign-in), Stripe (payments), Resend (email), and, for mechanic applicants who consent, a background-check provider to operate the platform. These providers process data on our behalf under confidentiality obligations</li>
+        <li><strong>With service providers:</strong> We use Google Firebase (database and sign-in), Stripe (payments), Resend (email), OpenStreetMap's Nominatim service (to turn an address or ZIP code into a map location for distance matching), jsDelivr (icon files), and, for mechanic applicants who consent, a background-check provider to operate the platform. These providers process data on our behalf under confidentiality obligations</li>
         <li><strong>For legal reasons:</strong> We may disclose information if required by law, court order, or to protect the rights and safety of WrenchNow, its users, or the public</li>
         <li><strong>Business transfers:</strong> In the event of a merger, acquisition, or sale of assets, your information may be transferred as part of that transaction</li>
       </ul>
 
       <h2>4. Data Retention</h2>
-      <p>We retain your account information for as long as your account is active or as needed to provide services. Booking records are retained for a minimum of 7 years for legal and tax compliance purposes. You may request deletion of your personal data at any time (subject to legal retention requirements) by emailing privacy@wrenchnow.com.</p>
+      <p>We retain your account information for as long as your account is active or as needed to provide services. Booking records are retained for a minimum of 7 years for legal and tax compliance purposes. You may request deletion of your personal data at any time (subject to legal retention requirements) by emailing hello@getwrenchnow.com.</p>
 
       <h2>5. Security</h2>
       <p>We use industry-standard security measures to protect your information, including encrypted data transmission (HTTPS), access rules on our database that limit who can read each record, and secure third-party payment processing through Stripe. We never store payment card numbers. However, no method of transmission over the internet is completely secure, and we cannot guarantee absolute security.</p>
@@ -7518,7 +7572,7 @@ auth.onAuthStateChanged((user) => {
         <li><strong>Objection:</strong> Object to processing of your data for marketing purposes</li>
         <li><strong>Withdrawal of consent:</strong> Withdraw consent for data processing where consent is the legal basis</li>
       </ul>
-      <p>To exercise any of these rights, contact us at privacy@wrenchnow.com. We will respond within 30 days.</p>
+      <p>To exercise any of these rights, contact us at hello@getwrenchnow.com. We will respond within 30 days.</p>
 
       <h2>8. Children's Privacy</h2>
       <p>WrenchNow is not intended for use by persons under the age of 18. We do not knowingly collect personal information from children. If you believe a child has provided us with personal information, please contact us immediately.</p>
@@ -7533,13 +7587,13 @@ auth.onAuthStateChanged((user) => {
       <p>If you are located in the EEA, our legal basis for processing your personal data is: (a) performance of a contract when we process data to provide our services; (b) legitimate interests when we improve the platform and prevent fraud; (c) compliance with legal obligations; and (d) consent where you have provided it. You have the right to lodge a complaint with your local data protection authority.</p>
 
       <h2>12. CCPA — Users in California</h2>
-      <p>California residents have the right to know what personal information is collected, to request deletion of personal information, and to opt out of the sale of personal information. WrenchNow does not sell personal information. To exercise your rights under the CCPA, contact us at privacy@wrenchnow.com.</p>
+      <p>California residents have the right to know what personal information is collected, to request deletion of personal information, and to opt out of the sale of personal information. WrenchNow does not sell personal information. To exercise your rights under the CCPA, contact us at hello@getwrenchnow.com.</p>
 
       <h2>13. Changes to This Policy</h2>
       <p>We may update this Privacy Policy from time to time. We will notify you of material changes by updating the "Last updated" date. Your continued use of the platform constitutes acceptance of the revised policy.</p>
 
       <h2>14. Contact</h2>
-      <p>For privacy-related questions or requests, contact us at privacy@wrenchnow.com.</p>
+      <p>For privacy-related questions or requests, contact us at hello@getwrenchnow.com.</p>
 
     </div>
   </div>
@@ -7553,7 +7607,7 @@ auth.onAuthStateChanged((user) => {
     <div class="legal-head">
       <div>
         <div class="legal-title">Mechanic Independent Contractor Agreement</div>
-        <div class="legal-updated">Last updated: October 12, 2026</div>
+        <div class="legal-updated">Last updated: October 15, 2026</div>
       </div>
       <button class="legal-close" onclick="closeLegal('mechAgreementOverlay')" aria-label="Close"><i class="ti ti-x" aria-hidden="true"></i></button>
     </div>
@@ -7568,7 +7622,7 @@ auth.onAuthStateChanged((user) => {
       <p>As an independent contractor, you are solely responsible for:</p>
       <ul>
         <li>All taxes arising from payments received through WrenchNow, including self-employment tax</li>
-        <li>Obtaining and maintaining all required licences, certifications, and permits to perform automotive services in your jurisdiction</li>
+        <li>Obtaining and maintaining all required licenses, certifications, and permits to perform automotive services in your jurisdiction</li>
         <li>Providing your own tools, equipment, and supplies</li>
         <li>Setting your own working hours and schedule</li>
         <li>Determining how services are performed, subject to customer requirements</li>
@@ -7581,21 +7635,16 @@ auth.onAuthStateChanged((user) => {
         <li>You are at least 18 years of age</li>
         <li>You have the legal right to work in the jurisdiction where you will provide services</li>
         <li>All information you provide in your application is accurate and complete</li>
-        <li>You hold all licences, certifications, and qualifications required by applicable law to perform the services you offer</li>
+        <li>You hold all licenses, certifications, and qualifications required by applicable law to perform the services you offer</li>
         <li>You have not been convicted of a crime that would reasonably disqualify you from working with members of the public</li>
         <li>You are in good health and physically capable of performing automotive services safely</li>
         <li>You will maintain the accuracy of your profile information at all times</li>
       </ul>
 
-      <h2>3. Insurance Requirements</h2>
-      <p><strong>You are required to maintain, at your own expense, adequate insurance coverage to protect yourself and your customers, including:</strong></p>
-      <ul>
-        <li>General liability insurance (recommended minimum: $1,000,000 per occurrence)</li>
-        <li>Garage keeper's liability or on-hook towing insurance if applicable</li>
-        <li>Workers' compensation insurance if required by your jurisdiction</li>
-        <li>Any other insurance required by applicable law</li>
-      </ul>
-      <p>WrenchNow does not provide insurance coverage for Mechanics or their work. WrenchNow is not responsible for any claims, losses, or damages arising from your failure to maintain adequate insurance.</p>
+      <h2>3. Insurance</h2>
+      <p>Liability insurance is not required to join WrenchNow, but it is strongly recommended. You are responsible for any damage or injury you cause, whether or not you are insured, and for any insurance the law requires of you (for example, workers' compensation if you have employees).</p>
+      <p><strong>Insured badge.</strong> If you upload proof of current general liability insurance (we suggest at least $1,000,000 per occurrence, plus garage keeper's coverage if you drive customers' vehicles), WrenchNow shows an Insured badge on your profile until the policy's expiry date. You must tell WrenchNow promptly if the policy is cancelled, and you may not tell customers you are insured when you are not.</p>
+      <p>WrenchNow does not provide insurance coverage for Mechanics or their work.</p>
 
       <h2>4. Quality of Work</h2>
       <p>You agree to:</p>
@@ -7607,6 +7656,9 @@ auth.onAuthStateChanged((user) => {
         <li>Leave the customer's vehicle and property in the same or better condition than found</li>
         <li>Respond promptly to booking notifications and customer communications</li>
         <li>Arrive within the agreed time window or notify the customer immediately of any delay</li>
+        <li>Follow the consumer protection laws that apply to auto repair where you work, including the Colorado Motor Vehicle Repair Act (C.R.S. 42-9-101 and following) in Colorado. Your quote in WrenchNow is your written estimate and must include your price and date; the customer's acceptance in the app is their authorization; any additional work needs their approval of a revised price in the app first</li>
+        <li>Return replaced parts to the customer when they asked for them, except parts that must go back to a supplier or manufacturer under a warranty or exchange</li>
+        <li>Honor the warranty shown on your profile for jobs booked while it was shown</li>
       </ul>
 
       <h2>5. Prohibited Conduct</h2>
@@ -7630,6 +7682,7 @@ auth.onAuthStateChanged((user) => {
       <p>You will get at least 30 days' notice by email before the platform fee changes, and a change never applies to jobs already accepted.</p>
       <p><strong>Quotes and price changes.</strong> You set your price for each job as a quote (labor and parts). If you find more work is needed, send a revised price through WrenchNow before doing the extra work; the customer must approve it, and if they don't, the original price stands.</p>
       <p><strong>Getting paid.</strong> All jobs are paid through WrenchNow. You must complete Stripe payout setup (Stripe Connect) before sending quotes. The customer's payment goes to your Stripe account, less card processing costs (about 3.2% + 55¢ per job, covering Stripe's card and payout fees), the 5% platform fee, and any onboarding fee still owed. Payment is taken when the customer confirms the job, or 48 hours after you mark it done unless the customer reports a problem first. If a customer reports a problem or disputes the charge with their bank, payment may be held, and if a refund is issued, the amount paid to you for that job may be reversed.</p>
+      <p><strong>Sponsored placement (optional).</strong> For $29 a month, billed by Stripe and cancellable any time, your profile can appear in the Sponsored row above search results when you match a customer's search and travel to them. Sponsored listings are always labeled "Sponsored", and sponsorship does not change your ranking in the regular results.</p>
       <p>Payments are processed through Stripe Connect. WrenchNow is not responsible for delays or failures in payment processing caused by Stripe or by errors in your account information.</p>
 
       <h2>7. Liability and Indemnification</h2>
@@ -7644,7 +7697,7 @@ auth.onAuthStateChanged((user) => {
       </ul>
 
       <h2>8. Ratings and Reviews</h2>
-      <p>Customers may rate and review your services after each completed job. WrenchNow may display these ratings publicly on your profile. WrenchNow reserves the right to remove any review that violates its policies. You may not solicit, incentivise, or manipulate reviews in any way.</p>
+      <p>Customers may rate and review your services after each completed job. WrenchNow may display these ratings publicly on your profile. WrenchNow reserves the right to remove any review that violates its policies. You may not solicit, incentivize, or manipulate reviews in any way.</p>
       <p>WrenchNow may suspend or remove Mechanics whose average rating falls below acceptable thresholds as determined by WrenchNow in its sole discretion.</p>
 
       <h2>9. Termination</h2>
@@ -7653,7 +7706,7 @@ auth.onAuthStateChanged((user) => {
         <li>Violation of this Agreement or WrenchNow's Terms of Service</li>
         <li>Customer complaints or consistently low ratings</li>
         <li>Fraudulent or illegal conduct</li>
-        <li>Failure to maintain required licences or insurance</li>
+        <li>Failure to maintain required licenses, or insurance you have told customers you carry</li>
         <li>Any conduct that WrenchNow determines, in its sole discretion, is harmful to customers, the platform, or WrenchNow's reputation</li>
       </ul>
       <p>You may terminate this Agreement at any time by ceasing to use the platform.</p>
@@ -7665,13 +7718,13 @@ auth.onAuthStateChanged((user) => {
       <p>Any dispute between you and WrenchNow arising out of this Agreement shall be resolved by binding arbitration on an individual basis. You waive any right to participate in class action proceedings.</p>
 
       <h2>12. Governing Law</h2>
-      <p>This Agreement shall be governed by applicable law in the jurisdiction where WrenchNow is incorporated.</p>
+      <p>This Agreement shall be governed by the laws of the State of Colorado, United States, without regard to its conflict of law provisions.</p>
 
       <h2>13. Entire Agreement</h2>
       <p>This Agreement, together with WrenchNow's Terms of Service and Privacy Policy, constitutes the entire agreement between you and WrenchNow regarding your participation as a Mechanic on the platform.</p>
 
       <h2>14. Contact</h2>
-      <p>For questions about this Agreement, contact legal@wrenchnow.com.</p>
+      <p>For questions about this Agreement, contact hello@getwrenchnow.com.</p>
 
     </div>
   </div>

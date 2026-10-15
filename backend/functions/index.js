@@ -13,7 +13,11 @@
  *   onBookingUpdated      – confirmed → email the customer; completed → update the mechanic's job count
  *                           cancelled → tell the mechanic the job is off
  *   Quotes & payments:
- *   onRequestCreated      – a customer asks specific mechanics for quotes → those mechanics are emailed
+ *   onRequestCreated      – a quote request → the chosen mechanics (or, for open requests, every verified
+ *                           mechanic who travels there) are emailed; the customer gets a confirmation;
+ *                           you're told, flagged MATCH BY HAND when nobody nearby could be reached
+ *   onRequestInvited      – you add a mechanic to a request from Admin → that mechanic is emailed
+ *   requestFollowUp       – daily: requests that ran out with no quotes → customer and you are told
  *   onQuoteWritten        – a mechanic sends a quote → the customer is emailed
  *   createCardSetup       – customer accepted a quote → Stripe page to save their card (nothing charged)
  *   connectOnboard        – mechanic's one-time Stripe payout setup (Stripe Connect Express)
@@ -25,8 +29,8 @@
  *   onReviewWritten       – a review is posted or deleted → the mechanic's star rating and review
  *                           count are recalculated from their real reviews
  *   onMessageCreated      – contact form message → forwarded to you
- *   stripeWebhook also handles the Featured subscription: paid → the mechanic with that email is
- *   pinned as Featured; cancelled → Featured is removed. You are emailed either way.
+ *   stripeWebhook also handles the Sponsored placement subscription (stored as is_featured): paid →
+ *   the mechanic with that email is Sponsored; cancelled → Sponsored is removed. You are emailed either way.
  */
 const { onDocumentCreated, onDocumentUpdated, onDocumentWritten } = require('firebase-functions/v2/firestore');
 const { onRequest } = require('firebase-functions/v2/https');
@@ -219,7 +223,7 @@ exports.stripeWebhook = onRequest(
         await Promise.all(mech.docs.map(d => d.ref.update({ payouts_ready: ready })));
       }
     }
-    // Featured subscription ($29/mo): match the payer's email to a mechanic and pin them
+    // Sponsored placement subscription ($29/mo): match the payer's email to a mechanic and pin them
     const setFeatured = async (email, on) => {
       if (!email) return null;
       const priv = await db.collection('mechanic_private').where('email', '==', email).limit(1).get();
@@ -235,17 +239,17 @@ exports.stripeWebhook = onRequest(
       const email = (session.customer_details && session.customer_details.email) || session.customer_email || '';
       const slug = await setFeatured(email, true);
       if (slug) await db.collection('mechanic_private').doc(slug).update({ stripe_customer: session.customer || '' });
-      await toAdmin((slug ? '' : 'ACTION NEEDED: ') + 'Featured subscription paid — ' + email,
-        layout(slug ? 'New Featured mechanic' : 'Featured payment with no matching mechanic',
+      await toAdmin((slug ? '' : 'ACTION NEEDED: ') + 'Sponsored placement paid — ' + email,
+        layout(slug ? 'New Sponsored mechanic' : 'Sponsored payment with no matching mechanic',
           rows([['Email', email], ['Mechanic', slug || 'no mechanic uses this email']])
-          + (slug ? '<p>They are now pinned as Featured.</p>' : '<p>Nobody was made Featured. Find the mechanic and press "Make Featured" in the Admin tab.</p>')));
+          + (slug ? '<p>They now appear in the Sponsored row.</p>' : '<p>Nobody was made Sponsored. Find the mechanic and press "Make Sponsored" in the Admin tab.</p>')));
     }
     if (event.type === 'customer.subscription.deleted') {
       const customer = event.data.object.customer;
       const priv = await db.collection('mechanic_private').where('stripe_customer', '==', customer).limit(1).get();
       if (!priv.empty) {
         const slug = await setFeatured(priv.docs[0].data().email, false);
-        await toAdmin('Featured subscription ended — ' + (slug || customer), layout('Featured removed', rows([['Mechanic', slug]]) + '<p>Their subscription ended, so the Featured badge was removed.</p>'));
+        await toAdmin('Sponsored placement ended — ' + (slug || customer), layout('Sponsored placement removed', rows([['Mechanic', slug]]) + '<p>Their subscription ended, so Sponsored placement was removed.</p>'));
       }
     }
     res.json({ received: true });
@@ -332,7 +336,7 @@ exports.onMechanicPublished = onDocumentCreated(
       html: layout('Welcome aboard, ' + (m.name || '').split(' ')[0],
         `<p>Your checks cleared and your profile is now live with the <strong>Verified</strong> badge.</p>
          <p>Booking requests will arrive by email with the customer's details. Reply to the customer to confirm the time.</p>
-         <p>Want to be seen first? Featured mechanics are pinned to the top of search results for $29/month.</p>
+         <p>Want to be seen first? Sponsored placement puts you in a labeled row above search results you match, for $29/month.</p>
          <p><a href="${esc(appUrl())}">See your profile</a></p>`),
       replyTo: ADMIN_EMAIL.value()
     });
@@ -591,18 +595,88 @@ async function mechanicSlugByDoc(docId) {
   return d.exists ? (d.data().slug || docId) : docId;
 }
 
-// Customer asked specific mechanics → email each of them (address is NOT included)
+function milesApart(a, b) {
+  const R = 3958.8, rad = x => x * Math.PI / 180;
+  const dLat = rad(b.lat - a.lat), dLng = rad(b.lng - a.lng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+// New quote request → email the mechanics it was sent to (named ones, or everyone nearby for open requests),
+// confirm to the customer, and tell the admin, flagged when nobody could be reached so you can match by hand.
+// The customer's address is never included in mechanic emails.
 exports.onRequestCreated = onDocumentCreated(
   { document: 'requests/{id}', secrets: [RESEND_API_KEY] },
   async (event) => {
     const r = event.data.data();
-    const details = rows([['Job', r.service], ['Car', r.vehicle], ['Area', r.zip ? 'ZIP ' + r.zip : ''], ['Preferred days', (r.pref_dates || []).join(', ') + ((r.pref_parts || []).length ? ' · ' + r.pref_parts.join(' / ') : '')], ['Notes', r.notes]]);
-    for (const docId of (r.invited_docs || [])) {
+    const details = rows([['Job', r.service], ['Car', r.vehicle], ['Area', r.zip ? 'ZIP ' + r.zip : ''], ['Preferred days', (r.pref_dates || []).join(', ') + ((r.pref_parts || []).length ? ' · ' + r.pref_parts.join(' / ') : '')], ['Old parts', r.parts_back ? 'Customer wants them back' : ''], ['Notes', r.notes]]);
+    const told = [];
+    let docIds = r.invited_docs || [];
+    if (r.mode === 'open') {
+      const all = (await db.collection('mechanics').get()).docs.map(d => ({ id: d.id, ...d.data() }));
+      const here = r.approx_lat != null && r.approx_lng != null ? { lat: r.approx_lat, lng: r.approx_lng } : null;
+      docIds = all.filter(m => m.verified === true && m.hidden !== true && m.owner_uid
+        && !(r.level_needed === 'full' && m.service_level === 'basic')
+        && (!here || m.geo_lat == null || m.geo_lng == null || milesApart(here, { lat: m.geo_lat, lng: m.geo_lng }) <= (Number(m.radius_mi) || 25)))
+        .slice(0, 40).map(m => m.id);
+    }
+    for (const docId of docIds) {
+      const p = await mechanicPrivate(await mechanicSlugByDoc(docId));
+      if (p && p.email) {
+        await sendEmail({ to: p.email, subject: (r.mode === 'open' ? 'New job near you — ' : 'Quote request — ') + (r.service || 'a job'),
+          html: layout(r.customer_first + (r.mode === 'open' ? ' needs a mechanic near you' : ' asked you for a quote'), details + `<p>Log in at <a href="${esc(appUrl())}">${esc(appUrl())}</a> and open <strong>My jobs</strong> to send your price. The customer's address is shared only if they accept your quote.</p>`) });
+        told.push(docId);
+      }
+    }
+    const priv = (await db.collection('request_private').doc(event.params.id).get()).data() || {};
+    if (priv.customer_email) {
+      const nobody = !told.length;
+      await sendEmail({ to: priv.customer_email, replyTo: ADMIN_EMAIL.value(), subject: 'We got your request: ' + (r.service || 'your job'),
+        html: layout('Your request is in', details + (nobody
+          ? `<p>There isn't a mechanic listed near you yet, so we're finding one for you. We'll email you when a quote is ready. Nothing is charged unless you accept a quote and the job is done.</p>`
+          : `<p>We sent it to ${told.length === 1 ? 'a mechanic' : told.length + ' mechanics'} near you. Quotes arrive by email, and you can compare them in <a href="${esc(appUrl())}">WrenchNow</a> (tap your initials, then My bookings). Nothing is charged unless you accept a quote and the job is done.</p>`)
+          + '<p>Questions? Just reply to this email.</p>') });
+    }
+    const who = rows([['Customer', [priv.customer_name, priv.customer_email, priv.phone].filter(Boolean).join(' · ')], ['Mechanics emailed', String(told.length)]]);
+    await toAdmin((told.length ? 'New quote request — ' : 'MATCH BY HAND: no mechanic for — ') + (r.service || ''),
+      layout(told.length ? 'New quote request' : 'Nobody nearby got this request', details + who + (told.length ? '' : '<p>No listed mechanic covers this area or job yet. Reach out to a mechanic you know, have them sign up and quote, or reply to the customer.</p>')));
+  });
+
+// Admin added mechanics to a request → email just the new ones (address never included)
+exports.onRequestInvited = onDocumentUpdated(
+  { document: 'requests/{id}', secrets: [RESEND_API_KEY] },
+  async (event) => {
+    const before = event.data.before.data(), r = event.data.after.data();
+    if (r.status !== 'open') return;
+    const added = (r.invited_docs || []).filter(d => !(before.invited_docs || []).includes(d));
+    if (!added.length) return;
+    const details = rows([['Job', r.service], ['Car', r.vehicle], ['Area', r.zip ? 'ZIP ' + r.zip : ''], ['Preferred days', (r.pref_dates || []).join(', ')], ['Old parts', r.parts_back ? 'Customer wants them back' : ''], ['Notes', r.notes]]);
+    for (const docId of added) {
       const p = await mechanicPrivate(await mechanicSlugByDoc(docId));
       if (p && p.email) await sendEmail({ to: p.email, subject: 'Quote request — ' + (r.service || 'a job'),
-        html: layout(r.customer_first + ' asked you for a quote', details + `<p>Log in at <a href="${esc(appUrl())}">${esc(appUrl())}</a> and open <strong>My jobs</strong> to send your price. The customer's address is shared only if they accept your quote.</p>`) });
+        html: layout('A customer near you needs a quote', details + `<p>Log in at <a href="${esc(appUrl())}">${esc(appUrl())}</a> and open <strong>My jobs</strong> to send your price. The customer's address is shared only if they accept your quote.</p>`) });
     }
-    await toAdmin('New quote request — ' + (r.service || ''), layout('New quote request', details + `<p>${r.mode === 'open' ? 'Open to all nearby mechanics.' : 'Sent to ' + esc((r.invited_names || []).join(', '))}</p>`));
+  });
+
+// Daily: requests that ran out with no quotes → tell the customer (so nobody is left waiting) and you
+exports.requestFollowUp = onSchedule(
+  { schedule: 'every day 09:05', timeZone: 'America/Denver', secrets: [RESEND_API_KEY] },
+  async () => {
+    const snap = await db.collection('requests').where('status', '==', 'open').get();
+    const now = Date.now();
+    for (const d of snap.docs) {
+      const r = d.data();
+      if (!r.expires_at || Date.parse(r.expires_at) > now) continue;
+      const quotes = (await d.ref.collection('quotes').get()).docs.filter(q => q.data().status === 'sent').length;
+      await d.ref.update({ status: 'expired', expired_at: new Date().toISOString() });
+      const priv = (await db.collection('request_private').doc(d.id).get()).data() || {};
+      if (!quotes && priv.customer_email) {
+        await sendEmail({ to: priv.customer_email, replyTo: ADMIN_EMAIL.value(), subject: 'No quotes yet for ' + (r.service || 'your request'),
+          html: layout("We couldn't get you a quote in time", `<p>Your request for <strong>${esc(r.service || 'your car')}</strong> closed without a quote. We're still adding mechanics near you. Reply to this email and we'll keep looking, or send a new request in <a href="${esc(appUrl())}">WrenchNow</a>. Nothing was charged.</p>`) });
+      }
+      await toAdmin((quotes ? 'Request closed — ' : 'Request closed with NO quotes — ') + (r.service || ''),
+        layout('A quote request ran out', rows([['Job', r.service], ['Area', r.zip ? 'ZIP ' + r.zip : ''], ['Quotes', String(quotes)], ['Customer', [priv.customer_name, priv.customer_email, priv.phone].filter(Boolean).join(' · ')]])));
+    }
   });
 
 // Mechanic sent (or changed) a quote → email the customer
@@ -671,6 +745,27 @@ exports.connectOnboard = onRequest(
     } catch (err) { console.error('connectOnboard', err); fail(res, err); }
   });
 
+// Itemized receipt (Colorado MVRA-style: labor, parts, mechanic, vehicle, warranty)
+function receiptHtml(id, b, mech, amount, custFee, total) {
+  const usd = c => '$' + ((c || 0) / 100).toFixed(2);
+  const rev = b.revision && b.revision.status === 'approved' && b.revision.total_cents === amount ? b.revision : null;
+  const labor = rev ? rev.labor_cents : (b.labor_cents || 0), parts = rev ? rev.parts_cents : (b.parts_cents || 0);
+  const itemized = labor + parts === amount;
+  const w = mech && [0, 30, 90, 180, 365].includes(mech.warranty_days) ? mech.warranty_days : null;
+  const warranty = w == null ? 'Ask your mechanic' : w === 0 ? 'None offered' : (w === 365 ? '12 months' : w + ' days') + ', parts and labor, from ' + (b.mechanic_name || 'your mechanic');
+  return layout('Receipt', rows([
+    ['Receipt for', b.customer_name || b.customer_email],
+    ['Job', b.service], ['Vehicle', b.vehicle], ['Where', b.address],
+    ['Date', b.booking_date_iso || ''], ['Mechanic', b.mechanic_name],
+    ...(itemized ? [['Labor', usd(labor)], ['Parts', usd(parts)]] : [['Price', usd(amount)]]),
+    ...(custFee ? [['Booking fee', usd(custFee)]] : []),
+    ['Total paid', usd(total)],
+    ['Warranty', warranty],
+    ...(b.parts_back ? [['Old parts', 'You asked to keep the replaced parts']] : []),
+    ['Reference', id]
+  ]) + '<p>Paid by card through WrenchNow (Stripe). Keep this email for your records. Questions or a problem with the work? Reply to this email.</p><p>A quick review helps other drivers choose: open WrenchNow, tap your initials, then My bookings.</p>');
+}
+
 // Charge the final approved price. Money goes straight to the mechanic's Stripe account minus your fee;
 // if the mechanic has no finished payout setup, nothing is charged and you're told.
 async function chargeJob(ref) {
@@ -721,7 +816,7 @@ async function chargeJob(ref) {
     await ref.update({ payment_status: 'paid', paid_cents: total, fee_cents: appFee, platform_fee_cents: platformCut, processing_cents: processing, onboarding_cents: onboarding, mechanic_net_cents: total - appFee, payment_intent: pi.id, paid_at: new Date().toISOString() });
     await countOnboarding(ref, slug);
     await sendEmail({ to: b.customer_email, replyTo: ADMIN_EMAIL.value(), subject: 'Receipt: $' + (total / 100).toFixed(2) + ' paid to ' + (b.mechanic_name || 'your mechanic'),
-      html: layout('Payment received', rows([['Job', b.service], ['Mechanic', b.mechanic_name], ['Paid', '$' + (total / 100).toFixed(2)]]) + '<p>Thanks for using WrenchNow. A quick review helps other drivers choose.</p>') });
+      html: receiptHtml(id, b, mechDoc, amount, custFee, total) });
   } catch (err) {
     console.error('charge failed', id, err.message);
     // card declined or needs the customer present → send them a secure pay link instead
