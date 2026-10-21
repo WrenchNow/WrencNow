@@ -1,12 +1,14 @@
 # Roadmap
 
 Ranked: the top item is next. Updated at the end of every session.
-_Last updated: 2026-10-22 (after the overnight session)_
+_Last updated: 2026-10-22 (afternoon)_
+
+**Done since last update:** meal planning (week plan + tonight picks + combined cart) ✅ · AI scan cost roughly halved ✅
 
 ## Now: make the app usable by strangers (nothing else matters until this is done)
 | # | Task | Owner | Time | Blocked on |
 |---|---|---|---|---|
-| 1 | **Decide where Pantry Pal lives**: its own GitHub repo plus its own Netlify site (recommended), so it can't ship onto getwrenchnow.com | Wyatt | 10 min | — |
+| 1 | **Move Pantry Pal to its own private repo** (decided: fully separate). Wyatt creates an empty `pantry-pal` repo and gives Claude access; Claude moves it with history and sets up its own Netlify site. | Wyatt, then Claude | 10 + 15 min | Wyatt creates the repo |
 | 2 | **Deploy the Worker** (`node deploy.mjs`) and set an Anthropic monthly spend limit. Without this, scanning only works for people who paste their own API key. | Wyatt + product-dev | 30 min | — |
 | 3 | Set `ALLOWED_ORIGIN` on the Worker. Fill in the About/Privacy placeholders. Put the site and app on a real domain. | Wyatt | 30 min | #1, #2 |
 | 4 | Fix PWA install: a real manifest file and PNG icons (loosens the "one file" rule a little; needs Wyatt's OK) | product-dev | 1–2 hrs | OK |
@@ -17,10 +19,10 @@ _Last updated: 2026-10-22 (after the overnight session)_
 |---|---|---|---|---|
 | 6 | Hand-verify the top 50 ASINs (`docs/asins-to-verify.md`). The amazon agent ships them. | Wyatt, amazon | 1–2 hrs | — |
 | 7 | Apply for Amazon Associates **once the site is live and ~50–100 people a week use the app** (`docs/amazon-signup-guide.md`) | Wyatt | 10 min | #3 |
-| 8 | **5-day meal plan with one combined cart** (`docs/meal-plan-draft.md`) | product-dev, recipes, amazon | ~3 hrs | Wyatt's OK |
-| 9 | **Decide: Instacart as a second store** (reportedly ~3% of the whole order vs Amazon's ~1%, and covers King Soopers/Safeway/Costco in Denver). Changes rule 1. | Wyatt | — | — |
+| 9 | **Instacart as a second store** (approved). Wyatt checks whether developer signup is open; the build is ~1 evening behind a switch (`docs/research/instacart-integration.md`). | Wyatt, then product-dev | 1 evening | signup open? |
 | 10 | "Did your order arrive? Add all to pantry" prompt when the user returns from Amazon | product-dev | 1–2 hrs | — |
-| 11 | Pantry Pal Pro (about $2.99/mo or $24/yr: unlimited scans, the meal plan, the reminder) via a Stripe Payment Link | product-dev | 1–2 weekends | Wyatt's OK |
+| 11 | Pantry Pal Pro (`docs/pro-plan-draft.md`; option B recommended: $3.99/mo or $29/yr, 100 scans/month) | product-dev | 1–2 weekends | Wyatt picks A/B/C |
+| 11b | Test Haiku 5.5 on real fridge and receipt photos (could make AI ~20× cheaper) | Wyatt + product-dev | 20 min | Worker deployed |
 
 ## Then: the vision features
 | # | Task | Owner | Time |
