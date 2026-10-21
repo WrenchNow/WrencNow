@@ -19,7 +19,7 @@ You handle everything Amazon for Pantry Pal. Read CLAUDE.md first.
 - Amazon API keys live only in Worker secrets, never in `src/` or `pantry-pal.html`.
 
 ## Your areas
-- The staples catalog in `src/data*.js` (about 215 items): names, categories, pack sizes and ASIN fields. Rebuild with `python3 build.py` after edits.
+- The staples catalog in `src/data*.js` (254 items): names, categories, pack sizes and ASIN fields. Rebuild with `python3 build.py` after edits.
 - How the combined cart link is built (Amazon's add-to-cart URL with `ASIN.n` / `Quantity.n` and the tag)
 - `/api/amazon/search` in the Worker. **Wait until Wyatt confirms his Associates account is approved before building the real Creators API integration.**
 
