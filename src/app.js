@@ -474,9 +474,25 @@ async function fileToJpeg(file, max = 1568) {
 
 /* ---------- Amazon ---------- */
 const AMZ = 'https://www.amazon.com';
+// Words that describe a part or form of a food, so 'lemon juice' can still buy lemons and 'garlic cloves' garlic.
+const FORM_WORDS = new Set(['juice', 'zest', 'clove', 'seed', 'wedge', 'slice', 'strip', 'yolk', 'leaf', 'sprig', 'stalk', 'floret', 'piece', 'chunk', 'half']);
+// Like norm() but keeps descriptive words ('diced', 'baby') so those staples can be told apart.
+const looseKey = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\(.*?\)/g, ' ').replace(/[^a-z\s-]/g, ' ').split(/[\s-]+/).filter(Boolean).map(singular).join(' ');
+// Picks the most specific staple. Unlike nameMatch (used for "have it"), a different head noun is only
+// accepted for form words, so 'butter lettuce' doesn't buy butter and 'potato gnocchi' doesn't buy potatoes.
 function catalogFind(name) {
   const n = norm(name); if (!n) return null;
-  return S.catalog.find(c => norm(c.name) === n) || S.catalog.find(c => nameMatch(name, c.name)) || null;
+  const k = looseKey(name), exact = S.catalog.find(c => looseKey(c.name) === k); if (exact) return exact;
+  const A = n.split(' '); let best = null, bestScore = -Infinity;
+  for (const c of S.catalog) {
+    const cn = norm(c.name); if (cn !== n && !nameMatch(name, c.name)) continue;
+    const B = cn.split(' '), diff = [...A.filter(w => !B.includes(w)), ...B.filter(w => !A.includes(w))];
+    const sameHead = A[A.length - 1] === B[B.length - 1];
+    if (!sameHead && !diff.every(w => FORM_WORDS.has(w))) continue;
+    const score = (cn === n ? 100 : 0) + (sameHead ? 10 : 0) - diff.length;
+    if (score > bestScore) { best = c; bestScore = score; }
+  }
+  return best;
 }
 function packQty(ing, q, cat) {
   if (ing.unit) return 1;
