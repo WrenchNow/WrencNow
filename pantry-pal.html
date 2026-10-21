@@ -1179,6 +1179,33 @@ function hydrate(saved) {
   return out;
 }
 
+// A backup file can come from anyone. Rebuild it from known fields with safe types so it can't inject
+// HTML (ids and numbers are rendered unescaped) or crash a view. Owner settings and keys are never imported.
+function sanitizeBackup(d) {
+  const id = v => String(v ?? '').replace(/[^\w-]/g, '').slice(0, 40) || uid();
+  const num = (v, lo, hi, def) => { const n = Number(v); return Number.isFinite(n) ? clamp(n, lo, hi) : def; };
+  const str = (v, n = 200) => String(v ?? '').slice(0, n);
+  const date = v => /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null;
+  const arr = v => Array.isArray(v) ? v.filter(x => x && typeof x === 'object') : [];
+  const strs = (v, ok) => Array.isArray(v) ? v.filter(x => typeof x === 'string' && (!ok || ok(x))) : [];
+  const item = x => ({ id: id(x.id), name: str(x.name), qty: num(x.qty, 0, 1e6, 1), unit: str(x.unit, 20), category: CATEGORIES.includes(x.category) ? x.category : 'Other', expires: date(x.expires), added: date(x.added) || todayISO() });
+  const recipes = (v, source) => arr(v).map(x => { const r = normalizeAiRecipe(x, 2); if (!r) return null; r.source = source; if (source === 'community') { r.id = 'local-' + uid(); r.author = str(x.author, 30); } return r; }).filter(Boolean);
+  const hh = d.household && typeof d.household === 'object' ? d.household : {}, f = d.filters && typeof d.filters === 'object' ? d.filters : {}, st = d.settings && typeof d.settings === 'object' ? d.settings : {};
+  const bools = {}; ['picker', 'hideAllergens', 'applyDiets', 'autoGen', 'useSwaps'].forEach(k => { if (typeof st[k] === 'boolean') bools[k] = st[k]; });
+  return {
+    v: 2, onboarded: true,
+    household: { partySize: num(hh.partySize, 1, 30, 2), members: arr(hh.members).map(m => ({ id: id(m.id), name: str(m.name, 60), allergies: strs(m.allergies, k => ALLERGENS.some(a => a.k === k)), custom: strs(m.custom).map(t => t.slice(0, 40)), diets: strs(m.diets, x => DIETS.includes(x)) })) },
+    inventory: arr(d.inventory).map(item),
+    cart: arr(d.cart).map(item),
+    shopping: arr(d.shopping).map(x => ({ id: id(x.id), name: str(x.name), need: str(x.need, 40), amount: num(x.amount, 0, 1e6, 1), unit: str(x.unit, 20), from: str(x.from, 90), done: !!x.done })),
+    aiRecipes: recipes(d.aiRecipes, 'ai').slice(0, 40), community: recipes(d.community, 'community').slice(0, 100),
+    cooked: arr(d.cooked).filter(c => typeof c.title === 'string').map(c => ({ title: c.title.slice(0, 90), date: date(c.date) || todayISO() })).slice(-200),
+    catalog: arr(d.catalog).map(c => ({ id: id(c.id), name: str(c.name, 80), cat: CATEGORIES.includes(c.cat) ? c.cat : 'Other', per: num(c.per, 0, 100, 0), asin: str(c.asin, 10).toUpperCase().replace(/[^A-Z0-9]/g, ''), title: str(c.title), term: str(c.term || c.name, 80) })).filter(c => c.name),
+    filters: { cuisines: strs(f.cuisines, c => CUISINES.includes(c)), meal: MEALS.includes(f.meal) ? f.meal : 'Any', maxTime: TIMES.includes(Number(f.maxTime)) ? Number(f.maxTime) : 0, party: num(f.party, 0, 30, 0), cookWith: str(f.cookWith, 100), goal: GOALS.some(g => g.k === f.goal) ? f.goal : 'any' },
+    settings: bools
+  };
+}
+
 /* transient (not persisted) */
 const scan = { type: 'receipt', images: [], busy: false, items: null, error: '' };
 const feed = { busy: false, error: '', expanded: {} };
@@ -1202,6 +1229,9 @@ function allergyIndex() {
   }
   return { keys, custom };
 }
+const ALLERGY_NOTE = 'Allergy flags are a helper, not a safety guarantee. Always check labels and ingredients yourself.';
+const allergyNote = (style = '') => `<p class="tiny muted" style="${style}">⚠ ${ALLERGY_NOTE}</p>`;
+function hasAllergies() { const { keys, custom } = allergyIndex(); return !!(keys.size || custom.length); }
 function householdDiets() { const s = new Set(); S.household.members.forEach(m => (m.diets || []).forEach(d => s.add(d))); return [...s]; }
 function allergensOf(name) {
   const out = [];
@@ -1553,7 +1583,7 @@ function viewFeed() {
       ${list.length > lim ? `<button class="btn btn-ghost more-btn" data-act="expand" data-k="${key}">Show all ${list.length}</button>` : ''}`;
   };
   const total = g.ready.length + g.near.length + g.shop.length;
-  return filtersPanel() + gen + emptyInv +
+  return filtersPanel() + gen + emptyInv + (hasAllergies() ? allergyNote('margin:-4px 0 14px') : '') +
     (total ? sec('ready', 'Ready now', 'var(--ok)', g.ready) + sec('near', 'Missing 1–2 items', 'var(--warn)', g.near) + onlineSection() + sec('shop', 'Needs shopping', 'var(--accent)', g.shop)
       : `<div class="empty"><div class="big">🔍</div><h3>No recipes match</h3><p>Try loosening your filters or generate new ideas.</p></div>` + onlineSection());
 }
@@ -1624,6 +1654,7 @@ function viewPantry() {
       <div class="stat"><b>${exp.length}</b><span>Use within 3 days</span></div>
       <div class="stat"><b style="color:${expired.length ? 'var(--danger)' : 'inherit'}">${expired.length}</b><span>Expired</span></div>
       <div class="stat"><b style="color:${flagged.length ? 'var(--danger)' : 'inherit'}">${flagged.length}</b><span>Allergen flags</span></div></div>
+      ${hasAllergies() ? allergyNote('margin:-4px 0 14px') : ''}
       ${exp.length ? `<button class="btn btn-soft btn-block" style="margin-bottom:14px" data-act="useItUp">🍳 Cook with what’s expiring</button>` : ''}
       <div class="chips scroll" style="margin-bottom:14px">
         <button class="chip ${filter === 'all' ? 'on' : ''}" data-act="pantryFilter" data-v="all">All</button>
@@ -1662,6 +1693,7 @@ function viewScan() {
     const on = scan.items.filter(i => i.on).length;
     return head + `<div class="row" style="justify-content:space-between;margin-bottom:12px"><h2>Review ${scan.items.length} item${scan.items.length === 1 ? '' : 's'}</h2><button class="btn btn-ghost btn-sm" data-act="scanToggleAll">${on === scan.items.length ? 'Uncheck all' : 'Check all'}</button></div>
       <p class="small muted" style="margin-bottom:12px">Fix anything the AI got wrong, uncheck what you don’t want, then add.</p>
+      ${hasAllergies() ? allergyNote('margin:-6px 0 12px') : ''}
       ${scan.items.map((it, i) => `<div class="review-item ${it.on ? '' : 'off'}">
         <div class="review-top"><input type="checkbox" ${it.on ? 'checked' : ''} data-scan="${i}" data-f="on" aria-label="Include"><input class="input" data-scan="${i}" data-f="name" value="${esc(it.name)}" aria-label="Name"></div>
         <div class="review-grid">
@@ -1721,6 +1753,7 @@ function viewHousehold() {
     <div class="panel row" style="justify-content:space-between"><div><b>Default party size</b><p class="small muted">Used to scale every recipe</p></div>
       <div class="stepper"><button data-act="hhParty" data-d="-1" aria-label="Fewer">−</button><span>${hh.partySize}</span><button data-act="hhParty" data-d="1" aria-label="More">+</button></div></div>
     <div class="section-h"><h2>Members</h2><button class="btn btn-soft btn-sm" data-act="addMember">＋ Add</button></div>
+    ${allergyNote('margin:-4px 0 12px')}
     ${hh.members.length ? hh.members.map(m => `<button class="card" style="box-shadow:none" data-act="editMember" data-id="${m.id}">
       <div class="art" style="--h:${hash(m.name) % 360};width:52px;height:52px;font-size:22px;border-radius:50%">${esc((m.name || '?')[0].toUpperCase())}</div>
       <div class="card-body"><h3>${esc(m.name || 'Unnamed')}</h3>
@@ -1733,6 +1766,7 @@ function memberSheet() {
     <div class="field"><label for="m-name">Name</label><input id="m-name" class="input" data-mdraft="name" value="${esc(m.name)}" placeholder="e.g. Sam"></div>
     <span class="label">Allergies</span><div class="chips" style="margin:8px 0 10px">${ALLERGENS.map(a => `<button class="chip danger ${m.allergies.includes(a.k) ? 'on' : ''}" data-act="mAllergy" data-k="${a.k}">${a.label}</button>`).join('')}
       ${m.custom.map((t, i) => `<button class="chip danger on" data-act="mCustomRm" data-i="${i}">${esc(t)}<span class="x">✕</span></button>`).join('')}</div>
+    ${allergyNote('margin:0 0 10px')}
     <form class="row" data-form="mCustom" style="margin-bottom:16px"><input class="input grow" name="t" placeholder="Other allergy (e.g. strawberries)" autocomplete="off"><button class="btn btn-soft" type="submit">Add</button></form>
     <span class="label">Diet</span><div class="chips" style="margin:8px 0 18px">${DIETS.map(d => `<button class="chip ${m.diets.includes(d) ? 'on' : ''}" data-act="mDiet" data-d="${d}">${d}</button>`).join('')}</div>
     <div class="stack"><button class="btn btn-primary btn-block" data-act="saveMember">Save</button>${m.isNew ? '' : `<button class="btn btn-danger btn-block" data-act="deleteMember">Remove member</button>`}</div>`;
@@ -1764,7 +1798,7 @@ function viewSettings() {
     </section>
     <section class="panel"><h2>Recipes</h2>
       <div class="switch"><div><b>Suggest ingredient swaps</b><p class="small muted">Count a recipe as makeable when you have a close substitute (e.g. lime for lemon)</p></div><input type="checkbox" class="toggle" data-setting-bool="useSwaps" ${st.useSwaps ? 'checked' : ''} aria-label="Suggest swaps"></div>
-      <div class="switch"><div><b>Hide recipes with household allergens</b><p class="small muted">Off shows them with a warning badge</p></div><input type="checkbox" class="toggle" data-setting-bool="hideAllergens" ${st.hideAllergens ? 'checked' : ''} aria-label="Hide allergen recipes"></div>
+      <div class="switch"><div><b>Hide recipes with household allergens</b><p class="small muted">Off shows them with a warning badge. ${ALLERGY_NOTE}</p></div><input type="checkbox" class="toggle" data-setting-bool="hideAllergens" ${st.hideAllergens ? 'checked' : ''} aria-label="Hide allergen recipes"></div>
       <div class="switch"><div><b>Apply household diets</b><p class="small muted">Only show recipes that fit everyone’s diet</p></div><input type="checkbox" class="toggle" data-setting-bool="applyDiets" ${st.applyDiets ? 'checked' : ''} aria-label="Apply diets"></div>
       ${S.aiRecipes.length ? `<button class="btn btn-ghost btn-block" data-act="clearAi" style="margin-top:10px">Clear ${S.aiRecipes.length} AI-generated recipes</button>` : ''}</section>
     <section class="panel"><h2>Your data</h2><p class="small muted" style="margin-bottom:10px">Saved in ${esc(Store.label())} · ${S.inventory.length} pantry items</p><div class="stack">
@@ -1799,6 +1833,7 @@ function viewCommunity() {
   return `<header class="top"><div><p class="eyebrow">${b ? 'Shared through your backend' : 'Saved on this device'}</p><h1>Community</h1></div>${backBtn()}</header>
     <button class="btn btn-primary btn-block" data-act="newShare" style="margin-bottom:14px">＋ Share a recipe</button>
     ${!b ? `<div class="note" style="margin-bottom:14px">Connect your backend in Settings to share recipes with everyone using your Pantry Pal. Until then, shared recipes stay on this device.</div>` : ''}
+    ${hasAllergies() ? allergyNote('margin:0 0 14px') : ''}
     ${comm.loading ? `<div class="loading"><div class="spinner"></div></div>` : ''}${comm.error ? `<div class="note danger" style="margin-bottom:14px">${esc(comm.error)}</div>` : ''}
     ${list.length ? `<div class="feed">${list.map(r => card({ r, missing: r.ingredients.filter(i => !haveIng(i)), conflicts: conflictsFor(r.ingredients.map(i => i.name)) }).replace('<h3>', `<h3><span class="tag">${esc(r.author || 'Community')}</span>`)).join('')}</div>`
       : comm.loading ? '' : `<div class="empty"><div class="big">🌍</div><h3>No shared recipes yet</h3><p>Be the first — share a family favorite.</p></div>`}`;
@@ -1854,6 +1889,7 @@ function recipeSheet() {
       <div class="macros"><span class="macro">🔥 ${r.nutrition.kcal} cal</span><span class="macro">Protein ${r.nutrition.protein}g</span><span class="macro">Carbs ${r.nutrition.carbs}g</span><span class="macro muted">per serving</span></div>
       <div class="badges">${[...info.diets].filter(d => d !== 'Pescatarian' || !info.diets.has('Vegetarian')).map(d => `<span class="badge ok">${d}</span>`).join('')}</div>
       ${conflicts.map(c => `<div class="note danger">⚠ Contains <b>${esc(c.label)}</b> — ${esc(c.who.join(', '))}</div>`).join('')}
+      ${conflicts.length || hasAllergies() ? allergyNote() : ''}
       ${r.source === 'web' && CONFIG.ONLINE_RECIPES ? `<p class="small muted">Recipe from <b>${esc(r.sourceName || 'the web')}</b>${r.sourceUrl ? ` · <a href="${esc(r.sourceUrl)}" target="_blank" rel="noopener">view original ↗</a>` : ''}</p>` : ''}
       ${madeCount ? `<p class="small muted">You’ve made this ${madeCount} time${madeCount === 1 ? '' : 's'}.</p>` : ''}
     </div>
@@ -1945,6 +1981,7 @@ function renderOnboard() {
     <div class="field"><label for="ob-name">Your name</label><input id="ob-name" class="input" data-ob="name" value="${esc(ob.name)}" placeholder="First name" autocomplete="given-name"></div>
     <span class="label">Allergies</span><div class="chips">${ALLERGENS.map(a => `<button class="chip danger ${ob.allergies.includes(a.k) ? 'on' : ''}" data-act="obAllergy" data-k="${a.k}">${a.label}</button>`).join('')}${ob.custom.map((t, i) => `<button class="chip danger on" data-act="obCustomRm" data-i="${i}">${esc(t)}<span class="x">✕</span></button>`).join('')}</div>
     <form class="row" data-form="obCustom"><input class="input grow" name="t" placeholder="Other allergy" autocomplete="off"><button class="btn btn-soft" type="submit">Add</button></form>
+    ${allergyNote()}
     <span class="label">Diet</span><div class="chips">${DIETS.map(d => `<button class="chip ${ob.diets.includes(d) ? 'on' : ''}" data-act="obDiet" data-d="${d}">${d}</button>`).join('')}</div>
     <div class="row" style="justify-content:space-between"><span class="label">Usually cooking for</span><div class="stepper"><button data-act="obParty" data-d="-1" aria-label="Fewer">−</button><span>${ob.party}</span><button data-act="obParty" data-d="1" aria-label="More">+</button></div></div>`;
   if (s === 3) body = `<div class="ob-hero">✨</div><h1>${aiMode() === 'backend' ? 'You’re all set' : 'Turn on AI'}</h1>
@@ -1988,7 +2025,8 @@ async function checkHealth(silent) {
   try {
     const res = await fetch(b + '/api/health', { headers: bheaders(false) });
     const data = await res.json().catch(() => ({}));
-    health = res.ok ? Object.assign({ ok: true }, data) : { ok: false, error: data.error || ('Backend returned ' + res.status) };
+    health = res.ok ? Object.assign({ ok: true }, data) : { ok: false, error: String(data.error || ('Backend returned ' + res.status)) };
+    if (health.ok) health.freePerDay = Number(health.freePerDay) || 0;   // shown unescaped in Settings/onboarding
     if (!S.onboarded) renderOnboard();
   } catch (e) { health = { ok: false, error: 'Couldn’t reach that URL. Check it and your Worker’s CORS settings.' }; }
   if (!silent || S.ui.tab === 'settings') render();
@@ -2253,7 +2291,7 @@ document.addEventListener('change', e => {
   if (el.id === 'cam' || el.id === 'gal') { addFiles(el.files); el.value = ''; return; }
   if (el.id === 'import') {
     const f = el.files[0]; el.value = ''; if (!f) return;
-    f.text().then(t => { const data = JSON.parse(t); if (!data || !Array.isArray(data.inventory)) throw new Error(); const keep = { userKey: S.settings.userKey, admin: S.settings.admin }; S = hydrate(data); Object.assign(S.settings, keep); persist(); render(); toast('Backup restored'); }).catch(() => toast('That file isn’t a Pantry Pal backup'));
+    f.text().then(t => { const data = JSON.parse(t); if (!data || !Array.isArray(data.inventory)) throw new Error(); const { userKey, admin, backendUrl, appToken, tag } = S.settings; const keep = { userKey, admin, backendUrl, appToken, tag }; S = hydrate(sanitizeBackup(data)); Object.assign(S.settings, keep); persist(); render(); toast('Backup restored'); }).catch(() => toast('That file isn’t a Pantry Pal backup'));
   }
 });
 document.addEventListener('toggle', e => { const el = e.target; if (el.dataset && el.dataset.details) { S.ui[el.dataset.details] = el.open; persist(); } }, true);
