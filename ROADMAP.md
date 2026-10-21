@@ -3,7 +3,7 @@
 Ranked: the top item is next. Updated at the end of every session.
 _Last updated: 2026-10-22 (afternoon)_
 
-**Done since last update:** meal planning (week plan + tonight picks + combined cart) ✅ · AI scan cost roughly halved ✅
+**Done since last update:** meal planning (week plan + tonight picks + combined cart) ✅ · AI scan cost roughly halved ✅ · "Did your order arrive?" + Paste order ✅
 
 ## Now: make the app usable by strangers (nothing else matters until this is done)
 | # | Task | Owner | Time | Blocked on |
@@ -20,7 +20,7 @@ _Last updated: 2026-10-22 (afternoon)_
 | 6 | Hand-verify the top 50 ASINs (`docs/asins-to-verify.md`). The amazon agent ships them. | Wyatt, amazon | 1–2 hrs | — |
 | 7 | Apply for Amazon Associates **once the site is live and ~50–100 people a week use the app** (`docs/amazon-signup-guide.md`) | Wyatt | 10 min | #3 |
 | 9 | **Instacart as a second store** (approved). Wyatt checks whether developer signup is open; the build is ~1 evening behind a switch (`docs/research/instacart-integration.md`). | Wyatt, then product-dev | 1 evening | signup open? |
-| 10 | "Did your order arrive? Add all to pantry" prompt when the user returns from Amazon | product-dev | 1–2 hrs | — |
+| 10 | Tune the Paste-order reader on a real (redacted) Amazon and Instacart email | Wyatt sends sample, product-dev | 30 min | sample email |
 | 11 | Pantry Pal Pro (`docs/pro-plan-draft.md`; option B recommended: $3.99/mo or $29/yr, 100 scans/month) | product-dev | 1–2 weekends | Wyatt picks A/B/C |
 | 11b | Test Haiku 5.5 on real fridge and receipt photos (could make AI ~20× cheaper) | Wyatt + product-dev | 20 min | Worker deployed |
 
@@ -28,7 +28,7 @@ _Last updated: 2026-10-22 (afternoon)_
 | # | Task | Owner | Time |
 |---|---|---|---|
 | 12 | Quantity tracking: "I made this" → confirm what you used → deduct (half an onion stays) | product-dev | 10–14 hrs |
-| 13 | Weekly "use it up" reminder by **email** (web push only works on iPhone after Add to Home Screen). Needs email sign-in. | product-dev | 10–16 hrs incl. accounts |
+| 13 | Email sign-in, which unlocks the weekly "use it up" reminder by **email**, Pro, and **auto-forwarded order emails** (web push only works on iPhone after Add to Home Screen). Needs email sign-in. | product-dev | 10–16 hrs incl. accounts |
 | 14 | "$ saved from the trash" counter plus a shareable card | product-dev, website | 3–4 hrs |
 | 15 | Recipe images (generated title cards) so Google shows rich results | website | 2–3 hrs |
 | 16 | Ingredient-combination SEO pages | website, recipes | 3–4 hrs |

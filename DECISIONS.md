@@ -16,6 +16,12 @@ Newest first. One entry per decision: the date, what was decided and why.
   - A typical scan is now ~1¢, down from ~2.5¢. The model is unchanged; Haiku stays an option, pending an accuracy test with Wyatt's real photos.
 - **Instacart build is on hold until Wyatt confirms signup is open.** One Instacart page says it isn't accepting new developer applications.
 
+- **Online orders reach the pantry without photos or AI** (Wyatt approved):
+  - **"Did your order arrive?"** offers to add the items the user sent to Amazon, after they review them.
+  - **"Paste order"** reads Amazon, Instacart and Walmart order text on the phone. The raw text is never stored or sent; AI is an opt-in fallback only when nothing is found.
+  - The parser is tested only on synthetic emails. It needs one real, redacted order email from Wyatt to tune.
+  - Automatic email forwarding is deferred until sign-in is built (it shares that work with Pro and the reminder).
+
 ## 2026-10-21 (overnight)
 - **Imported the real Pantry Pal source** from Wyatt's zip. The app is edited in `src/` and built by `build.py`; `pantry-pal.html` is build output. The agents were updated to match.
 - **The vision was written into CLAUDE.md** (missing-only cart, party/allergy fit, auto-updating inventory, habits), with honest constraints: Amazon gives affiliates no order data, and product allergen data needs a real source.
