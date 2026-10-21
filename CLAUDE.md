@@ -26,7 +26,7 @@ Known constraints (keep them honest in the UI and the plans):
 | --- | --- |
 | `pantry-pal.html` | The whole app in one file. **It's built output, so don't hand-edit it.** Edit `src/` and rebuild. |
 | `src/shell.html`, `src/app.css`, `src/app.js` | App source: page shell, styles and logic. `CONFIG` is at the top of `src/app.js`. |
-| `src/data.js`, `src/data2.js`, `src/data3.js` | 208 original recipes in `R(title, cuisine, meal, minutes, servings, kcal, protein, carbs, 'ingredients; …', 'step\|step')` format, plus the staples catalog (254 items, empty ASINs) and ingredient swaps |
+| `src/data.js`, `src/data2.js`, `src/data3.js` | 232 original recipes in `R(title, cuisine, meal, minutes, servings, kcal, protein, carbs, 'ingredients; …', 'step\|step')` format, plus the staples catalog (254 items, empty ASINs) and ingredient swaps |
 | `build.py` | `python3 build.py` inlines `src/` into `pantry-pal.html`. Commit both. |
 | `build-site.js` | `node build-site.js https://domain.com` builds the static recipe site into `site/` (one page per recipe, sitemap, Recipe structured data, app at `/app/`). |
 | `sw.js` | Optional offline service worker |

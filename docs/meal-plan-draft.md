@@ -27,7 +27,7 @@ So the plan feature is mostly **a picker plus a merge step** feeding the existin
 6. The plan is saved (`S.plan`), so the future weekly "use it up" reminder can use it.
 
 ## How it picks recipes
-For each Dinner recipe (there are 102 built in):
+For each Dinner recipe (there are 117 built in):
 - **Skip it** if it conflicts with any member's allergy, fails a member's diet or was cooked in the last 7 days.
 - **Score:**
   - +3 for each pantry item it uses that expires within 3 days
@@ -45,15 +45,14 @@ For each Dinner recipe (there are 102 built in):
 ## Things to know before you OK it
 - **ASINs:** they're all blank, so on day one every item is a search link and nothing goes into the one-tap cart. The cart works fully once ASINs are filled in.
 - **Important:** ASINs typed into the Staples catalog screen are saved **only on that phone** (`S.catalog` in local storage). To give every user the one-tap cart, verified ASINs have to be written into `src/data.js`. That's the amazon agent's job, once you verify them.
-- **Vegan households** may not have 5 different vegan dinners. If the picker comes up short, it will repeat a recipe and tell the user. The recipes agent can fill the gap.
+- **Recipe coverage:** there are now 117 dinners, including 36 vegetarian and 16 vegan (up from 7), so 5 different dinners fit every common diet. If a strict combination comes up short, the picker will say so rather than repeat silently.
 
 ## Work split
 | Part | Agent | Time |
 |---|---|---|
 | Planner, plan screen, merge step and save | product-dev | ~2 hours, including 390px testing |
-| Check vegan/vegetarian dinner coverage and fill gaps if needed | recipes | ~30 min |
 | Make sure the merged items map to catalog names | amazon | ~20 min |
-| **Total** | | **~3 hours of agent work, plus about 10 min of you trying it on your phone** |
+| **Total** | | **~2.5 hours of agent work, plus about 10 min of you trying it on your phone** |
 
 ## Questions for Wyatt
 1. Dinners only for v1? (Recommended. Breakfast can come later.)
