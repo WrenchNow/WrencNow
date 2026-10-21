@@ -359,9 +359,12 @@ function recipeEmoji(t) {
   return '🍽️';
 }
 function normalizeAiRecipe(x, party) {
-  if (!x || !x.title || !Array.isArray(x.ingredients)) return null;
-  const ingredients = x.ingredients.map(i => {
+  const ing = x && (x.ingredients || x.ing);
+  if (!x || !x.title || !Array.isArray(ing)) return null;
+  const ingredients = ing.map(i => {
     if (typeof i === 'string') return parseIng(i);
+    if (Array.isArray(i)) i = { qty: i[0], unit: i[1], name: i[2] };   // compact AI format [qty, unit, name]
+    if (!i || typeof i !== 'object') return null;
     const name = String(i.name || i.item || '').trim(); if (!name) return null;
     let unit = String(i.unit || '').toLowerCase().trim().replace(/\.$/, ''); if (['whole', 'count', 'each', 'pc', 'piece', 'pieces', 'item', 'serving', 'servings', 'large', 'medium', 'small'].includes(unit)) unit = '';
     unit = ({ cups: 'cup', c: 'cup', tablespoon: 'tbsp', tablespoons: 'tbsp', tbs: 'tbsp', teaspoon: 'tsp', teaspoons: 'tsp', ounce: 'oz', ounces: 'oz', pound: 'lb', pounds: 'lb', lbs: 'lb', grams: 'g', gram: 'g', cloves: 'clove', cans: 'can', slices: 'slice', pinches: 'pinch', bunches: 'bunch', stalks: 'stalk', heads: 'head', sprigs: 'sprig', leaves: 'leaf', ml: 'ml', liter: 'l', liters: 'l' })[unit] || unit;
@@ -373,10 +376,10 @@ function normalizeAiRecipe(x, party) {
     id: 'ai-' + uid(), title: String(x.title).slice(0, 90),
     cuisine: CUISINES.includes(x.cuisine) ? x.cuisine : 'Other',
     meal: MEALS.includes(x.meal) && x.meal !== 'Any' ? x.meal : 'Dinner',
-    time: clamp(Number(x.time_minutes ?? x.time) || 30, 5, 240),
+    time: clamp(Number(x.time_minutes ?? x.time ?? x.min) || 30, 5, 240),
     servings: clamp(Number(x.servings) || party || 2, 1, 50),
-    nutrition: { kcal: Math.round(Number(x.calories ?? n.kcal) || 0), protein: Math.round(Number(x.protein_g ?? n.protein) || 0), carbs: Math.round(Number(x.carbs_g ?? n.carbs) || 0) },
-    summary: String(x.summary || '').slice(0, 200),
+    nutrition: { kcal: Math.round(Number(x.calories ?? x.kcal ?? n.kcal) || 0), protein: Math.round(Number(x.protein_g ?? x.p ?? n.protein) || 0), carbs: Math.round(Number(x.carbs_g ?? x.c ?? n.carbs) || 0) },
+    summary: String(x.summary || x.sum || '').slice(0, 200),
     ingredients, steps: Array.isArray(x.steps) && x.steps.length ? x.steps.map(String) : null,
     source: 'ai', created: Date.now()
   };
@@ -563,7 +566,30 @@ function extractJSON(text) {
   if (start === -1) throw new Error('The AI response wasn’t readable. Try again.');
   const close = text[start] === '{' ? '}' : ']';
   const end = text.lastIndexOf(close);
-  try { return JSON.parse(text.slice(start, end + 1)); } catch (e) { throw new Error('The AI response wasn’t readable. Try again.'); }
+  try { return JSON.parse(text.slice(start, end + 1)); } catch (e) { }
+  const cut = salvageJSON(text.slice(start));
+  if (cut) return cut;
+  throw aiError('The AI reply was cut off before anything usable came through. Try again with fewer photos.', 'truncated');
+}
+// A reply that hit max_tokens stops mid-JSON. Keep every complete element of the main list
+// ({"items":[{…},{…},{… ← cut}) by closing the brackets after the last finished one. Marks the result _partial.
+function salvageJSON(t) {
+  const stack = []; let inStr = false, esc = false, best = null;
+  for (let i = 0; i < t.length; i++) {
+    const ch = t[i];
+    if (inStr) { if (esc) esc = false; else if (ch === '\\') esc = true; else if (ch === '"') inStr = false; continue; }
+    if (ch === '"') inStr = true;
+    else if (ch === '{' || ch === '[') stack.push(ch);
+    else if (ch === '}' || ch === ']') {
+      stack.pop();
+      // Just finished an element of the top-level list: root '[' (depth 1) or root '{' then '[' (depth 2).
+      if (ch === '}' && (stack.join('') === '{[' || stack.join('') === '[')) best = { i, rest: stack.slice() };
+      if (!stack.length) break;
+    }
+  }
+  if (!best) return null;
+  const tail = best.rest.reverse().map(c => c === '{' ? '}' : ']').join('');
+  try { const v = JSON.parse(t.slice(0, best.i + 1) + tail); Object.defineProperty(v, '_partial', { value: true }); return v; } catch (e) { return null; }
 }
 function constraintsText() {
   const { keys, custom } = allergyIndex();
@@ -934,6 +960,7 @@ function viewScan() {
     const on = scan.items.filter(i => i.on).length;
     return head + `<div class="row" style="justify-content:space-between;margin-bottom:12px"><h2>Review ${scan.items.length} item${scan.items.length === 1 ? '' : 's'}</h2><button class="btn btn-ghost btn-sm" data-act="scanToggleAll">${on === scan.items.length ? 'Uncheck all' : 'Check all'}</button></div>
       <p class="small muted" style="margin-bottom:12px">Fix anything the AI got wrong, uncheck what you don’t want, then add.</p>
+      ${scan.partial ? `<div class="note danger" style="margin-bottom:12px">The AI reply was cut off, so some items may be missing. Add these, then scan the rest with fewer photos at a time.</div>` : ''}
       ${hasAllergies() ? allergyNote('margin:-6px 0 12px') : ''}
       ${scan.items.map((it, i) => `<div class="review-item ${it.on ? '' : 'off'}">
         <div class="review-top"><input type="checkbox" ${it.on ? 'checked' : ''} data-scan="${i}" data-f="on" aria-label="Include"><input class="input" data-scan="${i}" data-f="name" value="${esc(it.name)}" aria-label="Name"></div>
@@ -1291,8 +1318,10 @@ PARTY SIZE: ${party} (write ingredient amounts for exactly ${party} servings).
 FILTERS: cuisine ${f.cuisines.length ? f.cuisines.join(' or ') : 'any'}; meal ${f.meal === 'Any' ? 'any' : f.meal}; max total time ${f.maxTime ? f.maxTime + ' minutes' : 'any'}; nutrition goal ${GOALS.find(g => g.k === f.goal)?.label || 'any'}${f.cookWith ? `; must use: ${f.cookWith}` : ''}.
 AVOID REPEATS: Don't recreate any of these: ${[...S.aiRecipes.slice(0, 20).map(r => r.title), ...S.cooked.slice(-10).map(c => c.title)].join('; ') || 'none'}.
 RULES: Prefer pantry items, especially ones marked [use soon]. Make at least ${seed ? 1 : 3} recipes that need nothing beyond the pantry plus salt, pepper, water and oil; the others may need 1–2 extra items. Ingredient names must be plain grocery names (e.g. "chicken breast", "olive oil"). Units must be one of: cup, tbsp, tsp, lb, oz, g, kg, ml, l, clove, can, slice, pinch, bunch, or empty for whole items. Nutrition is per serving. Cuisine must be one of: ${CUISINES.join(', ')}. Meal must be one of: Breakfast, Lunch, Dinner, Side, Snack, Dessert. No links or references to websites.
-Return JSON only: {"recipes":[{"title":"","cuisine":"","meal":"","time_minutes":0,"servings":${party},"calories":0,"protein_g":0,"carbs_g":0,"summary":"one appetizing sentence","ingredients":[{"qty":1,"unit":"","name":""}]}]}`;
-    const text = await callClaude({ system: 'You are a creative, practical home chef. You strictly respect allergies and diets. Respond with JSON only.', content: [{ type: 'text', text: prompt }], maxTokens: 4000 });
+Return compact JSON only, no prose: {"recipes":[{"title":"","cuisine":"","meal":"","min":30,"kcal":0,"p":0,"c":0,"sum":"one appetizing sentence","ing":[[1,"cup","rice"],[2,"","egg"]]}]}
+min = total minutes; kcal, p (protein g), c (carbs g) per serving; ing = [qty, unit, name] with unit "" for whole items.`;
+    // ~150 output tokens per recipe in this format; 2500 leaves room for 6 big ones. A cut-off reply keeps the finished recipes.
+    const text = await callClaude({ system: 'You are a creative, practical home chef. You strictly respect allergies and diets. Respond with JSON only.', content: [{ type: 'text', text: prompt }], maxTokens: 2500 });
     const data = extractJSON(text);
     const list = (Array.isArray(data) ? data : data.recipes || []).map(x => normalizeAiRecipe(x, party)).filter(Boolean);
     if (!list.length) throw new Error('The AI didn’t return any recipes. Try again.');
@@ -1311,24 +1340,28 @@ async function analyzeScan() {
     const what = t === 'receipt' ? 'grocery receipt' : `photo of the inside of a ${t}`;
     const instr = t === 'receipt'
       ? 'Extract every food or drink item purchased. Expand store abbreviations into plain names (e.g. "ORG BNLS CHKN BRST" → "chicken breast"). Use the quantity and weight printed on the receipt. Skip non-food items, bags, taxes, totals, coupons and discounts.'
-      : `List every distinct food item you can see. Estimate quantities from what is visible. Items in a ${t} may have been there a while, so estimate use-by conservatively, and mention in "note" anything that looks spoiled or nearly empty.`;
+      : `List every distinct food item you can see. Estimate quantities from what is visible. Items in a ${t} may have been there a while, so estimate use-by conservatively. Add "note" (a few words) only if an item looks spoiled or nearly empty.`;
     const imgs = await Promise.all(scan.images.map(src => toJpeg(src, t)));
     const content = [
       ...imgs.map(src => ({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: src.split(',')[1] } })),
       { type: 'text', text: `These ${scan.images.length > 1 ? scan.images.length + ' images show one' : 'image shows a'} ${what}. ${instr}
-Return JSON only: {"items":[{"name":"plain lowercase grocery name","quantity":1,"unit":"lb, oz, g, gal, qt, l, ml, can, bottle, bag, box, jar, bunch, or empty for a count","category":"one of: ${CATEGORIES.join(', ')}","expires_in_days":7,"note":""}]}
+Return compact JSON only, no prose: {"items":[{"n":"milk","q":2,"u":"gal","c":"Dairy & Eggs","d":7}]}
+n = plain lowercase grocery name. q = quantity (omit if 1). u = one of lb, oz, g, gal, qt, l, ml, can, bottle, bag, box, jar, bunch (omit for a count). c = one of: ${CATEGORIES.join(', ')}. d = days until it expires.
 If there is no food, return {"items":[]}.` }
     ];
-    const text = await callClaude({ system: 'You are a meticulous grocery inventory assistant. Respond with JSON only.', content, maxTokens: 3000 });
+    // ~18 output tokens per item in the compact format, so 2000 fits ~100 items. A cut-off reply is salvaged below.
+    const text = await callClaude({ system: 'You are a meticulous grocery inventory assistant. Respond with JSON only.', content, maxTokens: 2000 });
     const data = extractJSON(text);
     const items = (Array.isArray(data) ? data : data.items || []).map(x => {
-      const name = String(x.name || '').trim(); if (!name) return null;
-      const category = CATEGORIES.includes(x.category) ? x.category : guessCategory(name);
-      let unit = String(x.unit || '').toLowerCase().trim(); if (['count', 'each', 'ea', 'whole', 'item', 'pc'].includes(unit)) unit = '';
-      return { on: true, name, qty: Number(x.quantity ?? x.qty) || 1, unit, category, days: Number.isFinite(Number(x.expires_in_days)) ? Math.round(Number(x.expires_in_days)) : SHELF[category], note: String(x.note || '').slice(0, 140) };
+      if (!x || typeof x !== 'object') return null;
+      const name = String(x.n ?? x.name ?? '').trim(); if (!name) return null;
+      const cat = x.c ?? x.category, category = CATEGORIES.includes(cat) ? cat : guessCategory(name);
+      let unit = String(x.u ?? x.unit ?? '').toLowerCase().trim(); if (['count', 'each', 'ea', 'whole', 'item', 'pc'].includes(unit)) unit = '';
+      const d = x.d ?? x.expires_in_days, days = d != null && d !== '' && Number.isFinite(Number(d)) ? Math.round(Number(d)) : SHELF[category];
+      return { on: true, name, qty: Number(x.q ?? x.quantity ?? x.qty) || 1, unit, category, days, note: String(x.note || '').slice(0, 140) };
     }).filter(Boolean);
-    if (!items.length) throw new Error(t === 'receipt' ? 'No food items found on that receipt. Try a clearer, flatter photo.' : 'No food found in that photo. Try better light or a closer shot.');
-    scan.items = items;
+    if (!items.length) throw new Error(data._partial ? 'The AI reply was cut off before any items came through. Try fewer photos at a time.' : t === 'receipt' ? 'No food items found on that receipt. Try a clearer, flatter photo.' : 'No food found in that photo. Try better light or a closer shot.');
+    scan.items = items; scan.partial = !!data._partial;
   } catch (e) { scan.error = e.message; scan.errorCode = e.code || ''; }
   scan.busy = false; if (S.ui.tab === 'scan') render(); else if (scan.items) toast('Scan ready to review');
 }
