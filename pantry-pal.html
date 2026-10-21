@@ -270,6 +270,10 @@ details.filters[open] summary::after{transform:rotate(180deg)}
 .arrive.soft{display:flex;align-items:center;gap:10px;background:var(--surface-2);border-color:var(--line);padding:10px 12px}
 .arrive.soft .ic{font-size:22px}
 .arrive.soft .icon-btn{min-width:36px;height:36px;padding:0}
+/* scan types: four photo types, then "Paste order" on its own row */
+.seg.scan-types{display:grid;grid-template-columns:repeat(4,1fr)}
+.seg.scan-types button:last-child{grid-column:1/-1}
+.paste-box{min-height:170px;font-size:15px}
 
 </style>
 </head>
@@ -1355,7 +1359,9 @@ function sanitizeBackup(d) {
 }
 
 /* transient (not persisted) */
-const scan = { type: 'receipt', images: [], busy: false, items: null, error: '' };
+const scan = { type: 'receipt', images: [], busy: false, items: null, error: '', source: '' };
+const paste = { empty: false, text: '' };   // memory only: text = junk-stripped order text, kept just for the optional AI read
+
 const feed = { busy: false, error: '', expanded: {} };
 const comm = { items: null, loading: false, error: '' };
 const online = { items: null, loading: false, error: '' };   // licensed web recipes: kept in memory only, never saved
@@ -1790,6 +1796,143 @@ function recordPending(items) {
   persist();
 }
 
+/* ---------- paste an order: local rule-based parser (no AI, no network) ----------
+   Reads text copied from an Amazon / Instacart / Walmart order email or order page, or a plain
+   "Qty 2 · item" list. Returns [{ name, qty, unit, category, maybe }]; maybe = not sure it's food. */
+const ORDER_SKIP_ON = /^(refunded|out of stock|unavailable|not available|cancel+ed|removed|missing items|items? (not|un)available|couldn.t find|not found|items? refunded)\b/i;
+const ORDER_SKIP_OFF = /^(found items|items? (found|ordered|delivered|in this (order|shipment)|received)|delivered items|your items|replaced items|replacements?|substitut\w*|order items|items|shipment \d+|package \d+)\b/i;
+const ORDER_ADDR_HEAD = /^(ship(ping|ped)? to|deliver(y|ed|ing)? (to|address)|shipping address|billing address|bill(ing)? to|sent to|recipient)\b/i;
+// Personal and payment lines: never sent to the AI. (Also dropped by the local parser, via ORDER_JUNK.)
+const ORDER_PII = [
+  /^(hi|hello|hey|dear)\b[^\d]{0,40}[,!]?$/i, /^(thanks|thank you)\b.*,\s*[\p{L} .'-]{2,40}[!.]?$/iu, /\b(your )?shopper\b|\b(sold|supplied|fulfilled|shipped|packed|delivered|dispatched|picked|shopped) by\b/i,
+  /\b(visa|mastercard|master card|amex|american express|discover card|debit|credit card|ending in|ends in|card ending|paypal|apple pay|google pay|ebt)\b|\*{2,}\s*\d{2,4}|x{3,}\d{3,4}|•{2,}/i,
+  /\b(gift card|gift balance|e-?gift)\b/i, /@|https?:|www\.|\.com\b/i, /\(?\b\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}\b/, /\border\s*(#|no\.|number\b)|\b\d{3}-\d{7}-\d{7}\b|\b\d{7}-\d{6,}\b/i,
+  /^\d+\s+[\w.'’-]+(\s+[\w.'’-]+)*\s+(st|street|ave|avenue|rd|road|blvd|boulevard|dr|drive|ln|lane|way|court|pl|place|pkwy|parkway|hwy|highway|cir|circle|ter|terrace|trl|trail|sq|square)\.?(\s*(,|#|$|apt|suite|unit|ste))/i,
+  /\b(apt|apartment|suite|ste|unit|po box|p\.o\. box)\s*#?\s*\w+/i, /\b[A-Z]{2},?\s+\d{5}(-\d{4})?\b/, /^(united states|usa|us)$/i
+];
+const ORDER_JUNK = [...ORDER_PII,
+  /^(order|invoice|confirmation|receipt)\s*(#|no\b|number|id\b|details|summary|placed|date|total|status|confirmed)/i, /\border\s*(#|no\.|number\b)/i, /\b\d{3}-\d{7}-\d{7}\b/, /\b\d{7}-\d{6,}\b/,
+  /^(sub ?total|total|grand total|order total|estimated total|total before tax|total charged|amount charged|you paid|items? subtotal|item\(s\) subtotal|balance|amount due|charged|final total|temporary hold)\b/i,
+  /^(estimated |sales )?tax(es)?\b/i, /\btax to be collected\b/i, /^(driver |shopper |delivery |courier )?(tip|tips|gratuity)\b/i, /\bfees?\b/i,
+  /^(shipping|delivery|service|handling|bag|checkout bag|bottle deposit|crv|express|priority)\b/i,
+  /\b(sold|supplied|fulfilled|shipped|packed|delivered|dispatched|picked|shopped) by\b/i,
+  /^(arriving|arrives|arrived|delivered|shipped|out for delivery|estimated delivery|expected|get it|ordered on|order placed|placed on|scheduled|your (package|delivery|order|shopper|items? (have|has|were|was|are|is))|package|track|tracking|return|returns|replace|buy it again|view|write a|leave|rate|condition:|payment|paid|billing|contact|help|questions|customer|manage|cancel|change|edit|details|see all|download|get the app|open the app|thank|thanks|we|we'll|we’ll|this (email|order)|unsubscribe|privacy|terms|conditions|copyright|all rights|reorder|shopper|your shopper|need help|problem with|report|feedback|survey|sign in|log in|account|recommended|you might|customers who|sponsored|deals?|shop now|add to cart|free (delivery|shipping))\b/i,
+  /^(hi|hello|hey|dear)\b[^\d]{0,40}[,!]?$/i, /\b(amazon prime|prime (member|savings|delivery|day)|walmart\+|instacart\+|membership)\b/i,
+  /\b(gift card|gift balance|e-?gift|promo|promotion|coupon|discount|you saved|savings|saved \$|rewards?|points|cash ?back|credit applied|refund(ed)?|price adjustment)\b/i,
+  /\b(visa|mastercard|master card|amex|american express|discover card|debit|credit card|ending in|ends in|card ending|paypal|apple pay|google pay|ebt)\b|\*{2,}\s*\d{2,4}|x{3,}\d{3,4}|•{2,}/i,
+  /@|https?:|www\.|\.com\b/i, /\(?\b\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}\b/,
+  /^\d+\s+[\w.'’-]+(\s+[\w.'’-]+)*\s+(st|street|ave|avenue|rd|road|blvd|boulevard|dr|drive|ln|lane|way|court|pl|place|pkwy|parkway|hwy|highway|cir|circle|ter|terrace|trl|trail|sq|square)\.?(\s*(,|#|$|apt|suite|unit|ste))/i,
+  /\b(apt|apartment|suite|ste|unit|po box|p\.o\. box)\s*#?\s*\w+/i, /\b[A-Z]{2},?\s+\d{5}(-\d{4})?\b/, /^(united states|usa|us)$/i,
+  /^(mon|tues?|wed(nes)?|thu(rs)?|fri|sat(ur)?|sun)(day)?\.?,?\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\d)/i, /^(jan(uary)?|feb(ruary)?|mar(ch)?|apr(il)?|may|june?|july?|aug(ust)?|sept?(ember)?|oct(ober)?|nov(ember)?|dec(ember)?)\.?\s+\d{1,2}(st|nd|rd|th)?\b(?!\s*(oz|lb|ct|count|fl|g\b|ml|pack|pk))/i, /^\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}\b/, /^\d{1,2}(:\d{2})?\s*(am|pm)\b/i
+];
+const ORDER_NONFOOD = /\b(paper towels?|toilet paper|bath tissue|facial tissues?|tissues|napkins|paper plates|batter(y|ies)|aa|aaa|phone|iphone|android|phone case|charger|charging|cable|usb|headphones?|earbuds?|screen protector|detergent|laundry|dish soap|dishwasher|soap|body wash|shampoo|conditioner|toothpaste|toothbrush|floss|mouthwash|deodorant|lotion|sunscreen|razors?|diapers?|wipes|trash bags?|garbage bags?|bleach|cleaner|disinfect\w*|sponges?|light bulbs?|candles?|pet food|dog food|cat food|dog treats|cat litter|litter|multivitamin|vitamins|supplements?|ibuprofen|acetaminophen|bandages?|aluminum foil|plastic wrap|storage bags|sandwich bags|zip(lock|loc)|utensils|toys?|book|t-shirt|shirt|socks|notebook|printer|ink|lamp|coffee filters?|water filter|air filter|cotton swabs|makeup|nail polish|hair (gel|spray|ties|dryer|brush)|hairbrush|tampons?|pads|condoms?)\b/i;
+const ORDER_FOOD_HINT = ['cereal', 'juice', 'soda', 'water', 'yogurt', 'cheese', 'chip', 'cookie', 'cracker', 'snack', 'coffee', 'tea', 'sauce', 'soup', 'stock', 'bread', 'meat', 'fruit', 'vegetable', 'veggie', 'frozen', 'nut', 'candy', 'chocolate', 'drink', 'beverage', 'seasoning', 'spice', 'oil', 'vinegar', 'flour', 'sugar', 'butter', 'cream', 'milk', 'egg', 'rice', 'bean', 'pasta', 'noodle', 'tortilla', 'salsa', 'jam', 'jelly', 'syrup', 'honey', 'pickle', 'olive', 'chicken', 'beef', 'pork', 'turkey', 'fish', 'salmon', 'shrimp', 'sausage', 'bacon', 'ham', 'apple', 'banana', 'berry', 'grape', 'orange', 'lemon', 'lime', 'tomato', 'potato', 'onion', 'pepper', 'lettuce', 'salad', 'spinach', 'carrot', 'broccoli', 'mushroom', 'avocado', 'pizza', 'granola', 'oat', 'popcorn', 'pretzel', 'cake', 'muffin', 'bagel', 'bun', 'wine', 'beer', 'lemonade', 'hummus', 'dip', 'dressing', 'ketchup', 'mustard', 'mayo', 'tofu', 'peanut', 'almond', 'cashew', 'walnut', 'cracker', 'oatmeal', 'waffle', 'pancake', 'tortilla', 'broth', 'cheddar', 'mozzarella', 'parmesan', 'steak', 'ground', 'grain', 'quinoa', 'lentil', 'chickpea', 'corn', 'pea', 'squash', 'zucchini', 'cucumber', 'celery', 'garlic', 'ginger', 'herb', 'cilantro', 'parsley', 'basil', 'melon', 'peach', 'pear', 'plum', 'cherry', 'mango', 'pineapple', 'kiwi', 'raisin', 'romaine', 'kale', 'greens', 'cabbage', 'jerky', 'cocoa'];
+// Store and house brands to drop from names the staples catalog doesn't know.
+const ORDER_BRANDS = /\b(great value|kirkland signature|kirkland|365 by whole foods market|365 whole foods market|whole foods market|happy belly|amazon fresh|amazon grocery|amazon basics|good (&|and) gather|marketside|market pantry|signature select|o organics|simple truth( organic)?|private selection|kroger|member'?s mark|sam'?s choice|trader joe'?s|wegmans|h-e-b|publix|food lion|lucerne|freshness guaranteed|fresh express|equate|mainstays|up ?& ?up|by amazon)\b/gi;
+const ORDER_WORDS = /\b(organic|fresh|natural|all natural|premium|original|classic|family size|value size|value pack|club pack|bulk|non-?gmo|gluten[- ]free|usda|grade a|each|ea|per lb|count|ct|bag|bottle|jar|carton|box|tub|container|pouch|can|pack|pk|bunch)\b/gi;
+// Words that can follow a staple's name without changing what it is ("Barilla Spaghetti Pasta", "Hass Avocado Bag").
+const ORDER_TAIL = new Set(['pasta', 'fruit', 'vegetable', 'veggie', 'produce', 'bag', 'bunch', 'pack', 'jar', 'can', 'bottle', 'box', 'carton', 'tub', 'loaf', 'container', 'pouch', 'family', 'size', 'value', 'original', 'classic', 'bulk', 'variety', 'count', 'ct', 'oz', 'lb', 'stick', 'head', 'crown', 'floret', 'stalk', 'cluster', 'clamshell', 'dozen', 'by', 'from', 'with', 'in', 'for']);
+const ORDER_UNITS = { 'fl oz': 'oz', 'fl. oz': 'oz', 'fluid ounce': 'oz', 'fluid ounces': 'oz', ounce: 'oz', ounces: 'oz', oz: 'oz', pound: 'lb', pounds: 'lb', lbs: 'lb', lb: 'lb', g: 'g', gram: 'g', grams: 'g', kg: 'kg', kilogram: 'kg', kilograms: 'kg', ml: 'ml', milliliter: 'ml', milliliters: 'ml', l: 'l', liter: 'l', liters: 'l', litre: 'l', litres: 'l', gal: 'gal', gallon: 'gal', gallons: 'gal', qt: 'qt', quart: 'qt', quarts: 'qt', pt: 'pt', pint: 'pt', pints: 'pt' };
+const SIZE_RE = /(\d+\/\d+|\d+(?:\.\d+)?)\s*-?\s*(fl\.?\s*oz|fluid ounces?|ounces?|oz|pounds?|lbs?|lb|grams?|kilograms?|kg|g|milliliters?|ml|liters?|litres?|l|gallons?|gal|quarts?|qt|pints?|pt)\b\.?/i;
+const COUNT_RE = /\b(?:(?:pack|case|box|set|bundle|bag) of\s*(\d+)|(\d+)\s*-?\s*(?:pack|pk|ct|count|pc|pcs|pieces|cans|bottles|bars|pods|sticks|packets|pouches|cups|eggs|rolls|links|fillets|tortillas)\b|(\d+)\s*-?\s*dozen)/i;
+const toNum = v => { if (/\//.test(v)) { const [a, b] = v.split('/').map(Number); return b ? a / b : 0; } return Number(v); };
+function seqAt(W, B) { for (let i = 0; i + B.length <= W.length; i++) if (B.every((w, j) => W[i + j] === w)) return i; return -1; }
+// The staple a product title is about, or null. Tries catalogFind first, then the longest staple whose words
+// appear together in the title and aren't just a modifier ('peanut oil' isn't peanuts, 'coconut milk' isn't milk).
+function orderStaple(seg) {
+  const c = catalogFind(seg); if (c) return c;
+  const W = norm(seg).split(' ').filter(Boolean); let best = null, bs = -1;
+  for (const c of S.catalog) {
+    const B = norm(c.name).split(' ').filter(Boolean); if (!B.length) continue;
+    const i = seqAt(W, B); if (i < 0) continue;
+    const after = W[i + B.length], before = W[i - 1];
+    if (after && !ORDER_TAIL.has(after)) continue;
+    if (before && IDENTITY_MODS.includes(before)) continue;
+    const sc = B.length * 10 + i; if (sc > bs) { best = c; bs = sc; }
+  }
+  return best;
+}
+// One product line → { name, q, qu, count, size, su, ev }. q/qu = quantity given on the line itself.
+function orderLine(line) {
+  let s = line, q = null, qu = '', ev = false, m;
+  if (/\$\s?\d/.test(s)) { ev = true; s = s.replace(/[-–]?\$\s?\d[\d,]*(?:\.\d+)?(?:\s*\/\s*[a-z]+)?/gi, ' '); }
+  if ((m = s.match(/^(?:qty|quantity)\s*[:.]?\s*(\d+(?:\.\d+)?)\s*[·•|:,\-–—x×]*\s*/i))) { q = +m[1]; ev = true; s = s.slice(m[0].length); }
+  else if ((m = s.match(/^(\d{1,2}(?:\.\d+)?)\s*(?:x|×|\*|of:?)\s+/i))) { q = +m[1]; ev = true; s = s.slice(m[0].length); }
+  else if ((m = s.match(/^(\d{1,2}(?:\.\d+)?)\s*(lbs?|lb|oz|kg|g|gal|ct|ea)?\.?\s+(?=[a-z])/i)) && !/^\d+\s+by\b/i.test(s)) { q = +m[1]; if (m[2] && !/^(ct|ea)$/i.test(m[2])) qu = ORDER_UNITS[m[2].toLowerCase()] || ''; ev = true; s = s.slice(m[0].length); }
+  if ((m = s.match(/\s*[-–,·|(]*\s*(?:qty|quantity)\s*[:.]?\s*(\d+)\)?\s*$/i))) { q = +m[1]; ev = true; s = s.slice(0, m.index); }
+  else if ((m = s.match(/\s+(?:[x×]\s?(\d{1,3})|(\d{1,3})\s?[x×])\s*$/i))) { q = +(m[1] || m[2]); ev = true; s = s.slice(0, m.index); }
+  let count = 0, size = 0, su = '';
+  if ((m = s.match(COUNT_RE))) { count = m[3] ? +m[3] * 12 : +(m[1] || m[2]); s = s.replace(m[0], ' '); }
+  if ((m = s.match(SIZE_RE))) { size = toNum(m[1]); su = ORDER_UNITS[m[2].toLowerCase().replace(/\s+/g, ' ').replace('fl. oz', 'fl oz')] || ''; s = s.replace(m[0], ' '); }
+  s = s.replace(/\(.*?\)|\[.*?\]/g, ' ');
+  const seg = s.split(/,|\s[-–—|]\s|\s·\s/).map(x => x.trim()).find(x => /[a-z]{2}/i.test(x)) || '';
+  return { seg, q, qu, count, size, su, ev };
+}
+function parseOrderText(text) {
+  const lines = String(text || '').replace(/[​-‍﻿]/g, '').replace(/ /g, ' ').split(/\r?\n/).map(l => l.replace(/\s+/g, ' ').trim());
+  const toks = []; let skip = false, addr = 0, qlabel = false;
+  for (const l of lines) {
+    if (!l) { addr = 0; continue; }
+    if (ORDER_SKIP_ON.test(l)) { skip = true; continue; }
+    if (ORDER_SKIP_OFF.test(l)) { skip = false; addr = 0; continue; }
+    if (ORDER_ADDR_HEAD.test(l)) { addr = 5; continue; }
+    if (addr) { addr = /\b[A-Z]{2},?\s+\d{5}(-\d{4})?\b/.test(l) ? 0 : addr - 1; continue; }   // name + address lines under "Ship to"
+    if (skip) continue;
+    if (/^(qty|quantity)\s*:?$/i.test(l)) { qlabel = true; continue; }
+    let m;
+    if ((m = l.match(/^(?:qty|quantity|qnty)\s*[:.]?\s*(\d+(?:\.\d+)?)\b/i)) && !/[a-z]{3}/i.test(l.slice(m[0].length))) { toks.push({ t: 'qty', q: +m[1], u: '' }); qlabel = false; continue; }
+    if ((m = l.match(/^(\d+(?:\.\d+)?)\s*(lbs?|lb|oz|kg|g|ct|ea|each)?\s*(?:x|×|@)\s*\$/i)) || (m = l.match(/^(?:weight|weighed|net wt\.?)?\s*:?\s*(\d+(?:\.\d+)?)\s*(lbs?|lb|oz|kg|g)$/i))) {
+      toks.push({ t: 'qty', q: +m[1], u: m[2] && !/^(ct|ea|each)$/i.test(m[2]) ? ORDER_UNITS[m[2].toLowerCase()] || '' : '' }); qlabel = false; continue;
+    }
+    if (/^\d{1,2}$/.test(l)) { toks.push({ t: qlabel ? 'qty' : 'fqty', q: +l, u: '' }); qlabel = false; continue; }
+    qlabel = false;
+    if (/^[-–]?\s*(\$\s?\d[\d,]*(\.\d{2})?(\s*\/\s*[a-z]+)?\s*(each|ea)?\s*)+$/i.test(l)) { toks.push({ t: 'price' }); continue; }
+    if (!/[a-z]{2}/i.test(l) || ORDER_JUNK.some(r => r.test(l))) continue;
+    toks.push({ t: 'text', l });
+  }
+  const out = [];
+  toks.forEach((tk, i) => {
+    if (tk.t !== 'text') return;
+    const p = orderLine(tk.l); if (!p.seg) return;
+    let lq = null, lu = '', ev = p.ev;
+    const prev = toks[i - 1]; if (prev && prev.t === 'fqty') { lq = prev.q; ev = true; }
+    for (let j = i + 1; j < toks.length && j <= i + 4 && toks[j].t !== 'text' && toks[j].t !== 'fqty'; j++) {
+      ev = true; if (toks[j].t === 'qty' && lq == null) { lq = toks[j].q; lu = toks[j].u; }
+    }
+    if (ORDER_NONFOOD.test(tk.l)) return;
+    const c = orderStaple(p.seg);
+    let name = c ? c.name : p.seg.replace(ORDER_BRANDS, ' ').replace(ORDER_WORDS, ' ').replace(/[^\p{L}\s&'’-]/gu, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+    if (!/\p{L}{2}/u.test(name)) return;
+    const hint = !c && ORDER_FOOD_HINT.some(w => hasWord(name, w));
+    // No quantity or price near it and no known staple: prose, unless it's a short list line naming a food ("Sugar snap peas").
+    if (!c && !ev && !(hint && p.seg.split(' ').length <= 5)) return;
+    const n = p.q ?? lq ?? 1; let qty = n, unit = p.qu || lu;
+    if (!unit) { if (p.count) qty = n * p.count; else if (p.size) { qty = n * p.size; unit = p.su; } }
+    qty = clamp(Math.round(qty * 100) / 100 || 1, 0.01, 999);
+    out.push({ name, qty, unit, category: guessCategory(name), maybe: !c && !hint });
+  });
+  // Same food twice (e.g. two shipments): one row with the amounts added up.
+  const merged = [];
+  for (const x of out) {
+    const m = merged.find(y => norm(y.name) === norm(x.name) && y.unit === x.unit);
+    if (m) { m.qty = Math.round((m.qty + x.qty) * 100) / 100; m.maybe = m.maybe && x.maybe; } else merged.push(x);
+  }
+  return merged;
+}
+// Text for the optional AI read: drop greeting/name, address, card, contact and order-number lines, and cap the length.
+function orderTextForAI(text) {
+  const keep = []; let addr = 0;
+  for (const raw of String(text || '').split(/\r?\n/)) {
+    const l = raw.replace(/\s+/g, ' ').trim();
+    if (!l) { addr = 0; continue; }
+    if (ORDER_ADDR_HEAD.test(l)) { addr = 5; continue; }
+    if (addr) { addr = /\b[A-Z]{2},?\s+\d{5}(-\d{4})?\b/.test(l) ? 0 : addr - 1; continue; }
+    if (ORDER_PII.some(r => r.test(l))) continue;
+    keep.push(l);
+  }
+  return keep.join('\n').slice(0, 4000);
+}
+
 /* ---------- toast & sheet ---------- */
 let _toastT;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(_toastT); _toastT = setTimeout(() => t.classList.remove('show'), 2600); }
@@ -2080,13 +2223,13 @@ function itemSheet() {
 
 /* ---- scan ---- */
 function viewScan() {
-  const types = [['receipt', '🧾', 'Receipt'], ['fridge', '🧊', 'Fridge'], ['pantry', '🥫', 'Pantry'], ['freezer', '❄️', 'Freezer']];
+  const types = [['receipt', '🧾', 'Receipt'], ['fridge', '🧊', 'Fridge'], ['pantry', '🥫', 'Pantry'], ['freezer', '❄️', 'Freezer'], ['paste', '📋', 'Paste order']];
   const head = `<header class="top"><div><p class="eyebrow">AI scanner</p><h1>Scan</h1></div></header>`;
-  if (scan.busy) return head + `<div class="loading"><div class="spinner"></div><b>Reading your ${scan.type}…</b><p class="small">This usually takes 10–20 seconds.</p></div>`;
+  if (scan.busy) return head + `<div class="loading"><div class="spinner"></div><b>Reading your ${scan.type === 'paste' ? 'order' : scan.type}…</b><p class="small">This usually takes 10–20 seconds.</p></div>`;
   if (scan.items) {
     const on = scan.items.filter(i => i.on).length;
     return head + `<div class="row" style="justify-content:space-between;margin-bottom:12px"><h2>Review ${scan.items.length} item${scan.items.length === 1 ? '' : 's'}</h2><button class="btn btn-ghost btn-sm" data-act="scanToggleAll">${on === scan.items.length ? 'Uncheck all' : 'Check all'}</button></div>
-      <p class="small muted" style="margin-bottom:12px">Fix anything the AI got wrong, uncheck what you don’t want, then add.</p>
+      <p class="small muted" style="margin-bottom:12px">${scan.source === 'paste' ? 'Check the names and amounts, uncheck what you don’t want, then add.' : 'Fix anything the AI got wrong, uncheck what you don’t want, then add.'}</p>
       ${scan.partial ? `<div class="note danger" style="margin-bottom:12px">The AI reply was cut off, so some items may be missing. Add these, then scan the rest with fewer photos at a time.</div>` : ''}
       ${hasAllergies() ? allergyNote('margin:-6px 0 12px') : ''}
       ${scan.items.map((it, i) => `<div class="review-item ${it.on ? '' : 'off'}">
@@ -2103,7 +2246,15 @@ function viewScan() {
         <button class="btn btn-primary btn-block" data-act="scanAdd">Add ${on} item${on === 1 ? '' : 's'} to pantry</button>
         <button class="btn btn-ghost btn-block" data-act="scanDiscard">Discard</button></div></div>`;
   }
-  return head + `<div class="seg">${types.map(([k, ic, l]) => `<button class="${scan.type === k ? 'on' : ''}" data-act="scanType" data-v="${k}">${ic} ${l}</button>`).join('')}</div>
+  const seg = `<div class="seg scan-types">${types.map(([k, ic, l]) => `<button class="${scan.type === k ? 'on' : ''}" data-act="scanType" data-v="${k}">${ic} ${l}</button>`).join('')}</div>`;
+  if (scan.type === 'paste') return head + seg + `<div class="field"><label for="paste-text">Copy your Amazon, Instacart or Walmart order email or order page and paste it here</label>
+      <textarea id="paste-text" class="input paste-box" placeholder="Paste your order here" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea></div>
+    <button class="btn btn-primary btn-block" data-act="readPaste">Read items</button>
+    <p class="tiny muted" style="margin-top:8px">🔒 Your order text stays on this phone. We only keep the food items.</p>
+    ${paste.empty ? `<div class="note warn" style="margin-top:14px"><b>Couldn’t find food items in that text.</b> Try copying just the part with the items, or add them by hand in Pantry.
+      ${paste.text && canSeeImages() ? `<br><button class="btn btn-sm btn-soft" data-act="pasteAI" style="margin-top:8px">Read it with AI (text only)</button>` : ''}</div>` : ''}
+    ${scan.error ? `<div style="margin-top:14px">${aiErrorHtml(scan.error, scan.errorCode)}</div>` : ''}`;
+  return head + `<div class="seg scan-types">${types.map(([k, ic, l]) => `<button class="${scan.type === k ? 'on' : ''}" data-act="scanType" data-v="${k}">${ic} ${l}</button>`).join('')}</div>
     <div class="scan-btns">
       <button class="scan-btn" data-act="pickCam"><span class="ic">📷</span>Take photo</button>
       <button class="scan-btn" data-act="pickGal"><span class="ic">🖼️</span>Choose from gallery</button></div>
@@ -2479,18 +2630,39 @@ If there is no food, return {"items":[]}.` }
     // ~18 output tokens per item in the compact format, so 2000 fits ~100 items. A cut-off reply is salvaged below.
     const text = await callClaude({ system: 'You are a meticulous grocery inventory assistant. Respond with JSON only.', content, maxTokens: 2000 });
     const data = extractJSON(text);
-    const items = (Array.isArray(data) ? data : data.items || []).map(x => {
-      if (!x || typeof x !== 'object') return null;
-      const name = String(x.n ?? x.name ?? '').trim(); if (!name) return null;
-      const cat = x.c ?? x.category, category = CATEGORIES.includes(cat) ? cat : guessCategory(name);
-      let unit = String(x.u ?? x.unit ?? '').toLowerCase().trim(); if (['count', 'each', 'ea', 'whole', 'item', 'pc'].includes(unit)) unit = '';
-      const d = x.d ?? x.expires_in_days, days = d != null && d !== '' && Number.isFinite(Number(d)) ? Math.round(Number(d)) : SHELF[category];
-      return { on: true, name, qty: Number(x.q ?? x.quantity ?? x.qty) || 1, unit, category, days, note: String(x.note || '').slice(0, 140) };
-    }).filter(Boolean);
+    const items = scanItems(data);
     if (!items.length) throw new Error(data._partial ? 'The AI reply was cut off before any items came through. Try fewer photos at a time.' : t === 'receipt' ? 'No food items found on that receipt. Try a clearer, flatter photo.' : 'No food found in that photo. Try better light or a closer shot.');
-    scan.items = items; scan.partial = !!data._partial;
+    scan.items = items; scan.partial = !!data._partial; scan.source = 'photo';
   } catch (e) { scan.error = e.message; scan.errorCode = e.code || ''; }
   scan.busy = false; if (S.ui.tab === 'scan') render(); else if (scan.items) toast('Scan ready to review');
+}
+// AI reply in the compact scan format → review rows.
+function scanItems(data) {
+  return (Array.isArray(data) ? data : data.items || []).map(x => {
+    if (!x || typeof x !== 'object') return null;
+    const name = String(x.n ?? x.name ?? '').trim(); if (!name) return null;
+    const cat = x.c ?? x.category, category = CATEGORIES.includes(cat) ? cat : guessCategory(name);
+    let unit = String(x.u ?? x.unit ?? '').toLowerCase().trim(); if (['count', 'each', 'ea', 'whole', 'item', 'pc'].includes(unit)) unit = '';
+    const d = x.d ?? x.expires_in_days, days = d != null && d !== '' && Number.isFinite(Number(d)) ? Math.round(Number(d)) : SHELF[category];
+    return { on: true, name, qty: Number(x.q ?? x.quantity ?? x.qty) || 1, unit, category, days, note: String(x.note || '').slice(0, 140) };
+  }).filter(Boolean);
+}
+// Optional, only offered when the local parser found nothing and AI is set up. Sends the junk-stripped text only.
+async function readPasteWithAI() {
+  const order = paste.text; if (!order || scan.busy) return;
+  scan.busy = true; scan.error = ''; scan.errorCode = ''; render();
+  try {
+    const text = await callClaude({ system: 'You are a meticulous grocery inventory assistant. Respond with JSON only.', maxTokens: 800, content: [{ type: 'text', text: `This text was copied from an online grocery order. List every food or drink item that was bought, using plain grocery names without brands or sizes (e.g. "Barilla Spaghetti, 16 oz (Pack of 4)" → spaghetti, q 4). Skip non-food items, prices, fees, totals and anything refunded or out of stock.
+Return compact JSON only, no prose: {"items":[{"n":"milk","q":2,"u":"gal","c":"Dairy & Eggs","d":7}]}
+n = plain lowercase grocery name. q = quantity (omit if 1). u = one of lb, oz, g, gal, qt, l, ml, can, bottle, bag, box, jar, bunch (omit for a count). c = one of: ${CATEGORIES.join(', ')}. d = days until it expires.
+If there is no food, return {"items":[]}.
+ORDER TEXT:
+${order}` }] });
+    const data = extractJSON(text), items = scanItems(data);
+    if (!items.length) throw new Error('The AI couldn’t find food items in that text either.');
+    scan.items = items; scan.partial = !!data._partial; scan.source = 'paste'; paste.text = ''; paste.empty = false;
+  } catch (e) { scan.error = e.message; scan.errorCode = e.code || ''; }
+  scan.busy = false; if (S.ui.tab === 'scan') render();
 }
 async function addFiles(files) {
   const list = [...(files || [])].filter(f => f.type.startsWith('image/') || /\.(heic|heif)$/i.test(f.name)).slice(0, 6 - scan.images.length);
@@ -2600,18 +2772,30 @@ const ACT = {
   cartOpened: () => { arrival.left = true; recordPending(cartDraft.items.filter(i => i.on && i.asin)); toast('Opening Amazon… tap “Mark as bought” in Shop after checkout'); render(); setTimeout(drawSheet, 50); },
   searchOpened: el => { arrival.left = true; const it = cartDraft.items.find(i => i.key === el.dataset.key); if (it) recordPending([it]); render(); },
 
-  scanType: el => { scan.type = el.dataset.v; render(); },
+  scanType: el => { scan.type = el.dataset.v; paste.empty = false; paste.text = ''; scan.error = ''; render(); },
+  readPaste: () => {
+    const ta = $('#paste-text'), raw = ta ? ta.value : ''; if (ta) ta.value = '';   // the raw text is never kept
+    if (!raw.trim()) return toast('Paste your order text first');
+    const items = parseOrderText(raw);
+    scan.error = ''; paste.empty = !items.length; paste.text = !items.length && canSeeImages() ? orderTextForAI(raw) : '';
+    if (items.length) { scan.items = items.map(x => ({ on: !x.maybe, name: x.name, qty: x.qty, unit: x.unit, category: x.category, days: SHELF[x.category], note: x.maybe ? 'Not sure this is food, so it’s unchecked. Check it to add it.' : '' })); scan.partial = false; scan.source = 'paste'; }
+    render();
+  },
+  pasteAI: () => readPasteWithAI(),
   pickCam: () => $('#cam').click(),
   pickGal: () => $('#gal').click(),
   rmImg: el => { scan.images.splice(Number(el.dataset.i), 1); render(); },
   analyze: () => analyzeScan(),
   scanToggleAll: () => { const all = scan.items.every(i => i.on); scan.items.forEach(i => i.on = !all); render(); },
   scanAdd: () => {
-    const n = addToInventory(scan.items.filter(i => i.on)); scan.items = null; scan.images = [];
-    if (S.settings.autoGen && aiMode() !== 'none') { online.items = null; S.ui.cookView = 'feed'; goto('cook'); toast(`Added ${n} item${n === 1 ? '' : 's'} · finding recipes…`); generateRecipes(true); }
+    const added = scan.items.filter(i => i.on), fromPaste = scan.source === 'paste';
+    const n = addToInventory(added); scan.items = null; scan.images = []; scan.source = '';
+    // A pasted order is proof those pending Amazon items arrived, so "Did your order arrive?" won't ask about them.
+    if (fromPaste) { S.cart = S.cart.filter(c => !added.some(i => nameMatch(i.name, c.name))); persist(); }
+    if (!fromPaste && S.settings.autoGen && aiMode() !== 'none') { online.items = null; S.ui.cookView = 'feed'; goto('cook'); toast(`Added ${n} item${n === 1 ? '' : 's'} · finding recipes…`); generateRecipes(true); }
     else { toast(`Added ${n} item${n === 1 ? '' : 's'} to your pantry`); goto('pantry'); }
   },
-  scanDiscard: () => { scan.items = null; render(); },
+  scanDiscard: () => { scan.items = null; scan.source = ''; render(); },
 
   pantryFilter: el => { S.ui.pantryFilter = el.dataset.v; persist(); render(); },
   useItUp: () => {

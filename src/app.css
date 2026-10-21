@@ -253,3 +253,7 @@ details.filters[open] summary::after{transform:rotate(180deg)}
 .arrive.soft{display:flex;align-items:center;gap:10px;background:var(--surface-2);border-color:var(--line);padding:10px 12px}
 .arrive.soft .ic{font-size:22px}
 .arrive.soft .icon-btn{min-width:36px;height:36px;padding:0}
+/* scan types: four photo types, then "Paste order" on its own row */
+.seg.scan-types{display:grid;grid-template-columns:repeat(4,1fr)}
+.seg.scan-types button:last-child{grid-column:1/-1}
+.paste-box{min-height:170px;font-size:15px}
