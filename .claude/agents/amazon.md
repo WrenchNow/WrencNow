@@ -16,10 +16,10 @@ You handle everything Amazon for Pantry Pal. Read CLAUDE.md first.
 - **Never invent an ASIN.** Never scrape Amazon. If you don't have a verified ASIN, leave the field empty.
 - Every ASIN you add or touch goes in a verification list for Wyatt (`docs/asins-to-verify.md`) with the item name, the ASIN and where it came from. Mark entries `verified: false` in the data until Wyatt confirms them.
 - Links must include the tag from `CONFIG.AMAZON_TAG`. Never hard-code a tag elsewhere.
-- Amazon API keys live only in Worker secrets, never in `pantry-pal.html`.
+- Amazon API keys live only in Worker secrets, never in `src/` or `pantry-pal.html`.
 
 ## Your areas
-- The staples catalog in `pantry-pal.html` (about 215 items): names, categories, pack sizes and ASIN fields
+- The staples catalog in `src/data*.js` (about 215 items): names, categories, pack sizes and ASIN fields. Rebuild with `python3 build.py` after edits.
 - How the combined cart link is built (Amazon's add-to-cart URL with `ASIN.n` / `Quantity.n` and the tag)
 - `/api/amazon/search` in the Worker. **Wait until Wyatt confirms his Associates account is approved before building the real Creators API integration.**
 
