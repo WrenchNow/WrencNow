@@ -2450,7 +2450,7 @@ const ACT = {
   tonight: () => { tonight.open = true; tonight.n = 3; render(); $('#tonight')?.scrollIntoView({ block: 'start' }); },
   tonightMore: () => { tonight.n += 3; render(); },
   tonightClose: () => { tonight.open = false; render(); },
-  planOpen: () => { planDraft = { days: S.plan?.days || 5, start: todayISO(), party: S.household.members.length || S.household.partySize || 2 }; openSheet(planSheet); },
+  planOpen: () => { planDraft = { days: S.plan?.days || 5, start: todayISO(), party: S.household.partySize || S.household.members.length || 2 }; openSheet(planSheet); },
   pdDays: el => { planDraft.days = clamp(planDraft.days + Number(el.dataset.d), 3, 7); drawSheet(); },
   pdParty: el => { planDraft.party = clamp(planDraft.party + Number(el.dataset.d), 1, 30); drawSheet(); },
   pdStart: el => { planDraft.start = el.dataset.v; drawSheet(); },
