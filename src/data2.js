@@ -45,6 +45,21 @@ R('Fried Egg Sandwich','American','Breakfast',10,1,400,18,30,
 R('Sweet Potato Breakfast Bowl','American','Breakfast',30,2,420,20,46,
 '1 whole sweet potato; 4 whole eggs; 1 cup spinach; 1/2 whole avocado; 1 tbsp olive oil; 1 pinch red pepper flakes',
 'Dice the sweet potato and cook in oil, covered, over medium heat for 12 minutes, stirring now and then.|Add the spinach and cook until wilted.|Fry or scramble the eggs.|Divide into bowls, top with eggs, sliced avocado and pepper flakes.');
+R('Blueberry Banana Baked Oatmeal','American','Breakfast',40,6,250,5,42,
+'2 cup rolled oats; 1 tsp baking powder; 1 tsp cinnamon; 1/4 tsp salt; 2 whole bananas; 1.75 cup oat milk; 3 tbsp maple syrup; 2 tbsp vegetable oil; 1 cup blueberries',
+'Heat the oven to 375°F and grease an 8x8-inch dish.|Mash the bananas in a bowl, then whisk in the oat milk, maple syrup and oil.|Stir in the oats, baking powder, cinnamon and salt, then fold in most of the blueberries.|Spread in the dish, scatter the remaining berries on top and bake 30 minutes until set and golden.|Serve warm, or cover and keep in the fridge up to 4 days. Use oats labeled gluten-free if anyone needs it.');
+R('Cinnamon Apple Stovetop Oatmeal','American','Breakfast',15,2,280,9,50,
+'1 cup rolled oats; 1 cup milk; 1 whole apple; 1 tsp cinnamon; 1 tbsp brown sugar; 1 pinch salt',
+'Dice the apple and put it in a small pot with the oats, milk, 1 cup water, cinnamon and salt.|Bring to a simmer and cook 5–6 minutes, stirring often, until thick and creamy.|Stir in the brown sugar and add a splash more milk if you like it looser.');
+R('Egg and Black Bean Breakfast Tacos','Mexican','Breakfast',15,4,390,21,40,
+'6 whole eggs; 1 can black beans; 1/2 tsp cumin; 8 whole corn tortillas; 1/2 cup salsa; 1/2 cup cotija cheese; 1 tbsp vegetable oil; 2 tbsp cilantro',
+'Warm the drained beans with the cumin and a splash of water, mashing a few.|Scramble the eggs in the oil over medium-low heat until just set.|Warm the tortillas in a dry pan.|Fill with beans and eggs and top with salsa, crumbled cotija and cilantro.');
+R('Spinach Tofu Scramble','American','Breakfast',15,2,290,23,9,
+'14 oz firm tofu; 1 tbsp olive oil; 1/2 whole onion; 2 cup spinach; 1/2 tsp turmeric; 1/2 tsp garlic powder; 1/2 cup cherry tomatoes; 1 pinch black pepper',
+'Pat the tofu dry and crumble it into bite-size pieces.|Cook the diced onion in the oil for 4 minutes.|Add the tofu, turmeric, garlic powder and a good pinch of salt. Cook 5 minutes, stirring, until hot and lightly golden.|Add the spinach and halved tomatoes and stir until the spinach wilts.|Season with pepper. Serve with toast or warm tortillas if you like.');
+R('Berry Chia Pudding','American','Breakfast',5,2,215,6,30,
+'1/4 cup chia seeds; 1 cup oat milk; 1 tbsp maple syrup; 1/2 tsp vanilla extract; 1 cup raspberries',
+'Whisk the chia seeds, oat milk, maple syrup and vanilla in a bowl.|Wait 5 minutes and whisk again to break up any clumps.|Cover and chill at least 3 hours or overnight.|Mash half the berries and swirl them in, then top with the rest. Any soft berries work here.');
 
 /* ---- Lunch ---- */
 R('Black Bean Burrito Bowls','Mexican','Lunch',20,4,480,18,70,

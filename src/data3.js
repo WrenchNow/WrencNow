@@ -216,6 +216,53 @@ R('Tomato Egg Stir-Fry','Chinese','Dinner',15,2,280,14,12,
 '4 whole eggs; 3 whole tomatoes; 1 tsp sugar; 1 tbsp ketchup; 2 whole green onions; 2 tbsp vegetable oil',
 'Scramble the eggs softly in 1 tbsp oil and set aside.|Cook wedged tomatoes in the remaining oil until juicy.|Add sugar, ketchup and salt.|Fold the eggs back in and top with green onions. Serve over rice.');
 
+/* ---- Vegan, vegetarian & use-it-up dinners ---- */
+R('Sweet Potato Black Bean Chili','American','Dinner',40,4,300,14,52,
+'1 tbsp olive oil; 1 whole onion; 1 whole bell pepper; 3 clove garlic; 2 whole sweet potatoes; 2 can black beans; 1 can diced tomatoes; 2 cup vegetable broth; 2 tbsp chili powder; 1 tsp cumin; 1/4 cup cilantro; 1 whole lime',
+'Heat the oil in a large pot and cook the diced onion and pepper for 5 minutes.|Add the garlic, chili powder and cumin and stir for 1 minute.|Add the sweet potatoes cut into 1/2-inch cubes, the drained beans, tomatoes and broth.|Simmer, partly covered, for 25 minutes until the sweet potato is tender.|Mash a few spoonfuls against the side of the pot to thicken, then season with salt.|Serve with cilantro and lime wedges.');
+R('Red Lentil Ragu with Spaghetti','Italian','Dinner',40,4,670,28,122,
+'2 tbsp olive oil; 1 whole onion; 1 whole carrot; 1 stalk celery; 3 clove garlic; 2 tbsp tomato paste; 1 cup red lentils; 1 can crushed tomatoes; 2.5 cup vegetable broth; 1 tsp italian seasoning; 1 lb spaghetti',
+'Finely chop the onion, carrot and celery and cook in the oil for 8 minutes.|Add the garlic and tomato paste and stir 2 minutes until the paste darkens.|Add the rinsed lentils, tomatoes, broth and italian seasoning. Simmer 20 minutes, stirring often, until the lentils break down into a thick sauce.|Meanwhile cook the spaghetti and save 1/2 cup of the pasta water.|Toss the pasta with the sauce, loosening it with pasta water. Season with salt and pepper.');
+R('Peanut Sweet Potato Stew','Other','Dinner',35,4,470,18,46,
+'1 tbsp vegetable oil; 1 whole onion; 3 clove garlic; 1 tbsp ginger; 2 whole sweet potatoes; 1 can diced tomatoes; 4 cup vegetable broth; 1/2 cup peanut butter; 1 can chickpeas; 3 cup kale; 1/4 cup peanuts',
+'Cook the diced onion in the oil for 5 minutes, then add the garlic and ginger for 1 minute.|Add the sweet potatoes in 1-inch cubes, the tomatoes and the broth. Simmer 15 minutes.|Whisk the peanut butter with a ladle of the hot broth until smooth, then stir it into the pot.|Add the drained chickpeas and chopped kale and simmer 10 minutes more until the sweet potato is soft.|Season with salt and serve topped with chopped peanuts.');
+R('Crispy Potato and Black Bean Tacos','Mexican','Dinner',35,4,490,14,80,
+'3 whole potatoes; 2 tbsp vegetable oil; 1 can black beans; 1 tsp cumin; 1 tsp chili powder; 12 whole corn tortillas; 1 cup salsa; 1 whole avocado; 1/4 cup cilantro; 1 whole lime',
+'Cut the potatoes into 1/2-inch cubes and fry in the oil over medium heat, covered for the first 8 minutes, then uncovered until crisp, about 15 minutes in all.|Stir in the cumin, chili powder and a pinch of salt.|Warm the drained beans with a splash of water and mash lightly.|Char the tortillas in a dry pan.|Fill with beans and potatoes and top with salsa, sliced avocado, cilantro and a squeeze of lime.');
+R('White Bean and Spinach Stew','Italian','Dinner',35,4,280,13,40,
+'2 tbsp olive oil; 1 whole onion; 2 whole carrots; 2 stalk celery; 4 clove garlic; 1 tsp thyme; 2 can cannellini beans; 1 can diced tomatoes; 4 cup vegetable broth; 5 cup spinach; 1 whole lemon; 1/4 cup parsley',
+'Cook the diced onion, carrots and celery in the oil for 8 minutes.|Add the sliced garlic and thyme and cook 1 minute.|Add the drained beans, tomatoes and broth and simmer 15 minutes.|Mash about a cup of the beans against the pot to thicken the broth.|Stir in the spinach until wilted, then the lemon juice and chopped parsley. Season and serve, with crusty bread if you have some.');
+R('Caribbean Bean Bowls with Mango Salsa','Caribbean','Dinner',35,4,720,20,116,
+'1.5 cup jasmine rice; 1 can coconut milk; 2 can kidney beans; 1 tsp cumin; 1 tsp garlic powder; 1 tsp thyme; 2 whole mangoes; 1/2 whole red onion; 1 whole jalapeño; 1/4 cup cilantro; 2 whole limes',
+'Rinse the rice and put it in a pot with the coconut milk, 1 cup water and 1/2 tsp salt. Bring to a boil, cover and cook on low 15 minutes, then rest 10 minutes.|Warm the drained beans with the cumin, garlic powder, thyme and a splash of water for 5 minutes.|Dice the mango, red onion and seeded jalapeño and mix with the chopped cilantro, the juice of 1 lime and a pinch of salt.|Fill bowls with rice and beans and spoon the salsa on top. Serve with the other lime in wedges.');
+R('Lemon Garlic Chickpea Pasta','Italian','Dinner',20,4,525,16,80,
+'12 oz penne; 1/4 cup olive oil; 5 clove garlic; 1 pinch red pepper flakes; 1 can chickpeas; 4 cup spinach; 1 whole lemon; 1/4 cup parsley',
+'Cook the penne in salted water and save 1 cup of the pasta water.|Meanwhile warm the oil with the sliced garlic and pepper flakes over low heat until the garlic is pale gold.|Add the drained chickpeas and cook 5 minutes until lightly crisp.|Add the spinach and stir until wilted.|Toss in the pasta, the lemon zest and juice and enough pasta water to make it glossy. Finish with parsley.');
+R('Sheet-Pan Cauliflower and Chickpeas with Tahini','Middle Eastern','Dinner',40,4,475,16,56,
+'1 head cauliflower; 1 can chickpeas; 1 whole red onion; 3 tbsp olive oil; 1 tsp cumin; 1 tsp smoked paprika; 1/2 tsp garlic powder; 1 cup quinoa; 1/4 cup tahini; 1 whole lemon; 1/4 cup parsley',
+'Heat the oven to 425°F. Cut the cauliflower into florets and the onion into wedges.|Toss them with the drained chickpeas, oil, cumin, paprika, garlic powder and salt on a sheet pan.|Roast 25–30 minutes, stirring once, until browned at the edges.|Meanwhile simmer the rinsed quinoa in 2 cups water, covered, for 15 minutes.|Whisk the tahini with the lemon juice and 3–4 tbsp water until pourable.|Serve the vegetables over the quinoa, drizzled with the tahini sauce and scattered with parsley.');
+R('Tuscan Bread and Tomato Soup','Italian','Dinner',35,4,340,9,43,
+'1/4 cup olive oil; 1 whole onion; 4 clove garlic; 1 pinch red pepper flakes; 2 can crushed tomatoes; 3 cup vegetable broth; 6 slice bread; 1/2 cup basil',
+'Warm the oil in a pot and cook the diced onion for 6 minutes. Add the sliced garlic and pepper flakes for 1 minute.|Add the tomatoes and broth and simmer 10 minutes.|Tear the bread (day-old is best) into chunks and stir it in. Simmer 10 minutes, stirring, until the bread falls apart and the soup is thick.|Stir in the torn basil, season with salt and serve with a drizzle of olive oil.|For a vegan pot, pick a crusty bread made without milk, butter or egg.');
+R('Mushroom Stroganoff','American','Dinner',35,4,545,19,71,
+'12 oz egg noodles; 2 tbsp butter; 1 tbsp olive oil; 1.5 lb mushrooms; 1 whole onion; 3 clove garlic; 1 tbsp flour; 1 tsp paprika; 1.5 cup vegetable broth; 1 tsp dijon mustard; 2/3 cup sour cream; 2 tbsp parsley',
+'Cook the egg noodles, drain and keep warm.|Brown the sliced mushrooms in the butter and oil over high heat in two batches, about 6 minutes each. Set aside.|Lower the heat and cook the diced onion 5 minutes, then the garlic for 1 minute.|Stir in the flour and paprika, then the broth and mustard. Simmer 3 minutes until thickened.|Return the mushrooms, take the pan off the heat and stir in the sour cream. Season well.|Serve over the noodles with parsley.');
+R('Cheesy Spinach Rice Bake','American','Dinner',40,4,505,22,52,
+'4 cup cooked rice; 1 tbsp olive oil; 1 whole onion; 2 clove garlic; 4 cup spinach; 3 whole eggs; 1 cup milk; 1/2 tsp paprika; 1.5 cup cheddar cheese',
+'Heat the oven to 375°F and grease an 8x8-inch baking dish.|Cook the diced onion in the oil for 5 minutes, then add the garlic and spinach and stir until wilted.|Whisk the eggs, milk, paprika, salt and pepper.|Mix the rice, spinach, egg mixture and 1 cup of the cheese, then spread in the dish.|Top with the remaining cheese and bake 25 minutes until set and golden. Day-old rice works best.');
+R('Broccoli Cheddar Bread Strata','American','Dinner',70,6,370,21,27,
+'1 tbsp butter; 1 whole onion; 2 cup broccoli; 8 slice bread; 1.5 cup cheddar cheese; 6 whole eggs; 2 cup milk; 1 tsp dijon mustard',
+'Cook the diced onion in the butter for 5 minutes. Add the chopped broccoli and 2 tbsp water, cover and steam 3 minutes.|Cut the bread into cubes (stale bread works best) and spread half in a greased 9x13-inch dish.|Scatter over the broccoli mix and half the cheese, then the rest of the bread.|Whisk the eggs, milk, mustard, salt and pepper and pour over evenly. Press down and let soak 15 minutes.|Top with the remaining cheese and bake at 350°F for 40–45 minutes until puffed and set in the middle.');
+R('Lemony Zucchini Linguine','Italian','Dinner',25,4,490,18,70,
+'12 oz linguine; 3 whole zucchini; 3 tbsp olive oil; 3 clove garlic; 1 pinch red pepper flakes; 1 whole lemon; 1/2 cup parmesan cheese; 1/4 cup basil',
+'Cook the linguine and save 1 cup of the pasta water.|Coarsely grate the zucchini.|Warm the oil with the sliced garlic and pepper flakes, then add the zucchini and a pinch of salt. Cook 5 minutes until soft and jammy.|Toss with the pasta, lemon zest and juice, parmesan and enough pasta water to coat.|Finish with torn basil.');
+R('Creamy Chicken Spinach Pasta','Italian','Dinner',25,4,615,42,74,
+'12 oz penne; 2 tbsp butter; 3 clove garlic; 2 tbsp flour; 2 cup milk; 1/2 cup parmesan cheese; 2 cup cooked chicken; 4 cup spinach; 1 pinch black pepper',
+'Cook the penne and save 1 cup of the pasta water.|Melt the butter, add the garlic for 30 seconds, then whisk in the flour.|Slowly whisk in the milk and simmer 3 minutes until it coats a spoon. Stir in the parmesan.|Add the shredded chicken and the spinach and stir until the spinach wilts and the chicken is hot.|Toss with the pasta, loosening with pasta water. Season with salt and plenty of pepper.');
+R('Lemon Chicken Rice Soup','Mediterranean','Dinner',30,4,310,28,33,
+'1 tbsp olive oil; 1 whole onion; 2 whole carrots; 2 stalk celery; 2 clove garlic; 6 cup chicken broth; 2 cup cooked chicken; 2 cup cooked rice; 3 cup spinach; 1 whole lemon; 2 tbsp dill',
+'Cook the diced onion, carrots and celery in the oil for 6 minutes. Add the garlic for 1 minute.|Pour in the broth and simmer 10 minutes until the carrots are tender.|Add the shredded chicken and cooked rice and simmer 5 minutes.|Stir in the spinach until wilted.|Take off the heat and add the lemon juice and chopped dill. Taste and add salt.');
+
 /* ---- Snacks ---- */
 R('Deviled Eggs','American','Snack',25,6,120,6,1,
 '6 whole eggs; 1/4 cup mayonnaise; 1 tsp dijon mustard; 1 tsp lemon juice; 1 pinch paprika',
@@ -241,6 +288,18 @@ R('No-Bake Energy Bites','American','Snack',15,12,140,4,18,
 R('Baba Ganoush','Middle Eastern','Snack',50,6,110,2,10,
 '2 whole eggplants; 3 tbsp tahini; 2 tbsp lemon juice; 1 clove garlic; 2 tbsp olive oil',
 'Roast whole eggplants at 450°F for 40 minutes until collapsed.|Scoop out the flesh and drain 10 minutes.|Mash with tahini, lemon juice, garlic and salt.|Drizzle with olive oil.');
+R('Lemon Herb White Bean Dip','Italian','Snack',10,6,130,4,14,
+'1 can cannellini beans; 3 tbsp olive oil; 1 whole lemon; 1 clove garlic; 1/4 cup parsley; 2 tbsp basil; 2 whole carrots; 1 whole cucumber',
+'Drain and rinse the beans.|Blend with the oil, lemon zest and juice, garlic, herbs, 2 tbsp water and a pinch of salt until smooth.|Cut the carrots and cucumber into sticks for dipping.|Keeps 4 days in the fridge, and it is a good home for herbs that are about to wilt.');
+R('Banana Oat Snack Cookies','American','Snack',25,12,90,3,13,
+'2 whole bananas; 1/4 cup peanut butter; 1.5 cup rolled oats; 1 tsp cinnamon; 1 tbsp chia seeds; 1 pinch salt',
+'Heat the oven to 350°F and line a baking sheet.|Mash the very ripe bananas, then stir in the peanut butter, oats, cinnamon, chia seeds and salt.|Scoop 12 mounds onto the sheet and flatten them slightly.|Bake 14–16 minutes until golden at the edges. Cool on the sheet.');
+R('Frozen Yogurt Berry Bark','American','Snack',10,6,90,8,13,
+'2 cup greek yogurt; 2 tbsp honey; 1/2 tsp vanilla extract; 1 cup strawberries; 1/2 cup blueberries',
+'Line a baking sheet with parchment.|Stir the yogurt with the honey and vanilla and spread it about 1/2 inch thick.|Scatter the sliced strawberries and blueberries over and press them in lightly.|Freeze at least 3 hours, then break into pieces. Keep frozen.');
+R('Garlic Parmesan Popcorn','American','Snack',5,4,165,6,16,
+'10 cup popcorn; 2 tbsp butter; 1/2 tsp garlic powder; 1/3 cup parmesan cheese; 1 pinch salt',
+'Put the freshly popped popcorn in a big bowl.|Melt the butter with the garlic powder.|Drizzle it over the popcorn while tossing, then add the parmesan and salt and toss again.|Eat right away.');
 
 /* ---- Desserts ---- */
 R('Apple Crisp','American','Dessert',50,6,320,3,52,
