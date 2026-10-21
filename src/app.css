@@ -238,3 +238,10 @@ details.filters[open] summary::after{transform:rotate(180deg)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation-duration:.01ms!important}}
 .sheet-foot.static{position:static;background:none;padding-top:8px}
 .ing.swap .st{background:var(--brand-soft);color:var(--brand)}
+/* dinner tonight & meal plan */
+.plan-entry{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.plan-entry .btn{line-height:1.25;text-align:center;padding:11px 10px}
+.plan-day{display:flex;flex-direction:column;gap:6px;border-radius:var(--radius);padding:10px;margin:0 -6px;border:1.5px solid transparent}
+.plan-day.today{background:var(--brand-soft);border-color:var(--brand)}
+.plan-day .card{box-shadow:none}
+.plan-date{display:flex;align-items:center;gap:8px;font-size:14px}

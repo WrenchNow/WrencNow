@@ -172,8 +172,23 @@ function defaultState() {
     catalog: buildDefaultCatalog(), catalogVersion: STAPLE_ASINS_VERSION,
     settings: { backendUrl: '', appToken: '', tag: '', picker: true, hideAllergens: true, applyDiets: true, autoGen: true, useSwaps: true, userKey: '', admin: false },
     filters: { cuisines: [], meal: 'Any', maxTime: 0, party: 0, cookWith: '', goal: 'any' },
-    ui: { tab: 'cook', cookView: 'feed', pantryFilter: 'all' }
+    ui: { tab: 'cook', cookView: 'feed', pantryFilter: 'all' },
+    plan: null
   };
+}
+// Meal plan: { start: ISO date, days: 3–7, party, items: [{ id, title, locked }] } (one item per day; id null = no dinner fit).
+// Used for both saved state and backup import, so it rebuilds the plan from known fields with safe types.
+function sanitizePlan(p) {
+  if (!p || typeof p !== 'object' || !/^\d{4}-\d{2}-\d{2}$/.test(p.start)) return null;
+  const days = clamp(Math.round(Number(p.days)) || 5, 3, 7);
+  const party = clamp(Math.round(Number(p.party)) || 2, 1, 30);
+  const items = (Array.isArray(p.items) ? p.items : []).slice(0, days).map(x => {
+    x = x && typeof x === 'object' ? x : {};
+    const id = String(x.id ?? '').replace(/[^\w-]/g, '').slice(0, 40);
+    return { id: id || null, title: id ? String(x.title ?? '').slice(0, 90) : '', locked: x.locked === true };
+  });
+  while (items.length < days) items.push({ id: null, title: '', locked: false });
+  return { start: p.start, days, party, items };
 }
 let S = defaultState();
 function hydrate(saved) {
@@ -188,6 +203,7 @@ function hydrate(saved) {
   else if (!(saved.catalogVersion >= STAPLE_ASINS_VERSION)) out.catalog = mergeCatalog(out.catalog);
   out.catalogVersion = STAPLE_ASINS_VERSION;
   ['inventory', 'shopping', 'cart', 'aiRecipes', 'community', 'cooked'].forEach(k => { if (!Array.isArray(out[k])) out[k] = []; });
+  out.plan = sanitizePlan(saved.plan);
   return out;
 }
 
@@ -232,7 +248,8 @@ function sanitizeBackup(d) {
     cooked: arr(d.cooked).filter(c => typeof c.title === 'string').map(c => ({ title: c.title.slice(0, 90), date: date(c.date) || todayISO() })).slice(-200),
     catalog: arr(d.catalog).map(c => ({ id: id(c.id), name: str(c.name, 80), cat: CATEGORIES.includes(c.cat) ? c.cat : 'Other', per: num(c.per, 0, 100, 0), asin: str(c.asin, 10).toUpperCase().replace(/[^A-Z0-9]/g, ''), title: str(c.title), term: str(c.term || c.name, 80), asinSrc: c.asinSrc === 'shipped' ? 'shipped' : '' })).filter(c => c.name),
     filters: { cuisines: strs(f.cuisines, c => CUISINES.includes(c)), meal: MEALS.includes(f.meal) ? f.meal : 'Any', maxTime: TIMES.includes(Number(f.maxTime)) ? Number(f.maxTime) : 0, party: num(f.party, 0, 30, 0), cookWith: str(f.cookWith, 100), goal: GOALS.some(g => g.k === f.goal) ? f.goal : 'any' },
-    settings: bools
+    settings: bools,
+    plan: sanitizePlan(d.plan)
   };
 }
 
@@ -247,6 +264,9 @@ let detail = null;       // { id, servings }
 let cartDraft = null;    // { title, items: [] }
 let memberDraft = null;
 let itemDraft = null;
+let planDraft = null;    // { days, start, party } while the "Plan my week" sheet is open
+const tonight = { open: false, n: 3 };
+const planSeen = {};     // day index -> recipe ids already offered by Swap (this session only)
 let catQ = '';
 let health = null;
 
@@ -387,6 +407,98 @@ function computeFeed() {
   Object.values(groups).forEach(a => a.sort(sorter));
   return groups;
 }
+
+/* ---------- dinner tonight & meal plan (no AI: works offline and costs nothing) ---------- */
+const isoAdd = (iso, n) => { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return localISO(d); };
+const dayLabel = iso => { const d = daysUntil(iso); return d === 0 ? 'Today' : d === 1 ? 'Tomorrow' : new Date(iso + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }); };
+const PROTEINS = [['chicken', 'chicken'], ['turkey', 'turkey'], ['beef', 'beef'], ['steak', 'beef'], ['pork', 'pork'], ['bacon', 'pork'], ['ham', 'pork'], ['sausage', 'pork'], ['chorizo', 'pork'], ['lamb', 'lamb'], ['salmon', 'fish'], ['cod', 'fish'], ['tuna', 'fish'], ['tilapia', 'fish'], ['halibut', 'fish'], ['fish', 'fish'], ['shrimp', 'shellfish'], ['prawn', 'shellfish'], ['scallop', 'shellfish'], ['tofu', 'tofu'], ['tempeh', 'tofu'], ['egg', 'egg'], ['chickpea', 'legume'], ['lentil', 'legume'], ['bean', 'legume']];
+const _protein = new WeakMap();
+function mainProtein(r) {
+  if (_protein.has(r)) return _protein.get(r);
+  let out = '';
+  for (const i of r.ingredients) { if (hasWord(i.name, 'green bean')) continue; const m = PROTEINS.find(([w]) => hasWord(i.name, w)); if (m) { out = m[1]; break; } }
+  _protein.set(r, out); return out;
+}
+// Dinners that fit everyone: no household allergen, every member's diet, and not cooked in the last 7 days.
+function dinnerPool() {
+  const diets = householdDiets();
+  const recent = new Set(S.cooked.filter(c => daysUntil(c.date) >= -7).map(c => c.title.toLowerCase()));
+  const seen = new Set(), out = [];
+  for (const r of [...S.aiRecipes, ...LIB]) {
+    const key = r.title.toLowerCase(); if (r.meal !== 'Dinner' || seen.has(key) || recent.has(key)) continue; seen.add(key);
+    if (conflictsFor(r.ingredients.map(i => i.name)).length) continue;
+    if (diets.length) { const d = recipeInfo(r).diets; if (!diets.every(x => d.has(x))) continue; }
+    out.push(r);
+  }
+  return out;
+}
+// Score: +3 per pantry item used that is still good on `onDay` and expires within 3 days (unless another day
+// already claimed it), +1 per other pantry item used, −1 per missing ingredient.
+function dinnerEntry(r, claimed = new Set(), onDay = todayISO()) {
+  const { missing, swaps } = splitMissing(r);
+  const used = [];
+  for (const ing of r.ingredients) {
+    if (isBasic(ing.name)) continue;
+    const sw = swaps.find(s => s.ing === ing);
+    const it = sw ? S.inventory.find(i => i.name === sw.use) : S.inventory.find(i => nameMatch(ing.name, i.name));
+    if (it && !used.includes(it)) used.push(it);
+  }
+  const off = Math.max(0, daysUntil(onDay));
+  const exp = used.filter(it => { const d = daysUntil(it.expires); return d != null && d >= off && d <= 3 && !claimed.has(it.id); });
+  return { r, used, exp, missing, swaps, score: exp.length * 3 + (used.length - exp.length) - missing.length };
+}
+const byScore = (a, b) => b.score - a.score || a.missing.length - b.missing.length || a.r.time - b.r.time || a.r.title.localeCompare(b.r.title);
+function tonightPicks() { return dinnerPool().map(r => dinnerEntry(r)).sort(byScore); }
+function planRecipe(it) {
+  if (!it || !it.id) return null;
+  const r = getRecipe(it.id); if (r && r.title === it.title) return r;
+  return allRecipes().find(x => x.title === it.title) || null;
+}
+// Entries for each day in order, so each expiring pantry item only gives its bonus to one (the earliest) day.
+function planEntries(plan) {
+  const claimed = new Set();
+  return plan.items.map((it, i) => {
+    const r = planRecipe(it); if (!r) return null;
+    const e = dinnerEntry(r, claimed, isoAdd(plan.start, i)); e.exp.forEach(x => claimed.add(x.id)); return e;
+  });
+}
+// Best dinner for day i given the other days. `avoid` ids sink to the bottom (re-roll); `skip` ids are left out (swap).
+function pickForDay(plan, i, pool, claimed, taken, avoid = new Set(), skip = new Set()) {
+  const prev = planRecipe(plan.items[i - 1]), next = plan.items[i + 1]?.locked ? planRecipe(plan.items[i + 1]) : null;
+  const vary = r => [prev, next].reduce((s, o) => s - (o && mainProtein(o) && mainProtein(o) === mainProtein(r) ? 2 : 0) - (o && o.cuisine === r.cuisine ? 2 : 0), 0);
+  const day = isoAdd(plan.start, i);
+  const list = pool.filter(r => !taken.has(r.title.toLowerCase()) && !skip.has(r.id)).map(r => { const e = dinnerEntry(r, claimed, day); e.score += vary(r) - (avoid.has(r.id) ? 100 : 0); return e; }).sort(byScore);
+  return list[0] || null;
+}
+// Fill every unlocked day, day by day. Locked days are kept and claim their expiring items first.
+function fillPlan(plan, avoid = new Set()) {
+  const pool = dinnerPool();
+  const claimed = new Set(), taken = new Set();
+  plan.items.forEach((it, i) => { const r = it.locked && planRecipe(it); if (!r) return; taken.add(r.title.toLowerCase()); dinnerEntry(r, claimed, isoAdd(plan.start, i)).exp.forEach(x => claimed.add(x.id)); });
+  plan.items.forEach((it, i) => {
+    if (it.locked && planRecipe(it)) return;
+    const e = pickForDay(plan, i, pool, claimed, taken, avoid);
+    if (!e) { plan.items[i] = { id: null, title: '', locked: false }; return; }
+    plan.items[i] = { id: e.r.id, title: e.r.title, locked: false };
+    taken.add(e.r.title.toLowerCase()); e.exp.forEach(x => claimed.add(x.id));
+  });
+  return plan;
+}
+// Every day's missing ingredients, scaled to the plan's party size, merged by name + unit with amounts summed.
+function weekNeeds(plan) {
+  const map = new Map();
+  plan.items.forEach(it => {
+    const r = planRecipe(it); if (!r) return;
+    const f = plan.party / r.servings;
+    for (const i of splitMissing(r).missing) {
+      if (isBasic(i.name)) continue;
+      const k = norm(i.name) + '|' + (i.unit || '');
+      const m = map.get(k); if (m) { m.qty += i.qty * f; m.from.push(r.title); } else map.set(k, { name: i.name, unit: i.unit || '', qty: i.qty * f, from: [r.title] });
+    }
+  });
+  return [...map.values()];
+}
+const weekTitle = plan => 'Week of ' + fmtDate(plan.start);
 
 /* ---------- quantity formatting & scaling ---------- */
 const FRACS = [[0, ''], [1 / 8, '⅛'], [1 / 4, '¼'], [1 / 3, '⅓'], [3 / 8, '⅜'], [1 / 2, '½'], [5 / 8, '⅝'], [2 / 3, '⅔'], [3 / 4, '¾'], [7 / 8, '⅞'], [1, '']];
@@ -550,7 +662,7 @@ function openSheet(renderFn, onClose) {
 }
 function drawSheet() { if (!sheet) return; const b = $('#sheet-body'); const st = b.scrollTop; b.innerHTML = sheet.render(); b.scrollTop = st; }
 function closeSheet() {
-  const s = sheet; sheet = null; detail = null; cartDraft = null; memberDraft = null; itemDraft = null;
+  const s = sheet; sheet = null; detail = null; cartDraft = null; memberDraft = null; itemDraft = null; planDraft = null;
   $('#sheet').classList.remove('open'); $('#sheet').setAttribute('aria-hidden', 'true'); document.body.classList.remove('noscroll');
   if (s && s.onClose) s.onClose();
 }
@@ -629,9 +741,82 @@ function viewFeed() {
       ${list.length > lim ? `<button class="btn btn-ghost more-btn" data-act="expand" data-k="${key}">Show all ${list.length}</button>` : ''}`;
   };
   const total = g.ready.length + g.near.length + g.shop.length;
-  return filtersPanel() + gen + emptyInv + (hasAllergies() ? allergyNote('margin:-4px 0 14px') : '') +
+  return planEntry() + tonightPanel() + planPanel() + filtersPanel() + gen + emptyInv + (hasAllergies() ? allergyNote('margin:-4px 0 14px') : '') +
     (total ? sec('ready', 'Ready now', 'var(--ok)', g.ready) + sec('near', 'Missing 1–2 items', 'var(--warn)', g.near) + onlineSection() + sec('shop', 'Needs shopping', 'var(--accent)', g.shop)
       : `<div class="empty"><div class="big">🔍</div><h3>No recipes match</h3><p>Try loosening your filters or generate new ideas.</p></div>` + onlineSection());
+}
+
+/* ---- dinner tonight & meal plan ---- */
+function planEntry() {
+  return `<div class="plan-entry"><button class="btn btn-accent" data-act="tonight">🍽️ What’s for dinner tonight?</button>
+    <button class="btn btn-soft" data-act="planOpen">📅 ${S.plan ? 'Plan a new week' : 'Plan my week'}</button></div>`;
+}
+function dinnerCard(e, serv) {
+  const r = e.r;
+  const uses = e.used.length ? `<p class="small">Uses ${e.used.length} of your items${e.exp.length ? ' · ' + e.exp.map(x => `<span class="badge warn">⏳ ${esc(x.name)}</span>`).join(' ') : ''}</p>` : `<p class="small muted">Uses none of your items yet</p>`;
+  const miss = e.missing.length ? `<p class="missing">Missing: ${esc(e.missing.slice(0, 3).map(i => i.name).join(', '))}${e.missing.length > 3 ? ` +${e.missing.length - 3}` : ''}</p>` : `<p class="small" style="color:var(--ok);font-weight:600">✓ You have everything</p>`;
+  return `<button class="card" data-act="openRecipe" data-id="${esc(r.id)}"${serv ? ` data-serv="${Number(serv)}"` : ''}>
+    <div class="art" style="--h:${artHue(r.title)}" aria-hidden="true">${recipeEmoji(r.title)}</div>
+    <div class="card-body"><h3>${r.source === 'ai' ? '<span class="tag ai">AI</span>' : ''}${esc(r.title)}</h3>
+      <p class="meta">⏱ ${r.time} min · ${esc(r.cuisine)}</p>${uses}${miss}</div></button>`;
+}
+function tonightPanel() {
+  if (!tonight.open) return '';
+  const all = tonightPicks(), list = all.slice(0, tonight.n);
+  return `<section class="panel" id="tonight"><div class="row" style="justify-content:space-between;margin-bottom:4px"><h2 style="margin:0">Tonight’s best bets</h2><button class="icon-btn" data-act="tonightClose" aria-label="Hide tonight’s picks">✕</button></div>
+    <p class="small muted" style="margin-bottom:10px">${S.inventory.length ? 'Dinners that use what’s expiring first, then what you have, with the fewest things to buy.' : 'Your pantry is empty, so these need the fewest ingredients. Scan or add food for better picks.'} Fits everyone’s diets, and skips what you cooked this week.</p>
+    ${hasAllergies() ? allergyNote('margin:0 0 10px') : ''}
+    ${list.length ? `<div class="feed">${list.map(e => dinnerCard(e)).join('')}</div>` : `<div class="empty"><p>No dinner fits your household’s diets and allergies right now. Check members in Household.</p></div>`}
+    ${all.length > list.length ? `<button class="btn btn-ghost more-btn" style="margin-top:10px" data-act="tonightMore">Show 3 more</button>` : ''}</section>`;
+}
+function householdSummary() {
+  const { keys, custom } = allergyIndex();
+  const parts = [...householdDiets(), ...[...keys.keys()].map(k => 'no ' + ALLERGENS.find(a => a.k === k).label.toLowerCase()), ...custom.map(c => 'no ' + c.term)];
+  return parts.length ? parts.join(' · ') : 'no diets or allergies set';
+}
+function planSheet() {
+  const d = planDraft, t = todayISO(), tm = addDays(1);
+  return `${sheetBar('Plan my week')}<p class="small muted" style="margin:-6px 0 14px">Dinners only. Uses what you have first, especially food that expires soon. No AI needed.</p>
+    <div class="panel">
+      <div class="row" style="justify-content:space-between;margin-bottom:14px"><span class="label">Number of days</span>
+        <div class="stepper"><button data-act="pdDays" data-d="-1" aria-label="Fewer days">−</button><span>${d.days}</span><button data-act="pdDays" data-d="1" aria-label="More days">+</button></div></div>
+      <span class="label">Start</span><div class="chips" style="margin:8px 0">
+        <button class="chip ${d.start === t ? 'on' : ''}" data-act="pdStart" data-v="${t}">Today</button><button class="chip ${d.start === tm ? 'on' : ''}" data-act="pdStart" data-v="${tm}">Tomorrow</button></div>
+      <input class="input" type="date" data-plan="start" min="${t}" value="${esc(d.start)}" aria-label="Start date">
+      <div class="row" style="justify-content:space-between;margin-top:14px"><span class="label">Party size</span>
+        <div class="stepper"><button data-act="pdParty" data-d="-1" aria-label="Fewer people">−</button><span>${d.party}</span><button data-act="pdParty" data-d="1" aria-label="More people">+</button></div></div></div>
+    <div class="note" style="margin-bottom:8px">👥 Planning around: <b>${esc(householdSummary())}</b></div>
+    ${allergyNote('margin:0 0 14px')}
+    ${S.plan ? `<p class="small muted" style="margin-bottom:8px">This replaces your current plan.</p>` : ''}
+    <button class="btn btn-primary btn-block" data-act="planMake">Make my plan</button>`;
+}
+function planPanel() {
+  const p = S.plan; if (!p) return '';
+  const es = planEntries(p), ti = -daysUntil(p.start);
+  const empty = p.items.filter(it => !planRecipe(it)).length, fit = empty ? dinnerPool().length : 0;
+  const needs = weekNeeds(p).length;
+  const day = (it, i) => {
+    const e = es[i], now = i === ti;
+    const head = `<div class="plan-date"><b>${esc(dayLabel(isoAdd(p.start, i)))}</b>${now ? '<span class="tag">Tonight</span>' : ''}</div>`;
+    if (!e) return `<div class="plan-day ${now ? 'today' : ''}">${head}<p class="small muted">No other dinner fits your household for this day.</p></div>`;
+    return `<div class="plan-day ${now ? 'today' : ''}">${head}${dinnerCard(e, p.party)}
+      <div class="row" style="margin-top:8px"><button class="btn btn-ghost btn-sm grow" data-act="planSwap" data-i="${i}" ${it.locked ? 'disabled' : ''}>⇄ Swap</button>
+      <button class="btn btn-sm grow ${it.locked ? 'btn-primary' : 'btn-ghost'}" data-act="planLock" data-i="${i}" aria-pressed="${it.locked}">${it.locked ? '🔒 Locked' : '🔓 Lock'}</button></div></div>`;
+  };
+  return `<details class="filters" ${S.ui.planOpen === false ? '' : 'open'} data-details="planOpen" id="plan">
+    <summary><span>📅 Your plan · ${esc(weekTitle(p))}</span></summary>
+    <div class="filters-body">
+      <p class="small muted">${p.days} dinners for ${p.party} ${p.party === 1 ? 'person' : 'people'}. Lock the ones you like, then swap or re-roll the rest.</p>
+      ${ti >= p.days ? `<div class="note">This plan has ended. Plan a new week when you’re ready.</div>` : ''}
+      ${empty ? `<div class="note warn">Only ${fit} dinner${fit === 1 ? '' : 's'} fit${fit === 1 ? 's' : ''} your household’s diets and allergies right now (not counting what you cooked this week), so ${empty} day${empty === 1 ? ' is' : 's are'} left empty instead of repeating a meal. Try fewer days, or check members in Household.</div>` : ''}
+      ${hasAllergies() ? allergyNote() : ''}
+      ${p.items.map(day).join('')}
+      <button class="btn btn-ghost btn-block" data-act="planReroll" ${p.items.every(it => it.locked) ? 'disabled' : ''}>🎲 Re-roll unlocked days</button>
+      ${needs ? `<div class="stack"><button class="btn btn-accent btn-block" data-act="planShop">🛒 Shop for the week (${needs})</button>
+        <button class="btn btn-ghost btn-block" data-act="planList">＋ Add to my shopping list</button></div>
+        <p class="disclosure" style="margin-top:-6px">As an Amazon Associate, Pantry Pal earns from qualifying purchases.</p>` : `<div class="note ok">✓ You have everything for this plan.</div>`}
+      <button class="btn btn-danger btn-sm" data-act="planClear">Clear plan</button>
+    </div></details>`;
 }
 
 function onlineAvailable() { return !!(CONFIG.ONLINE_RECIPES && backend() && health?.online !== false); }
@@ -976,9 +1161,9 @@ Return: {"steps":["..."]}` }], maxTokens: 1500
   } catch (e) { r._stepsErr = e.message; }
   r._loading = false; if (sheet && detail && detail.id === r.id) drawSheet();
 }
-function openRecipe(id) {
+function openRecipe(id, servings) {
   const r = getRecipe(id); if (!r) return;
-  detail = { id, servings: S.filters.party || S.household.partySize || r.servings };
+  detail = { id, servings: servings || S.filters.party || S.household.partySize || r.servings };
   openSheet(recipeSheet);
   if (!r.steps && r.source !== 'web' && aiMode() !== 'none') loadSteps(r);
 }
@@ -1163,6 +1348,49 @@ const ACT = {
     if (!pool.length) return toast('Scan or add a few items first');
     openRecipe(pool[Math.floor(Math.random() * Math.min(pool.length, 25))].r.id);
   },
+  tonight: () => { tonight.open = true; tonight.n = 3; render(); $('#tonight')?.scrollIntoView({ block: 'start' }); },
+  tonightMore: () => { tonight.n += 3; render(); },
+  tonightClose: () => { tonight.open = false; render(); },
+  planOpen: () => { planDraft = { days: S.plan?.days || 5, start: todayISO(), party: S.household.members.length || S.household.partySize || 2 }; openSheet(planSheet); },
+  pdDays: el => { planDraft.days = clamp(planDraft.days + Number(el.dataset.d), 3, 7); drawSheet(); },
+  pdParty: el => { planDraft.party = clamp(planDraft.party + Number(el.dataset.d), 1, 30); drawSheet(); },
+  pdStart: el => { planDraft.start = el.dataset.v; drawSheet(); },
+  planMake: () => {
+    const d = planDraft; S.plan = fillPlan(sanitizePlan({ start: d.start, days: d.days, party: d.party, items: [] }));
+    Object.keys(planSeen).forEach(k => delete planSeen[k]); S.ui.planOpen = true; persist(); closeSheet(); render();
+    const n = S.plan.items.filter(it => it.id).length; toast(n === d.days ? `Planned ${n} dinners` : `Planned ${n} of ${d.days} dinners. See the note.`);
+    $('#plan')?.scrollIntoView({ block: 'start' });
+  },
+  planLock: el => { const it = S.plan?.items[Number(el.dataset.i)]; if (!it) return; it.locked = !it.locked; persist(); render(); },
+  planSwap: el => {
+    const p = S.plan, i = Number(el.dataset.i), cur = p?.items[i]; if (!cur || cur.locked) return;
+    const pool = dinnerPool(), claimed = new Set(), taken = new Set();
+    p.items.forEach((it, j) => { const r = j !== i && planRecipe(it); if (!r) return; taken.add(r.title.toLowerCase()); dinnerEntry(r, claimed, isoAdd(p.start, j)).exp.forEach(x => claimed.add(x.id)); });
+    const seen = planSeen[i] = planSeen[i] || new Set(); if (cur.id) seen.add(cur.id);
+    let e = pickForDay(p, i, pool, claimed, taken, new Set(), seen);
+    if (!e && seen.size > 1) { seen.clear(); if (cur.id) seen.add(cur.id); e = pickForDay(p, i, pool, claimed, taken, new Set(), seen); if (e) toast('That’s every dinner that fits. Starting from the top again.'); }
+    if (!e) return toast('No other dinner fits your household for this day');
+    p.items[i] = { id: e.r.id, title: e.r.title, locked: false }; persist(); render();
+  },
+  planReroll: () => {
+    if (!S.plan) return;
+    fillPlan(S.plan, new Set(S.plan.items.filter(it => !it.locked && it.id).map(it => it.id)));
+    Object.keys(planSeen).forEach(k => delete planSeen[k]); persist(); render(); toast('Re-rolled the unlocked days');
+  },
+  planShop: () => {
+    const items = weekNeeds(S.plan).map(m => draftItem({ name: m.name, qty: m.qty, unit: m.unit }, 1));
+    if (!items.length) return toast('Nothing to buy — you have it all');
+    openCartBuilder(weekTitle(S.plan), items);
+  },
+  planList: () => {
+    const from = weekTitle(S.plan); let n = 0;
+    for (const m of weekNeeds(S.plan)) {
+      if (S.shopping.some(s => !s.done && norm(s.name) === norm(m.name))) continue;
+      S.shopping.push({ id: uid(), name: m.name, need: fmtAmount(m.qty, m.unit), amount: m.qty, unit: m.unit, from, done: false }); n++;
+    }
+    persist(); render(); toast(n ? `Added ${n} item${n === 1 ? '' : 's'} to your shopping list` : 'Already on your list');
+  },
+  planClear: () => askConfirm('Clear this plan? Your pantry and shopping list stay as they are.', 'Clear plan', () => { S.plan = null; persist(); render(); toast('Plan cleared'); }),
   libMore: () => { lib.limit = (lib.limit || 40) + 40; $('#lib-results').innerHTML = libraryResults(); },
   searchOnline: () => searchOnline(),
   madeIt: () => {
@@ -1174,7 +1402,7 @@ const ACT = {
   adminTap: () => { if (++adminTaps >= 7) { adminTaps = 0; S.settings.admin = !S.settings.admin; persist(); render(); toast(S.settings.admin ? 'Owner settings unlocked' : 'Owner settings hidden'); } },
   exitAdmin: () => { S.settings.admin = false; persist(); render(); },
   removeKey: () => { S.settings.userKey = ''; persist(); render(); toast('Key removed from this device'); },
-  openRecipe: el => openRecipe(el.dataset.id),
+  openRecipe: el => openRecipe(el.dataset.id, clamp(Number(el.dataset.serv) || 0, 0, 30)),
   dServ: el => { detail.servings = clamp(detail.servings + Number(el.dataset.d), 1, 30); drawSheet(); },
   loadSteps: () => { const r = getRecipe(detail.id); if (r) loadSteps(r); },
   cartMissing: () => { const r = getRecipe(detail.id); const items = itemsFromMissing(r, detail.servings); if (!items.length) return toast('Nothing to buy — you have it all'); openCartBuilder(r.title, items); },
@@ -1336,6 +1564,7 @@ document.addEventListener('change', e => {
   if (ds.cartck != null && cartDraft) { cartDraft.items[Number(ds.cartck)].on = el.checked; drawSheet(); return; }
   if (ds.draft && itemDraft) { itemDraft[ds.draft] = el.value; if (ds.draft === 'category') itemDraft._catTouched = true; if (ds.draft === 'category' && !itemDraft.id) { itemDraft.expires = addDays(SHELF[el.value]); drawSheet(); } return; }
   if (ds.share && shareDraft) { shareDraft[ds.share] = el.value; return; }
+  if (ds.plan && planDraft) { if (/^\d{4}-\d{2}-\d{2}$/.test(el.value)) planDraft.start = el.value < todayISO() ? todayISO() : el.value; drawSheet(); return; }
   if (el.id === 'cam' || el.id === 'gal') { addFiles(el.files); el.value = ''; return; }
   if (el.id === 'import') {
     const f = el.files[0]; el.value = ''; if (!f) return;
