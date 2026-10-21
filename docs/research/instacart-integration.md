@@ -280,3 +280,12 @@ Show the Instacart sentence only when the Instacart button shows. Replace it wit
 37. Denver delivery guide 2017: https://303magazine.com/2017/05/denver-grocery-delivery/
 38. Natural Grocers 2015: https://progressivegrocer.com/natural-grocers-taps-instacart-delivery-denver
 39. Sprouts 2018: https://about.sprouts.com/press-release/sprouts-expands-instacart-grocery-delivery-to-denver-sacramento-and-san-diego
+
+## Update 2026-10-22: signup status check
+- **Still unconfirmed.** This environment blocks every Instacart domain (proxy 403 / DNS failure), so the live signup page couldn't be read. Wyatt needs to check it on his phone.
+- **Conflicting signals remain:**
+  - Instacart's **Canadian** developer page says "We are currently not accepting new applications. There is no waitlist available at this time." ([company.instacart.ca/business/developers](https://company.instacart.ca/business/developers)).
+  - The **US** page's snippet shows no such notice ([instacart.com/company/business/developers](https://instacart.com/company/business/developers)).
+  - A third-party guide says the platform was self-service as of July 20, 2026.
+- **New detail:** Instacart's approval docs say partners who want affiliate payments need an **Instacart Tastemakers account**, not only the Impact signup mentioned above. The production key stays "Pending approval" (and doesn't work) until Instacart reviews the live integration ([approval process](https://docs.instacart.com/developer_platform_api/guide/concepts/launch_activities/approval_process)).
+- **Two tiers:** the **Public API** (send users to Instacart, get a link back, no catalog, price, user or order data) is what we need. The **Partner API** (in-app shopping) has individual review.
