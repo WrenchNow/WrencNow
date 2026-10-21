@@ -173,9 +173,12 @@ function defaultState() {
     settings: { backendUrl: '', appToken: '', tag: '', picker: true, hideAllergens: true, applyDiets: true, autoGen: true, useSwaps: true, userKey: '', admin: false },
     filters: { cuisines: [], meal: 'Any', maxTime: 0, party: 0, cookWith: '', goal: 'any' },
     ui: { tab: 'cook', cookView: 'feed', pantryFilter: 'all' },
-    plan: null
+    plan: null,
+    arrivalSnooze: null   // ISO date "Not yet" was tapped on the "Did your order arrive?" card; hidden for that day
   };
 }
+// Only a real date up to today counts, so a backup can't hide the card for years (or inject anything).
+const snoozeDate = v => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && v <= todayISO() ? v : null;
 // Meal plan: { start: ISO date, days: 3–7, party, items: [{ id, title, locked }] } (one item per day; id null = no dinner fit).
 // Used for both saved state and backup import, so it rebuilds the plan from known fields with safe types.
 function sanitizePlan(p) {
@@ -204,6 +207,7 @@ function hydrate(saved) {
   out.catalogVersion = STAPLE_ASINS_VERSION;
   ['inventory', 'shopping', 'cart', 'aiRecipes', 'community', 'cooked'].forEach(k => { if (!Array.isArray(out[k])) out[k] = []; });
   out.plan = sanitizePlan(saved.plan);
+  out.arrivalSnooze = snoozeDate(saved.arrivalSnooze);
   return out;
 }
 
@@ -249,7 +253,8 @@ function sanitizeBackup(d) {
     catalog: arr(d.catalog).map(c => ({ id: id(c.id), name: str(c.name, 80), cat: CATEGORIES.includes(c.cat) ? c.cat : 'Other', per: num(c.per, 0, 100, 0), asin: str(c.asin, 10).toUpperCase().replace(/[^A-Z0-9]/g, ''), title: str(c.title), term: str(c.term || c.name, 80), asinSrc: c.asinSrc === 'shipped' ? 'shipped' : '' })).filter(c => c.name),
     filters: { cuisines: strs(f.cuisines, c => CUISINES.includes(c)), meal: MEALS.includes(f.meal) ? f.meal : 'Any', maxTime: TIMES.includes(Number(f.maxTime)) ? Number(f.maxTime) : 0, party: num(f.party, 0, 30, 0), cookWith: str(f.cookWith, 100), goal: GOALS.some(g => g.k === f.goal) ? f.goal : 'any' },
     settings: bools,
-    plan: sanitizePlan(d.plan)
+    plan: sanitizePlan(d.plan),
+    arrivalSnooze: snoozeDate(d.arrivalSnooze)
   };
 }
 
@@ -265,6 +270,8 @@ let cartDraft = null;    // { title, items: [] }
 let memberDraft = null;
 let itemDraft = null;
 let planDraft = null;    // { days, start, party } while the "Plan my week" sheet is open
+let arriveDraft = null;  // [{ id, on, qty }] while the "Did your order arrive?" review sheet is open
+const arrival = { left: false, soft: false };   // left = opened an Amazon link this session; soft = came back after that
 const tonight = { open: false, n: 3 };
 const planSeen = {};     // day index -> recipe ids already offered by Swap (this session only)
 let catQ = '';
@@ -698,7 +705,7 @@ function openSheet(renderFn, onClose) {
 }
 function drawSheet() { if (!sheet) return; const b = $('#sheet-body'); const st = b.scrollTop; b.innerHTML = sheet.render(); b.scrollTop = st; }
 function closeSheet() {
-  const s = sheet; sheet = null; detail = null; cartDraft = null; memberDraft = null; itemDraft = null; planDraft = null;
+  const s = sheet; sheet = null; detail = null; cartDraft = null; memberDraft = null; itemDraft = null; planDraft = null; arriveDraft = null;
   $('#sheet').classList.remove('open'); $('#sheet').setAttribute('aria-hidden', 'true'); document.body.classList.remove('noscroll');
   if (s && s.onClose) s.onClose();
 }
@@ -738,7 +745,7 @@ function card(e) {
 function viewCook() {
   const name = firstName();
   const head = `<header class="top"><div><p class="eyebrow">${greeting()}${name ? ', ' + esc(name) : ''}</p><h1>What’s cooking?</h1></div>
-    <button class="icon-btn" data-act="goto" data-tab="household" aria-label="Household">👥 ${S.filters.party || S.household.partySize}</button></header>
+    <button class="icon-btn" data-act="goto" data-tab="household" aria-label="Household">👥 ${S.filters.party || S.household.partySize}</button></header>${arrivalCard()}
     <div class="seg" role="tablist"><button class="${S.ui.cookView === 'feed' ? 'on' : ''}" data-act="cookView" data-v="feed">For you</button><button class="${S.ui.cookView === 'library' ? 'on' : ''}" data-act="cookView" data-v="library">Library · ${LIB.length}</button></div>`;
   return head + (S.ui.cookView === 'library' ? viewLibrary() : viewFeed());
 }
@@ -895,6 +902,30 @@ function viewLibrary() {
   return `<div class="search" style="margin-bottom:14px"><input class="input" type="search" placeholder="Search title, ingredient or cuisine" value="${esc(lib.q)}" data-live="libq" aria-label="Search recipes"></div><div id="lib-results">${libraryResults()}</div>`;
 }
 
+/* ---- "did your order arrive?" (pending Amazon items, no AI) ---- */
+function arrivalCard() {
+  const n = S.cart.length, t = todayISO();
+  if (!n || (S.arrivalSnooze && S.arrivalSnooze >= t)) return '';
+  // Just back from Amazon, or everything was only ordered today: a quiet note instead of asking.
+  if (arrival.soft || S.cart.every(c => c.added === t)) return `<div class="arrive soft" role="status"><span class="ic" aria-hidden="true">🛒</span>
+    <div class="grow"><b>Placed the order?</b><p class="small muted">We’ll ask when it arrives.</p></div>
+    <button class="btn btn-ghost btn-sm" data-act="arriveReview">It’s here</button><button class="icon-btn" data-act="arriveLater" aria-label="Hide until tomorrow">✕</button></div>`;
+  return `<section class="arrive" aria-label="Did your order arrive?"><b>🛒 Did your order arrive?</b>
+    <p class="small">Add ${n} item${n === 1 ? '' : 's'} to your pantry</p>
+    <div class="arrive-btns"><button class="btn btn-primary btn-sm" data-act="arriveReview">Review &amp; add</button>
+      <button class="btn btn-ghost btn-sm" data-act="arriveLater">Not yet</button><button class="btn btn-ghost btn-sm" data-act="arriveNone">Didn’t order</button></div></section>`;
+}
+function arriveSheet() {
+  const rows = arriveDraft.map((x, i) => [x, i, S.cart.find(c => c.id === x.id)]).filter(r => r[2]);
+  const on = rows.filter(([x]) => x.on).length;
+  return `${sheetBar('Did your order arrive?')}<p class="small muted" style="margin:-6px 0 12px">Uncheck anything that didn’t come and fix the amounts, then add.</p>
+    ${rows.map(([x, i, c]) => `<div class="cart-row ${x.on ? '' : 'off'}"><div class="row" style="align-items:center">
+      <input type="checkbox" ${x.on ? 'checked' : ''} data-arrck="${i}" style="width:22px;height:22px;accent-color:var(--brand)" aria-label="Include ${esc(c.name)}">
+      <div class="grow"><div class="li-title" style="text-transform:capitalize">${esc(c.name)}</div><div class="tiny muted">Added ${fmtDate(c.added)}</div></div>
+      <div class="stepper" style="flex:none"><button data-act="arriveQty" data-i="${i}" data-d="-1" aria-label="Less">−</button><span>${x.qty}</span><button data-act="arriveQty" data-i="${i}" data-d="1" aria-label="More">+</button></div></div></div>`).join('')}
+    <div class="sheet-foot static"><button class="btn btn-primary btn-block" data-act="arriveAdd" ${on ? '' : 'disabled'}>Add ${on} item${on === 1 ? '' : 's'} to pantry</button></div>`;
+}
+
 /* ---- pantry ---- */
 function expiryBadge(iso) {
   const d = daysUntil(iso); if (d == null) return '';
@@ -916,7 +947,7 @@ function viewPantry() {
   if (filter === 'allergen') list = flagged;
   const groups = CATEGORIES.map(c => [c, list.filter(i => (CATEGORIES.includes(i.category) ? i.category : 'Other') === c).sort((a, b) => (a.expires || '9').localeCompare(b.expires || '9'))]).filter(([, l]) => l.length);
   return `<header class="top"><div><p class="eyebrow">${inv.length} item${inv.length === 1 ? '' : 's'}</p><h1>Pantry</h1></div>
-    <button class="icon-btn" data-act="addItem">＋ Add</button></header>
+    <button class="icon-btn" data-act="addItem">＋ Add</button></header>${arrivalCard()}
     ${inv.length ? `<div class="stats">
       <div class="stat"><b>${exp.length}</b><span>Use within 3 days</span></div>
       <div class="stat"><b style="color:${expired.length ? 'var(--danger)' : 'inherit'}">${expired.length}</b><span>Expired</span></div>
@@ -1470,8 +1501,8 @@ const ACT = {
   cartQty: el => { const it = cartDraft.items[Number(el.dataset.i)]; it.qty = clamp(it.qty + Number(el.dataset.d), 1, 20); drawSheet(); },
   loadOpts: el => loadOptions(cartDraft.items[Number(el.dataset.i)]),
   pickOpt: el => { const it = cartDraft.items[Number(el.dataset.i)]; rememberPick(it, it.options[Number(el.dataset.j)]); drawSheet(); },
-  cartOpened: () => { recordPending(cartDraft.items.filter(i => i.on && i.asin)); toast('Opening Amazon… tap “Mark as bought” in Shop after checkout'); render(); setTimeout(drawSheet, 50); },
-  searchOpened: el => { const it = cartDraft.items.find(i => i.key === el.dataset.key); if (it) recordPending([it]); render(); },
+  cartOpened: () => { arrival.left = true; recordPending(cartDraft.items.filter(i => i.on && i.asin)); toast('Opening Amazon… tap “Mark as bought” in Shop after checkout'); render(); setTimeout(drawSheet, 50); },
+  searchOpened: el => { arrival.left = true; const it = cartDraft.items.find(i => i.key === el.dataset.key); if (it) recordPending([it]); render(); },
 
   scanType: el => { scan.type = el.dataset.v; render(); },
   pickCam: () => $('#cam').click(),
@@ -1503,6 +1534,17 @@ const ACT = {
 
   boughtOne: el => { const c = S.cart.find(x => x.id === el.dataset.id); if (!c) return; addToInventory([c]); S.cart = S.cart.filter(x => x !== c); persist(); render(); toast(`${c.name} added to pantry`); },
   boughtAll: () => { const n = addToInventory(S.cart); S.cart = []; persist(); render(); toast(`Moved ${n} item${n === 1 ? '' : 's'} into your pantry`); },
+  arriveReview: () => { arriveDraft = S.cart.map(c => ({ id: c.id, on: true, qty: Math.max(1, Math.round(Number(c.qty) || 1)) })); openSheet(arriveSheet); },
+  arriveQty: el => { const x = arriveDraft?.[Number(el.dataset.i)]; if (!x) return; x.qty = clamp(x.qty + Number(el.dataset.d), 1, 99); drawSheet(); },
+  arriveAdd: () => {
+    const pick = arriveDraft.filter(x => x.on), ids = new Set(pick.map(x => x.id));
+    const n = addToInventory(pick.map(x => Object.assign({}, S.cart.find(c => c.id === x.id), { qty: x.qty })).filter(c => c.name));
+    S.cart = S.cart.filter(c => !ids.has(c.id));
+    if (S.cart.length) S.arrivalSnooze = todayISO();   // they just answered; ask about the rest tomorrow
+    persist(); closeSheet(); render(); toast(`Added ${n} item${n === 1 ? '' : 's'} to your pantry`);
+  },
+  arriveLater: () => { S.arrivalSnooze = todayISO(); persist(); render(); toast('OK, we’ll ask again tomorrow'); },
+  arriveNone: () => { const n = S.cart.length; askConfirm(`Remove ${n} pending item${n === 1 ? '' : 's'}? ${n === 1 ? 'It' : 'They'} won’t be added to your pantry.`, 'Yes, I didn’t order these', () => { S.cart = []; persist(); render(); toast('Pending items cleared'); }); },
   rmCart: el => { S.cart = S.cart.filter(x => x.id !== el.dataset.id); persist(); render(); },
   slRm: el => { S.shopping = S.shopping.filter(x => x.id !== el.dataset.id); persist(); render(); },
   slClearDone: () => { S.shopping = S.shopping.filter(x => !x.done); persist(); render(); },
@@ -1605,6 +1647,7 @@ document.addEventListener('change', e => {
   if (ds.settingBool) { S.settings[ds.settingBool] = el.checked; persist(); render(); return; }
   if (ds.scan != null && scan.items) { const it = scan.items[Number(ds.scan)]; if (!it) return; if (ds.f === 'on') { it.on = el.checked; render(); } else it[ds.f] = el.value; return; }
   if (ds.sl) { const x = S.shopping.find(s => s.id === ds.sl); if (x) { x.done = el.checked; persist(); render(); } return; }
+  if (ds.arrck != null && arriveDraft) { const x = arriveDraft[Number(ds.arrck)]; if (x) x.on = el.checked; drawSheet(); return; }
   if (ds.cartck != null && cartDraft) { cartDraft.items[Number(ds.cartck)].on = el.checked; drawSheet(); return; }
   if (ds.draft && itemDraft) { itemDraft[ds.draft] = el.value; if (ds.draft === 'category') itemDraft._catTouched = true; if (ds.draft === 'category' && !itemDraft.id) { itemDraft.expires = addDays(SHELF[el.value]); drawSheet(); } return; }
   if (ds.share && shareDraft) { shareDraft[ds.share] = el.value; return; }
@@ -1614,6 +1657,12 @@ document.addEventListener('change', e => {
     const f = el.files[0]; el.value = ''; if (!f) return;
     f.text().then(t => { const data = JSON.parse(t); if (!data || !Array.isArray(data.inventory)) throw new Error(); const { userKey, admin, backendUrl, appToken, tag } = S.settings; const keep = { userKey, admin, backendUrl, appToken, tag }; S = hydrate(sanitizeBackup(data)); Object.assign(S.settings, keep); persist(); render(); toast('Backup restored'); }).catch(() => toast('That file isn’t a Pantry Pal backup'));
   }
+});
+// Coming back to the app (e.g. from an Amazon tab): refresh the "did your order arrive?" card.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  if (arrival.left) { arrival.left = false; arrival.soft = true; }
+  if (S.onboarded && ['cook', 'pantry'].includes(S.ui.tab)) render();
 });
 document.addEventListener('toggle', e => { const el = e.target; if (el.dataset && el.dataset.details) { S.ui[el.dataset.details] = el.open; persist(); } }, true);
 document.addEventListener('submit', e => {

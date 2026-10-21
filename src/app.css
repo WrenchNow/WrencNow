@@ -245,3 +245,11 @@ details.filters[open] summary::after{transform:rotate(180deg)}
 .plan-day.today{background:var(--brand-soft);border-color:var(--brand)}
 .plan-day .card{box-shadow:none}
 .plan-date{display:flex;align-items:center;gap:8px;font-size:14px}
+/* "did your order arrive?" card */
+.arrive{background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 35%,transparent);border-radius:var(--radius);padding:14px;margin-bottom:14px}
+.arrive>b{font-family:var(--font-d);font-size:17px}
+.arrive-btns{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:8px;margin-top:10px}
+.arrive-btns .btn{padding:7px 6px}
+.arrive.soft{display:flex;align-items:center;gap:10px;background:var(--surface-2);border-color:var(--line);padding:10px 12px}
+.arrive.soft .ic{font-size:22px}
+.arrive.soft .icon-btn{min-width:36px;height:36px;padding:0}
