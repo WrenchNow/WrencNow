@@ -17,6 +17,9 @@ Newest first. One entry per decision: the date, what was decided and why.
 - **deploy.mjs** now writes `BACKEND_URL` into `src/app.js` and rebuilds, so the next build no longer wipes it. It only touches `pantry-pal-*` KV namespaces.
 - **Allergy wording** ("a helper, not a safety guarantee") was added on every screen with allergy flags. The site's "safe for your allergies" was replaced.
 - **Backup import hardened** against injected HTML, which could have stolen a saved API key.
+- **Shipped ASINs now reach existing users.** `STAPLE_ASINS` in `src/data.js` is versioned and merged into saved catalogs, and the one-tap cart uses a shipped ASIN only when it's `verified: true`. ASINs set on a device are kept.
+- **Cart matching picks the most specific staple** (diced tomatoes → diced tomatoes, not fresh). Pantry "have it" matching is unchanged; it still has some false matches, logged in the roadmap.
+- **Picker prices are hidden** until they can carry an "as of" time (an Associates rule).
 - **The site** gained cuisine pages, About/Privacy pages, a richer Recipe JSON-LD and social tags.
 
 ## 2026-10-21
