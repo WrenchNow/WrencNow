@@ -230,13 +230,30 @@ const STAPLES = {
   'Beverages': 'coffee, tea, orange juice, sparkling water, white wine, red wine, beer, kombucha',
   'Snacks': 'crackers, pretzels, popcorn, trail mix, granola bars, potato chips'
 };
+/* ---- Shipped Amazon product picks for staples (owned by the amazon agent) ----
+   Keys must match a STAPLES name exactly. Never invent ASINs: leave an item out until Wyatt has looked it up.
+   Per-item fields:
+     asin     10-character Amazon ASIN, from Wyatt's phone lookup or the Creators API only
+     per      items per pack for countable items (eggs 12, tortillas 10). 0 = use the STAPLES pack count / buy 1
+     size     human note, e.g. '16.9 fl oz' (catalog screen only)
+     verified true only after Wyatt confirms the product page matches. The one-tap cart ignores unverified ASINs
+              and uses a tagged search link instead.
+     checked  ISO date Wyatt last confirmed it (re-check about every 6 months)
+     src      'wyatt-phone' or 'creators-api'
+   Example: 'olive oil': { asin: '', per: 0, size: '', verified: false, checked: '', src: '' },
+   Bump STAPLE_ASINS_VERSION on every change so existing users get the new picks merged into their saved catalog. */
+const STAPLE_ASINS_VERSION = 1;
+const STAPLE_ASINS = {};
+
 function buildDefaultCatalog(){
   const out = [];
   for (const [cat, list] of Object.entries(STAPLES)) {
     for (const raw of list.split(',')) {
       const [name, per] = raw.trim().split('|');
       if (!name) continue;
-      out.push({ id: 'c' + out.length, name, cat, per: per ? Number(per) : 0, asin: '', title: '', term: name });
+      const a = STAPLE_ASINS[name] || {};
+      out.push({ id: 'c' + out.length, name, cat, per: a.per > 0 ? Number(a.per) : per ? Number(per) : 0, asin: a.asin || '', title: '', term: name,
+        size: a.size || '', verified: a.verified === true, checked: a.checked || '', src: a.src || '', asinSrc: a.asin ? 'shipped' : '' });
     }
   }
   return out;

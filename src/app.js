@@ -169,7 +169,7 @@ function defaultState() {
     v: 2, onboarded: false,
     household: { members: [], partySize: 2 },
     inventory: [], shopping: [], cart: [], aiRecipes: [], community: [], cooked: [],
-    catalog: buildDefaultCatalog(),
+    catalog: buildDefaultCatalog(), catalogVersion: STAPLE_ASINS_VERSION,
     settings: { backendUrl: '', appToken: '', tag: '', picker: true, hideAllergens: true, applyDiets: true, autoGen: true, useSwaps: true, userKey: '', admin: false },
     filters: { cuisines: [], meal: 'Any', maxTime: 0, party: 0, cookWith: '', goal: 'any' },
     ui: { tab: 'cook', cookView: 'feed', pantryFilter: 'all' }
@@ -185,9 +185,29 @@ function hydrate(saved) {
   out.filters = Object.assign(defaultState().filters, saved.filters || {});
   out.ui = Object.assign(defaultState().ui, saved.ui || {});
   if (!Array.isArray(out.catalog) || !out.catalog.length) out.catalog = buildDefaultCatalog();
+  else if (!(saved.catalogVersion >= STAPLE_ASINS_VERSION)) out.catalog = mergeCatalog(out.catalog);
+  out.catalogVersion = STAPLE_ASINS_VERSION;
   ['inventory', 'shopping', 'cart', 'aiRecipes', 'community', 'cooked'].forEach(k => { if (!Array.isArray(out[k])) out[k] = []; });
   return out;
 }
+
+// Bring newly shipped STAPLE_ASINS into a saved catalog. ASINs set on this device (asinSrc 'user', or any ASIN
+// saved before shipped ASINs existed) and custom staples are kept. Shipped values always come from the current data.
+function mergeCatalog(saved) {
+  const old = new Map(saved.filter(c => c && c.name).map(c => [String(c.name).toLowerCase(), c]));
+  const out = buildDefaultCatalog().map(def => {
+    const o = old.get(def.name.toLowerCase()); if (!o) return def;
+    old.delete(def.name.toLowerCase());
+    const m = Object.assign(def, { term: o.term || def.term });
+    if (o.asin && o.asinSrc !== 'shipped') Object.assign(m, { asin: o.asin, title: o.title || '', asinSrc: 'user', verified: false, size: '', checked: '', src: '' });
+    return m;
+  });
+  const ids = new Set(out.map(c => c.id));
+  const custom = [...old.values()].map(c => Object.assign(c, { id: ids.has(c.id) ? 'c' + uid() : c.id, asinSrc: c.asin && c.asinSrc !== 'shipped' ? 'user' : '' }, c.asinSrc === 'shipped' ? { asin: '', title: '' } : {}));
+  return [...custom, ...out];
+}
+// Shipped ASINs are used for the one-tap cart only once Wyatt has verified them; ASINs set on this device work as before.
+const cartAsin = c => (c && c.asin && (c.asinSrc !== 'shipped' || c.verified === true)) ? c.asin : '';
 
 // A backup file can come from anyone. Rebuild it from known fields with safe types so it can't inject
 // HTML (ids and numbers are rendered unescaped) or crash a view. Owner settings and keys are never imported.
@@ -210,7 +230,7 @@ function sanitizeBackup(d) {
     shopping: arr(d.shopping).map(x => ({ id: id(x.id), name: str(x.name), need: str(x.need, 40), amount: num(x.amount, 0, 1e6, 1), unit: str(x.unit, 20), from: str(x.from, 90), done: !!x.done })),
     aiRecipes: recipes(d.aiRecipes, 'ai').slice(0, 40), community: recipes(d.community, 'community').slice(0, 100),
     cooked: arr(d.cooked).filter(c => typeof c.title === 'string').map(c => ({ title: c.title.slice(0, 90), date: date(c.date) || todayISO() })).slice(-200),
-    catalog: arr(d.catalog).map(c => ({ id: id(c.id), name: str(c.name, 80), cat: CATEGORIES.includes(c.cat) ? c.cat : 'Other', per: num(c.per, 0, 100, 0), asin: str(c.asin, 10).toUpperCase().replace(/[^A-Z0-9]/g, ''), title: str(c.title), term: str(c.term || c.name, 80) })).filter(c => c.name),
+    catalog: arr(d.catalog).map(c => ({ id: id(c.id), name: str(c.name, 80), cat: CATEGORIES.includes(c.cat) ? c.cat : 'Other', per: num(c.per, 0, 100, 0), asin: str(c.asin, 10).toUpperCase().replace(/[^A-Z0-9]/g, ''), title: str(c.title), term: str(c.term || c.name, 80), asinSrc: c.asinSrc === 'shipped' ? 'shipped' : '' })).filter(c => c.name),
     filters: { cuisines: strs(f.cuisines, c => CUISINES.includes(c)), meal: MEALS.includes(f.meal) ? f.meal : 'Any', maxTime: TIMES.includes(Number(f.maxTime)) ? Number(f.maxTime) : 0, party: num(f.party, 0, 30, 0), cookWith: str(f.cookWith, 100), goal: GOALS.some(g => g.k === f.goal) ? f.goal : 'any' },
     settings: bools
   };
@@ -473,7 +493,7 @@ function cartUrl(items) {
 }
 function draftItem(ing, factor) {
   const q = ing.qty * factor; const cat = catalogFind(ing.name);
-  return { key: uid(), name: ing.name, unit: ing.unit, amount: q, need: fmtAmount(q, ing.unit), asin: cat?.asin || '', title: cat?.asin ? (cat.title || cat.name) : '', term: cat?.term || ing.name, category: cat?.cat || 'Other', qty: packQty(ing, q, cat), on: true, options: null, loading: false, err: '' };
+  return { key: uid(), name: ing.name, unit: ing.unit, amount: q, need: fmtAmount(q, ing.unit), asin: cartAsin(cat), title: cartAsin(cat) ? (cat.title || cat.name) : '', term: cat?.term || ing.name, category: cat?.cat || 'Other', qty: packQty(ing, q, cat), on: true, options: null, loading: false, err: '' };
 }
 function pickerAvailable() { return !!(backend() && S.settings.picker && health?.amazon !== false); }
 async function loadOptions(it) {
@@ -493,7 +513,7 @@ function rememberPick(it, opt) {
   it.asin = opt.asin; it.title = opt.title || it.name; it.image = opt.image || ''; it.price = opt.price || '';
   let c = catalogFind(it.name);
   if (!c) { c = { id: 'c' + uid(), name: it.name.toLowerCase(), cat: it.category || 'Other', per: 0, asin: '', title: '', term: it.term }; S.catalog.push(c); }
-  c.asin = opt.asin; c.title = opt.title || ''; persist();
+  c.asin = opt.asin; c.title = opt.title || ''; c.asinSrc = 'user'; persist();
 }
 function recordPending(items) {
   for (const it of items) {
@@ -751,7 +771,7 @@ function viewShop() {
 /* ---- more / household / settings / catalog / community ---- */
 function viewMore() {
   const rows = [['household', '👥', 'Household', `${S.household.members.length} member${S.household.members.length === 1 ? '' : 's'} · party of ${S.household.partySize}`],
-  ['community', '🌍', 'Community recipes', 'Share and discover'], ...(S.settings.admin ? [['catalog', '🏷️', 'Staples catalog', `${S.catalog.filter(c => c.asin).length} of ${S.catalog.length} mapped to Amazon`]] : []), ['settings', '⚙️', 'Settings', 'AI, recipes and your data']];
+  ['community', '🌍', 'Community recipes', 'Share and discover'], ...(S.settings.admin ? [['catalog', '🏷️', 'Staples catalog', `${S.catalog.filter(cartAsin).length} of ${S.catalog.length} mapped to Amazon`]] : []), ['settings', '⚙️', 'Settings', 'AI, recipes and your data']];
   return `<header class="top"><div><p class="eyebrow">Pantry Pal</p><h1>More</h1></div></header>
     <div class="list">${rows.map(([t, ic, l, s]) => `<button class="li" data-act="goto" data-tab="${t}"><span class="ic">${ic}</span><div class="grow"><div class="li-title">${l}</div><div class="tiny muted">${esc(s)}</div></div><span class="chev">›</span></button>`).join('')}</div>
     <button class="btn btn-ghost btn-block" data-act="replayTour">Replay the tutorial</button>`;
@@ -795,7 +815,7 @@ function viewSettings() {
       <div class="field" style="margin-top:14px"><label for="s-tag">Amazon Associates tag${CONFIG.AMAZON_TAG ? ' · overrides CONFIG' : ''}</label><input id="s-tag" class="input" data-setting="tag" value="${esc(st.tag)}" placeholder="${esc(CONFIG.AMAZON_TAG || 'yourtag-20')}" autocapitalize="off" spellcheck="false"></div>
       ${!tagParam() ? `<p class="small" style="color:var(--warn);margin-bottom:10px">No tag set — Amazon links won’t earn commission.</p>` : `<p class="small muted" style="margin-bottom:10px">Links are tagged <b>${esc(tagParam())}</b></p>`}
       <div class="switch"><div><b>Product picker</b><p class="small muted">Top 3 Amazon products for unmapped items (needs Amazon API keys on the Worker)</p></div><input type="checkbox" class="toggle" data-setting-bool="picker" ${st.picker ? 'checked' : ''} aria-label="Product picker"></div>
-      <button class="btn btn-ghost btn-block" data-act="goto" data-tab="catalog" style="margin-top:10px">Edit staples catalog (${S.catalog.filter(c => c.asin).length}/${S.catalog.length} mapped)</button>
+      <button class="btn btn-ghost btn-block" data-act="goto" data-tab="catalog" style="margin-top:10px">Edit staples catalog (${S.catalog.filter(cartAsin).length}/${S.catalog.length} mapped)</button>
     </section>` : '';
   return `<header class="top"><div><p class="eyebrow">Preferences</p><h1>Settings</h1></div>${backBtn()}</header>
     ${owner}
@@ -821,7 +841,7 @@ function viewSettings() {
 function viewCatalog() {
   const q = norm(catQ);
   const list = S.catalog.filter(c => !q || norm(c.name).includes(q) || norm(c.cat).includes(q));
-  const mapped = S.catalog.filter(c => c.asin).length;
+  const mapped = S.catalog.filter(cartAsin).length;
   return `<header class="top"><div><p class="eyebrow">${mapped} of ${S.catalog.length} mapped</p><h1>Staples</h1></div>${backBtn('settings')}</header>
     <p class="small muted" style="margin-bottom:12px">Paste an Amazon ASIN (the 10-character code in a product URL, like B0XXXXXXXX) to send that exact product to the one-tap cart. Items without one open an Amazon search instead.</p>
     <div class="search" style="margin-bottom:12px"><input class="input" type="search" placeholder="Search staples" value="${esc(catQ)}" data-live="catq" aria-label="Search staples"></div>
@@ -831,7 +851,7 @@ function viewCatalog() {
 }
 function catalogList(list) {
   return `<div class="list">${list.slice(0, 250).map(c => `<div class="li" style="flex-wrap:wrap">
-    <div class="grow" style="min-width:140px"><div class="li-title" style="text-transform:capitalize">${esc(c.name)}</div><div class="tiny muted">${esc(c.cat)}${c.per ? ' · pack of ' + c.per : ''}${c.title ? ' · ' + esc(c.title) : ''}</div></div>
+    <div class="grow" style="min-width:140px"><div class="li-title" style="text-transform:capitalize">${esc(c.name)}</div><div class="tiny muted">${esc(c.cat)}${c.per ? ' · pack of ' + c.per : ''}${c.size ? ' · ' + esc(c.size) : ''}${c.title ? ' · ' + esc(c.title) : ''}${c.asin && c.asinSrc === 'shipped' ? (c.verified ? ' · shipped, verified' : ' · shipped, not verified (uses search)') : ''}</div></div>
     <input class="input" style="width:130px;min-height:38px;font-size:14px;text-transform:uppercase" data-cat="${c.id}" data-f="asin" value="${esc(c.asin)}" placeholder="ASIN" maxlength="10" autocapitalize="characters" spellcheck="false" aria-label="ASIN for ${esc(c.name)}">
     <input class="input" style="flex:1 1 100%;min-height:38px;font-size:14px" data-cat="${c.id}" data-f="term" value="${esc(c.term)}" placeholder="Search term" aria-label="Search term for ${esc(c.name)}">
   </div>`).join('')}</div>`;
@@ -1286,7 +1306,7 @@ document.addEventListener('input', e => {
   if (ds.mdraft && memberDraft) { memberDraft[ds.mdraft] = el.value; return; }
   if (ds.share && shareDraft) { shareDraft[ds.share] = el.value; return; }
   if (ds.ob) { ob[ds.ob] = el.value; return; }
-  if (ds.cat) { const c = S.catalog.find(x => x.id === ds.cat); if (c) { c[ds.f] = ds.f === 'asin' ? el.value.trim().toUpperCase() : el.value; if (ds.f === 'asin') c.title = ''; persist(); } return; }
+  if (ds.cat) { const c = S.catalog.find(x => x.id === ds.cat); if (c) { c[ds.f] = ds.f === 'asin' ? el.value.trim().toUpperCase() : el.value; if (ds.f === 'asin') { c.title = ''; c.asinSrc = c.asin ? 'user' : ''; } persist(); } return; }
 });
 document.addEventListener('change', e => {
   const el = e.target, ds = el.dataset;
