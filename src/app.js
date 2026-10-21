@@ -526,10 +526,10 @@ async function loadOptions(it) {
   it.loading = false; drawSheet();
 }
 function rememberPick(it, opt) {
-  it.asin = opt.asin; it.title = opt.title || it.name; it.image = opt.image || ''; it.price = opt.price || '';
+  it.asin = opt.asin; it.title = opt.title || it.name; it.image = opt.image || '';
   let c = catalogFind(it.name);
   if (!c) { c = { id: 'c' + uid(), name: it.name.toLowerCase(), cat: it.category || 'Other', per: 0, asin: '', title: '', term: it.term }; S.catalog.push(c); }
-  c.asin = opt.asin; c.title = opt.title || ''; c.asinSrc = 'user'; persist();
+  c.asin = opt.asin; c.title = ''; c.asinSrc = 'user'; persist(); // store the ASIN only, not API titles or prices
 }
 function recordPending(items) {
   for (const it of items) {
@@ -996,11 +996,11 @@ function cartSheet() {
     ${d.items.map((it, i) => `<div class="cart-row ${it.on ? '' : 'off'}">
       <div class="row"><input type="checkbox" ${it.on ? 'checked' : ''} data-cartck="${i}" style="width:22px;height:22px;accent-color:var(--brand);margin-top:2px" aria-label="Include ${esc(it.name)}">
         <div class="grow"><div class="li-title" style="text-transform:capitalize">${esc(it.name)}</div><div class="tiny muted">Recipe needs ${esc(it.need || '—')}</div>
-          <div class="small" style="margin-top:4px">${it.asin ? `<span style="color:var(--ok);font-weight:600">✓ ${esc(it.title || 'Mapped product')}</span>${it.price ? ` · ${esc(it.price)}` : ''}` : `<span class="muted">Opens Amazon search for “${esc(it.term)}”</span>`}</div></div>
+          <div class="small" style="margin-top:4px">${it.asin ? `<span style="color:var(--ok);font-weight:600">✓ ${esc(it.title || 'Mapped product')}</span>` : `<span class="muted">Opens Amazon search for “${esc(it.term)}”</span>`}</div></div>
         <div class="stepper" style="flex:none"><button data-act="cartQty" data-i="${i}" data-d="-1" aria-label="Less">−</button><span>${it.qty}</span><button data-act="cartQty" data-i="${i}" data-d="1" aria-label="More">+</button></div></div>
       ${it.loading ? `<div class="row small muted" style="margin-top:10px"><span class="spinner sm"></span> Finding top products…</div>` : ''}
       ${it.err ? `<p class="tiny muted" style="margin-top:8px">${esc(it.err)}</p>` : ''}
-      ${it.options && it.options.length ? `<div class="prod-opts">${it.options.map((o, j) => `<button class="prod ${it.asin === o.asin ? 'on' : ''}" data-act="pickOpt" data-i="${i}" data-j="${j}">${o.image ? `<img src="${esc(o.image)}" alt="" loading="lazy">` : ''}<div class="grow"><div class="pt">${esc(o.title)}</div><div class="tiny muted">${esc(o.price || '')}</div></div></button>`).join('')}</div>` : ''}
+      ${it.options && it.options.length ? `<div class="prod-opts">${it.options.map((o, j) => `<button class="prod ${it.asin === o.asin ? 'on' : ''}" data-act="pickOpt" data-i="${i}" data-j="${j}">${o.image ? `<img src="${esc(o.image)}" alt="" loading="lazy">` : ''}<div class="grow"><div class="pt">${esc(o.title)}</div></div></button>`).join('')}</div>` : ''}
       ${!it.asin && !it.options && !it.loading && pickerAvailable() ? `<button class="btn btn-ghost btn-sm" style="margin-top:8px" data-act="loadOpts" data-i="${i}">Show top products</button>` : ''}
     </div>`).join('')}
     <div class="sheet-foot static"><div class="stack">
