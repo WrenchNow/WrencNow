@@ -1955,7 +1955,8 @@ function recipeSheet() {
         <span class="st">${have ? '✓' : sw ? '⇄' : '!'}</span><span class="nm"><span class="amt">${esc(fmtAmount(ing.qty * factor, ing.unit))}</span> ${esc(ing.name)}${sw ? `<br><span class="tiny" style="color:var(--brand)">Swap: use your ${esc(sw)}</span>` : ''}</span>
         ${basic ? '' : `<button class="btn ${have ? 'btn-ghost' : 'btn-soft'} btn-sm" data-act="ingAdd" data-i="${idx}" aria-label="Add ${esc(ing.name)} to Amazon cart">Add</button>`}</li>`; }).join('')}</ul>
       ${missing.filter(i => !isBasic(i.name)).length ? `<div class="stack" style="margin-top:12px"><button class="btn btn-accent btn-block" data-act="cartMissing">🛒 Add missing to cart (${missing.filter(i => !isBasic(i.name)).length})</button>
-        <button class="btn btn-ghost btn-block" data-act="listMissing">＋ Add missing to shopping list</button></div>` : `<div class="note ok" style="margin-top:12px">✓ You have everything for this one.</div>`}
+        <button class="btn btn-ghost btn-block" data-act="listMissing">＋ Add missing to shopping list</button></div>
+        <p class="disclosure">As an Amazon Associate, Pantry Pal earns from qualifying purchases.</p>` : `<div class="note ok" style="margin-top:12px">✓ You have everything for this one.</div>`}
     </div>
     <div class="panel"><h2>Steps</h2>${steps}</div>
     <div class="stack">
