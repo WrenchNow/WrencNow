@@ -1,6 +1,6 @@
 # Draft: 5-Day Meal Plan with One Combined Cart
 
-**Status:** DRAFT, waiting for Wyatt's OK. Nothing is built yet.
+**Status:** BUILT 2026-10-22 (commit c6c6d6d), with "What's for dinner tonight?" added at Wyatt's request. This doc is kept as the design reference.
 **Updated:** 2026-10-21, after reading the real code in `src/`.
 
 ## The good news: most of the pieces already exist

@@ -54,7 +54,6 @@ Known constraints (keep them honest in the UI and the plans):
 
 - Real Amazon product search (needs Associates approval and the Creators API)
 - A weekly "use it up" reminder
-- A 5-day meal plan with one combined cart (draft in `docs/meal-plan-draft.md`, waiting for Wyatt's OK)
 - Shareable recipe cards
 - Ingredient-combination SEO pages
 
