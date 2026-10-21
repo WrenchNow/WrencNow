@@ -2,6 +2,12 @@
 
 Newest first. One entry per decision: the date, what was decided and why.
 
+## 2026-10-22
+- **Pantry Pal and WrenchNow will be fully separate.** Creating the new private `pantry-pal` repo was blocked: this session has no permission to create repos. Wyatt will create it and grant Claude access, then everything moves over with its history.
+- **Meal planning approved and in progress**: "Plan my week" (3–7 days, starting today or a chosen date) plus "What's for dinner tonight?" quick picks. Free, no AI.
+- **Instacart approved as a second store**, research first, then a build behind an on/off switch. Rule 1 now allows Amazon and Instacart shopping links.
+- **Pro plan: Wyatt asked about cost.** Drafted `docs/pro-plan-draft.md`: AI is ~3¢ a scan, so "unlimited" can lose money. Recommended fair use (100 scans/month at $3.99/mo or $29/yr). Waiting for his choice.
+
 ## 2026-10-21 (overnight)
 - **Imported the real Pantry Pal source** from Wyatt's zip. The app is edited in `src/` and built by `build.py`; `pantry-pal.html` is build output. The agents were updated to match.
 - **The vision was written into CLAUDE.md** (missing-only cart, party/allergy fit, auto-updating inventory, habits), with honest constraints: Amazon gives affiliates no order data, and product allergen data needs a real source.

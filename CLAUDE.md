@@ -41,7 +41,7 @@ Known constraints (keep them honest in the UI and the plans):
 
 ## Rules that never change
 
-1. Recipe content stays inside the app. Amazon links are the only outbound links. Licensed web recipes, if ever enabled, must carry their required source credits.
+1. Recipe content stays inside the app. The only outbound links are shopping links: Amazon, plus Instacart (approved by Wyatt 2026-10-22, built behind an on/off switch). Licensed web recipes, if ever enabled, must carry their required source credits.
 2. Never scrape recipe sites or Amazon. Never invent ASINs. Leave them blank for Wyatt to verify.
 3. Allergy flags are a helper, never a safety guarantee. The UI copy must say so.
 4. Keep the free AI allowance capped. Never put an API key in the app file.
