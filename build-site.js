@@ -79,7 +79,7 @@ fs.writeFileSync(path.join(out, 'index.html'), head('Pantry Pal — cook what yo
 <section class="hero"><h1>Cook what you already have.</h1>
 <p class="muted">Snap your fridge or a grocery receipt. Pantry Pal lists what you’ve got, flags what’s about to expire, and shows recipes you can make tonight — scaled for your crew, with allergy flags to help you choose (always check labels yourself).</p>
 <p><a class="cta" href="${SITE}/app/">Open Pantry Pal — free</a></p></section>
-<h2>Browse by cuisine</h2><ul class="grid">${CUISINES.map(c => `<li><a href="${cuisineUrl(c)}">${esc(c)}<small>${LIB.filter(r => r.cuisine === c).length} recipes</small></a></li>`).join('')}</ul>
+<h2>Browse by cuisine</h2><div class="meta">${CUISINES.map(c => `<span><a href="${cuisineUrl(c)}">${esc(c)}</a> ${LIB.filter(r => r.cuisine === c).length}</span>`).join('')}</div>
 ${meals.map(m => { const l = LIB.filter(r => r.meal === m); return l.length ? `<h2>${m} <span class="muted" style="font-size:16px">${l.length}</span></h2><ul class="grid">${l.map(r => `<li><a href="${r._url}">${esc(r.title)}<small>${r.time} min · ${esc(r.cuisine)} · ${r.nutrition.kcal} cal</small></a></li>`).join('')}</ul>` : ''; }).join('')}` + foot);
 
 // Cuisine pages: intro is built from the recipe data so each page is unique.
@@ -123,7 +123,7 @@ fs.writeFileSync(path.join(out, 'privacy.html'), head('Privacy Policy — Pantry
 <h2>The Pantry Pal app</h2>
 <p>Your pantry list, settings and saved recipes are stored in your own browser on your device. When you scan a receipt or a photo, the image is sent to an AI service (Anthropic's Claude) to read the food items, either through the Pantry Pal server or directly with your own API key if you add one. If you share a recipe to the community feed, what you post is stored on the Pantry Pal server and visible to other users. ${PH('confirm how long server data is kept and how users can ask for it to be deleted')}</p>
 <h2>Children</h2>
-<p>Pantry Pal is not aimed at children under 13 and does not knowingly collect their information.</p>
+<p>Pantry Pal is not aimed at children under 13 and does not knowingly collect their information. ${PH('confirm this matches your intended audience')}</p>
 <h2>Contact</h2>
 <p>Privacy questions: ${PH('contact email address')}</p>` + foot);
 
