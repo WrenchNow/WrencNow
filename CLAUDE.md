@@ -4,6 +4,22 @@ Pantry Pal is a mobile-first web app built by Wyatt, a frontend developer and re
 
 > **Repo note:** This repo also holds `index.html`, the separate **WrenchNow** mechanic site. Don't edit or delete it unless Wyatt asks.
 
+## The vision (north star, in Wyatt's words, summarized)
+
+1. **Know what's at home.** Users scan their fridge, cabinets and freezer (video or photo), receipts and their own recipes. Inventory keeps **quantities and dates**.
+2. **Show only what's missing.** A recipe in the app or on the website shows what you don't have. For example, if you're making spaghetti without tomato sauce, it says "missing: tomato sauce".
+3. **Fit the household.** Amounts scale to the number of people eating that night, or to the family's usual habits. Suggestions respect each member's diet and allergies, and that includes **products**: if someone is allergic to egg, don't suggest Amazon products that contain egg. (This is a helper, never a guarantee.)
+4. **One tap to buy.** Tapping sends the missing items to Amazon with Wyatt's tag already applied, so the user never types a code. Amazon delivers, and Wyatt earns the referral.
+5. **Inventory updates itself.**
+   - When an order arrives, the pantry updates.
+   - When you cook, it deducts what the recipe used (half an onion used, so half an onion is left).
+6. **Learn habits.** It tracks expiry dates, repeat foods and usual order times, then gives daily nudges, reorder suggestions and use-it-up ideas.
+
+Known constraints (keep them honest in the UI and the plans):
+- Amazon gives affiliates **no access to customer orders**, so an "order arrived" update has to come from the user. Options: scanning the receipt or packing slip, forwarding the order email or tapping "Mark as bought". Retailer partners with user-authorized APIs may offer more.
+- Allergen data per product needs a legitimate data source. We never guess from product titles.
+- Today `haveIng()` matches by name only, and cooking only logs the title and date. Nothing is deducted yet.
+
 ## Files
 
 | Path | What it is |
