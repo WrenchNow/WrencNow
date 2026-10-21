@@ -11,37 +11,36 @@
 | **AI-invented recipe** ("make something from what I have") | **Yes**, one AI call |
 | Hosting (Cloudflare Worker and storage, Netlify site) | Free tiers cover early growth |
 
-## Cost per AI call (Anthropic list prices, Oct 2026)
-The app currently uses **Claude Sonnet 5.5** ($2 per million input tokens, $10 per million output). Photos are resized to 1568px on the long side, which is roughly 1,600–2,500 tokens each.
+## Cost per AI call (Anthropic list prices, Oct 2026), after the 2026-10-22 savings
+The app uses **Claude Sonnet 5.5** ($2 per million input tokens, $10 per million output). Since 2026-10-22, fridge photos go out at 1024px, receipts stay sharp, and the AI answers in compact form.
 
-| Call | Sonnet 5.5 (current) | Haiku 5.5 (about 20× cheaper, somewhat less accurate) |
-|---|---|---|
-| Scan, 1 photo | ~1.5–2¢ | ~0.1¢ |
-| Scan, 3 photos (typical) | **~3¢** | ~0.2¢ |
-| Scan, 6 photos with a long item list (worst case) | ~7¢ | ~0.4¢ |
-| AI-invented recipe | ~2¢ | ~0.1¢ |
+| Call | Before the savings | **Now (Sonnet 5.5)** | If we later switch to Haiku 5.5 (~20× cheaper, needs an accuracy test) |
+|---|---|---|---|
+| Scan, 1 fridge photo, ~30 items | 1.3–1.7¢ | **~0.65¢** | ~0.03¢ |
+| Scan, 3 photos, ~30 items (typical) | 2.3–2.7¢ | **~1.1¢** | ~0.06¢ |
+| Receipt, ~30 items | ~1.0¢ | **~0.6¢** | ~0.03¢ |
+| 6 AI-invented recipes | ~1–2¢ | **~0.6–0.8¢** | ~0.04¢ |
 
 *These are estimates from token sizes, not measured bills. After the first real week, check the Anthropic console "Usage" page and we'll correct them.*
 
-## What the FREE allowance can cost you today
+## What the FREE allowance can cost you now
 The Worker caps free AI at **8 per person and 300 total per day**.
-- Typical (300 calls at ~3¢): **~$9/day, ~$270/month**, if the cap is hit every day
-- Worst case (300 calls at ~7¢): **~$21/day, ~$630/month**
-- Realistic early on (say 20 calls a day): **~$0.60/day, ~$18/month**
+- If the cap is hit every day (300 calls at ~1¢): **~$3/day, ~$90/month**
+- Realistic early on (say 20 calls a day): **~$0.20/day, ~$6/month**
 
 **Recommendations:**
 1. Set a **monthly spend limit** in the Anthropic console before deploying (for example $25 to start). That's the hard stop.
-2. Lower the free total to about **100/day** until there's income. It's one setting (`FREE_DAILY_TOTAL=100 node deploy.mjs`).
-3. Consider Haiku 5.5 for **receipt** scans (clear printed text, so the cheaper model is likely fine) and keep Sonnet for fridge photos. We'd test accuracy on real photos first; that's your call.
+2. Optional: lower the free total to about **100/day** until there's income (worst case about $1/day). It's one setting (`FREE_DAILY_TOTAL=100 node deploy.mjs`).
+3. Test Haiku 5.5 on a few of your real fridge and receipt photos. If it reads them well, the free tier becomes nearly free.
 
 ## Pro plan options
 Stripe takes about 2.9% + 30¢ per charge, so yearly billing keeps much more.
 
 | Option | Price | What Pro gets | Your AI cost for a heavy user | Verdict |
 |---|---|---|---|---|
-| A. "Unlimited" | $2.99/mo | Unlimited scans | 10 scans/day = **~$9/mo** | ❌ Loses money on heavy users |
-| **B. Fair-use (recommended)** | **$3.99/mo or $29/yr** | **100 AI scans/recipes a month**, meal plan extras, weekly email reminder, family sharing later | 100 × 3¢ = **~$3/mo max**, most users far less | ✅ Profitable for almost everyone |
-| C. Cheap model for Pro | $2.99/mo | 300/mo on Haiku | ~$0.60/mo max | ✅ Cheap; we'd confirm scan accuracy first |
+| A. "Unlimited" | $2.99/mo | Unlimited scans | 10 scans/day = **~$3.30/mo** | ⚠️ Roughly break-even on heavy users after Stripe fees |
+| **B. Fair-use (recommended)** | **$3.99/mo or $29/yr** | **100 AI scans/recipes a month**, meal plan extras, weekly email reminder, family sharing later | 100 × ~1¢ = **~$1.10/mo max** | ✅ Profitable for everyone |
+| C. Cheap model for Pro | $2.99/mo | 300/mo on Haiku | ~$0.20/mo max | ✅ Cheapest; needs the Haiku accuracy test |
 
 **Free tier stays useful:** 8 AI calls a day (or fewer), all built-in recipes, tonight's picks, the weekly plan and the cart. **Pro sells convenience** (more scans, reminders, sharing), not basic features.
 

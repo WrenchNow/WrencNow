@@ -8,6 +8,14 @@ Newest first. One entry per decision: the date, what was decided and why.
 - **Instacart approved as a second store**, research first, then a build behind an on/off switch. Rule 1 now allows Amazon and Instacart shopping links.
 - **Pro plan: Wyatt asked about cost.** Drafted `docs/pro-plan-draft.md`: AI is ~3¢ a scan, so "unlimited" can lose money. Recommended fair use (100 scans/month at $3.99/mo or $29/yr). Waiting for his choice.
 
+- **Meal planning built** ("What's for dinner tonight?" and "Plan my week" with a combined cart). Free and offline.
+- **AI scan cost roughly halved**:
+  - Fridge photos are sent at 1024px; receipts keep their resolution.
+  - Replies use compact JSON, with lower max_tokens.
+  - Cut-off replies are salvaged instead of failing.
+  - A typical scan is now ~1¢, down from ~2.5¢. The model is unchanged; Haiku stays an option, pending an accuracy test with Wyatt's real photos.
+- **Instacart build is on hold until Wyatt confirms signup is open.** One Instacart page says it isn't accepting new developer applications.
+
 ## 2026-10-21 (overnight)
 - **Imported the real Pantry Pal source** from Wyatt's zip. The app is edited in `src/` and built by `build.py`; `pantry-pal.html` is build output. The agents were updated to match.
 - **The vision was written into CLAUDE.md** (missing-only cart, party/allergy fit, auto-updating inventory, habits), with honest constraints: Amazon gives affiliates no order data, and product allergen data needs a real source.
