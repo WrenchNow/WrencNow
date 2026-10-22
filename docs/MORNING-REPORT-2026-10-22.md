@@ -6,7 +6,7 @@ Everything is on branch `claude/pantry-pal-setup`, pushed. Nothing is deployed a
 1. **You can go live in about 35 minutes, all on your phone, with no laptop.** The checklist is below and in `docs/setup/RUNBOOK.md`. After that, every update deploys itself.
 2. **The app looks better and costs less to run:** colors are easier to read, the new tomato jar icon is in, and scans cost about half what they did.
 3. **Ads are planned:** 12 Instagram/Facebook ad ideas that start with young adults and spread to their parents, plus a landing page for the ads to point to.
-4. **Free scanning on the phone** (barcode + receipt, no AI bill) is being finished right now. It was paused overnight by a usage limit.
+4. **Free scanning on the phone is done:** barcode (free food database) and paper receipts (read on the phone). Your AI bill is $0 for those. All 12 test suites pass.
 
 ## What got done overnight
 | Area | Done |
@@ -24,7 +24,7 @@ Everything is on branch `claude/pantry-pal-setup`, pushed. Nothing is deployed a
 | **Weekly helper** | Every **Monday 8:37am Denver time**, a background run checks the app, watches for Amazon, Instacart and AI price changes, writes next week's posts and sends you an 8-line summary. |
 
 ## Answers to your questions
-**"Analyze photos without paying for AI?"** Yes for barcodes (exact product, free database) and paper receipts (read on the phone). It's being finished right now. Fridge or shelf photos with loose food still need AI. The cheapest model would make those about 0.03¢ each, but we should test it on your real photos first.
+**"Analyze photos without paying for AI?"** Yes, and it's built: barcodes (exact product, free database) and paper receipts (read on the phone, about a 5 MB one-time download). The AI only runs if the user taps "Try the AI scan" after the free read fails. Fridge or shelf photos with loose food still need AI. The cheapest model would make those about 0.03¢ each, but we should test it on your real photos first.
 
 **"So I don't have to do any of the work?"** Close. Anything that creates an account in your name, adds payment or tax info, or accepts a legal agreement has to be you. That's the 35-minute list below. Everything after that runs itself.
 
@@ -55,7 +55,6 @@ Everything is on branch `claude/pantry-pal-setup`, pushed. Nothing is deployed a
 6. **Still open:** a real order email (redacted) to tune Paste order, and whether Instacart's signup is open.
 
 ## What's next (after your checklist)
-1. Finish and check free on-phone scanning (running now)
 2. Move everything to the `pantry-pal` repo, then first real deploy, which I'll watch
 3. Test the cheaper AI model on your real photos
 4. "I made this" subtracts what you used (the half-an-onion feature)

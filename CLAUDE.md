@@ -36,6 +36,8 @@ Known constraints (keep them honest in the UI and the plans):
 ## Current state
 - In `CONFIG`, `AMAZON_TAG` and `BACKEND_URL` are empty and `ONLINE_RECIPES` is false.
 - AI runs either on the free allowance through the Worker or on the user's own Anthropic key, which goes straight from the browser. Model: `claude-sonnet-5-5`.
+- `CONFIG.ON_DEVICE_SCAN` is true, so Barcode and Receipt scanning run free on the phone. On first use they load pinned libraries from jsDelivr (barcode-detector/zxing-wasm and tesseract.js). This is an exception to "everything inline", like Google Fonts. Barcode lookups send only the number to Open Food Facts, a free open database; it's a lookup, not a link. Photos for barcode reading and OCR never leave the phone. Receipts go to AI only if the user taps "Try the AI scan". If this switch is ever turned off, update the privacy and FAQ wording in `build-site.js`.
+- Tests: `node tests/run-all.mjs` (see `tests/README.md`).
 - Owner settings are hidden. Unlock them with `?admin=owner` or 7 taps on the version line in Settings.
 - Design tokens: green `#2E6A4E`, tomato `#D9572F`, cream `#FAF6EF`. Fonts: Fraunces + Inter.
 

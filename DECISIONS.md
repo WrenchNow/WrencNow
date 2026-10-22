@@ -9,7 +9,7 @@ Newest first. One entry per decision: the date, what was decided and why.
 - **Ad landing page at `/start/`** (no Amazon links, per the Associates paid-ads rule). Every recipe has a PNG title card. Privacy text says receipts are read on the phone unless the user opts into the AI scan.
 - **Paid social plan:** organic first, then $5/day boosts, with a $150 cap for month one (awaiting Wyatt's OK). The policy section is fact-checked.
 - **Weekly background run** scheduled for Mondays at 8:37am America/Denver (a scheduled task in this session).
-- **Free on-device scanning** (barcode + Open Food Facts, receipt OCR into the local parser) was interrupted by a usage limit and resumed in the morning.
+- **Free on-device scanning shipped:** barcode lookup via Open Food Facts and receipt OCR into the local parser, with libraries pinned from jsDelivr and loaded on first use. Receipts go to AI only if the user taps "Try the AI scan". All 12 test suites pass.
 
 ## 2026-10-22
 - **Pantry Pal and WrenchNow will be fully separate.** Creating the new private `pantry-pal` repo was blocked: this session has no permission to create repos. Wyatt will create it and grant Claude access, then everything moves over with its history.
