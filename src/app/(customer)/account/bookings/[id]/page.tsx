@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CustomerBookingActions, ReviewForm } from "@/components/account/forms";
+import { CustomerBookingActions, OffPlatformReport, ReviewForm } from "@/components/account/forms";
 import { LiveRefresh } from "@/components/account/live-refresh";
 import { StatusTimeline } from "@/components/account/status-timeline";
 import { Stars } from "@/components/review-list";
@@ -10,10 +10,10 @@ import { Card } from "@/components/ui/card";
 import { Notice } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/layout";
 import { requireRole } from "@/lib/auth";
-import { noShowReportable } from "@/lib/booking-status";
+import { customerNoShowAt, noShowReportable } from "@/lib/booking-status";
 import { syncBookingPayment } from "@/lib/bookings";
-import { stripeConfigured } from "@/lib/env";
-import { dateTime, money } from "@/lib/format";
+import { customerNoShowFeeCents, stripeConfigured } from "@/lib/env";
+import { dateTime, money, timeOnly } from "@/lib/format";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -48,12 +48,13 @@ export default async function BookingDetailPage({ params, searchParams }: PagePr
   const [{ data: code }, mech] = showArrival
     ? await Promise.all([
         supabase.from("booking_codes").select("code").eq("booking_id", b.id).maybeSingle(),
-        createAdminClient().from("mechanics").select("display_name, photo_url, check_status, insurance_status").eq("id", b.mechanic_id).maybeSingle(),
+        createAdminClient().from("mechanics").select("display_name, photo_url, check_status, insurance_status, profiles(phone)").eq("id", b.mechanic_id).maybeSingle(),
       ])
     : [{ data: null }, { data: null }];
 
   const canCancel = b.status === "requested" || b.status === "accepted"; // matches canCancel("customer", …)
-  const canNoShow = noShowReportable(b.status, b.scheduled_start);
+  const canNoShow = noShowReportable(b.status, b.scheduled_start, b.arrived_at);
+  const noShowDeadline = b.arrived_at && b.status === "en_route" ? customerNoShowAt(b.arrived_at, b.scheduled_start) : null;
 
   return (
     <>
@@ -80,6 +81,16 @@ export default async function BookingDetailPage({ params, searchParams }: PagePr
         <StatusTimeline status={b.status} />
       </Card>
 
+      {noShowDeadline && (
+        <div className="mb-6">
+          <Notice tone="warn" title="Your mechanic is here">
+            They checked in at your address at {timeOnly(b.arrived_at!)}. Meet them and read them your arrival code. If you don&apos;t respond by{" "}
+            {timeOnly(new Date(noShowDeadline).toISOString())}, they can mark you as a no-show and a {money(Math.min(customerNoShowFeeCents(), b.estimated_max_cents))} fee
+            is charged to your card.
+          </Notice>
+        </div>
+      )}
+
       {showArrival && code && (
         <Card className="mb-6 border-ore/40">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
@@ -92,6 +103,18 @@ export default async function BookingDetailPage({ params, searchParams }: PagePr
                   {mech.data?.check_status === "clear" && "✓ Background checked "}
                   {mech.data?.insurance_status === "verified" && "✓ Insured"}
                 </p>
+                {mech.data?.profiles?.phone && (
+                  <p className="mt-1 text-sm">
+                    <a href={`tel:${mech.data.profiles.phone}`} className="text-ore hover:underline">
+                      Call
+                    </a>
+                    {" · "}
+                    <a href={`sms:${mech.data.profiles.phone}`} className="text-ore hover:underline">
+                      Text
+                    </a>{" "}
+                    <span className="text-muted">{mech.data.profiles.phone}</span>
+                  </p>
+                )}
               </div>
             </div>
             <div className="sm:text-right">
@@ -127,12 +150,25 @@ export default async function BookingDetailPage({ params, searchParams }: PagePr
           <h2 className="mb-4 text-2xl font-bold uppercase">Payment</h2>
           <dl className="space-y-3 text-sm">
             <Detail label="Estimate (max)" value={money(b.estimated_max_cents)} />
-            {b.final_amount_cents && <Detail label="Final amount" value={money(b.final_amount_cents)} />}
+            {b.customer_no_show_fee_cents ? (
+              <Detail label="No-show fee" value={money(b.customer_no_show_fee_cents)} />
+            ) : (
+              b.final_amount_cents && <Detail label="Final amount" value={money(b.final_amount_cents)} />
+            )}
             {b.refunded_cents > 0 && <Detail label="Refunded" value={money(b.refunded_cents)} />}
             <Detail label="Status" value={PAYMENT_LABEL[b.payment_status] ?? b.payment_status} />
           </dl>
           <div className="mt-6">
             <CustomerBookingActions id={b.id} canCancel={canCancel} canNoShow={canNoShow} />
+          </div>
+          <p className="mt-6 text-xs text-muted">
+            Only pay through WrenchNow — never cash, Venmo, Zelle, or other apps.{" "}
+            <Link href="/payment-protection" className="text-ore hover:underline">
+              Why it matters
+            </Link>
+          </p>
+          <div className="mt-3">
+            <OffPlatformReport bookingId={b.id} />
           </div>
         </Card>
       </div>

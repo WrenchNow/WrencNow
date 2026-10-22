@@ -52,7 +52,16 @@ Branch: `claude/wrenchnow-bootstrap` (not merged to `main`, nothing deployed).
   review the new certificate.
 - **Profile photo:** required before a mechanic can submit an application.
 
+- **Customer no-show:** the mechanic taps "I'm here", which needs their phone's location within about 400 m of the
+  address. The customer sees "Your mechanic is here" with a deadline, and both sides get tap-to-call and text.
+  After 15 minutes (counted from the later of the check-in and the booked time), the mechanic can mark a customer
+  no-show. The customer's hold is then charged `CUSTOMER_NO_SHOW_FEE_CENTS` ($25 default, never more than the
+  estimate), and the mechanic gets 95%. Once a mechanic has checked in, the customer can't report them as a no-show.
+  Customers must give a phone number when booking. Admins can refund a disputed fee from Admin → Bookings.
+- **Pay through the app:** the `/payment-protection` page is linked from the footer, the FAQ, booking, and each
+  booking page. "Asked to pay outside WrenchNow?" reports appear in Admin → Overview.
+- **Unverified mechanics:** not built. I advised against it (see chat).
+
 ## Still open
-- **Customer no-show:** what happens if the mechanic arrives and the customer isn't there (so there's no code)?
-  Today an admin sorts it out. The owner doesn't want a call-out fee, because mechanics could game it. Proposed
-  instead: a "customer not here" check-in that records the mechanic's location, with no money moving automatically.
+- **No notifications yet.** Customers see "Your mechanic is here" when their booking page is open, and mechanics
+  can call or text. Email and SMS alerts need a provider, such as Resend for email or Twilio for SMS.

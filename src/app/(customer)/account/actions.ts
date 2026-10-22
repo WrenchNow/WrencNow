@@ -65,6 +65,7 @@ const bookingSchema = z.object({
   serviceSlug: z.string().min(1, "Pick a service").max(60),
   vehicleId: z.uuid("Pick a vehicle"),
   address: z.string().trim().min(5, "Enter the address where the car is").max(300),
+  phone: z.string().trim().min(7, "Enter a phone number your mechanic can reach you at").max(32).regex(/^[0-9+()\-.\s]+$/, "Enter a valid phone number"),
   lat: z.coerce.number().min(-90).max(90).nullable().optional(),
   lng: z.coerce.number().min(-180).max(180).nullable().optional(),
   problem: z.string().trim().max(2000).optional().transform((v) => v || null),
@@ -82,6 +83,9 @@ export async function createBookingAction(input: z.input<typeof bookingSchema>):
   if (!parsed.success) return { error: parsed.error.issues[0]!.message };
   try {
     const d = parsed.data;
+    // The mechanic needs a way to reach the customer when they arrive.
+    const supabase = await createClient();
+    await supabase.from("profiles").update({ phone: d.phone }).eq("id", viewer.id);
     return await createBooking({
       customerId: viewer.id,
       mechanicId: d.mechanicId,
@@ -140,4 +144,31 @@ export async function submitReview(_: FormState, formData: FormData): Promise<Fo
   if (error) return { error: error.code === "23505" ? "You've already reviewed this booking." : "Couldn't save your review. Please try again." };
   revalidatePath(`/account/bookings/${booking.id}`);
   return { ok: true, message: "Thanks — your review is live." };
+}
+
+const reportSchema = z.object({
+  bookingId: z.uuid(),
+  method: z.string().trim().max(60).optional().transform((v) => v || null),
+  details: z.string().trim().max(2000).optional().transform((v) => v || null),
+});
+
+/** "Asked to pay outside WrenchNow?" — logged for admin review. */
+export async function reportOffPlatformPayment(_: FormState, formData: FormData): Promise<FormState> {
+  const viewer = await requireViewer("/account/bookings");
+  const parsed = reportSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "Something's wrong with that report. Please try again." };
+  const supabase = await createClient();
+  // RLS: this only finds the booking if it's the viewer's own.
+  const { data: booking } = await supabase.from("bookings").select("id, mechanic_id, customer_id").eq("id", parsed.data.bookingId).maybeSingle();
+  if (!booking || booking.customer_id !== viewer.id) return { error: "Booking not found." };
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient();
+  const { data: report, error } = await admin
+    .from("payment_reports")
+    .insert({ booking_id: booking.id, reporter_id: viewer.id, mechanic_id: booking.mechanic_id, method: parsed.data.method, details: parsed.data.details })
+    .select("id")
+    .single();
+  if (error || !report) return { error: "Couldn't send your report. Please email hello@getwrenchnow.com." };
+  await admin.from("audit_log").insert({ actor_id: viewer.id, action: "payment.off_platform_reported", entity: "booking", entity_id: booking.id, data: { report: report.id } });
+  return { ok: true, message: "Thanks — we've got your report and will look into it. Don't pay outside the app; your card on the booking covers everything." };
 }

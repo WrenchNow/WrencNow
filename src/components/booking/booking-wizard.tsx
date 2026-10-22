@@ -34,6 +34,8 @@ export function BookingWizard({
   busy,
   initialService,
   publishableKey,
+  initialPhone,
+  noShowFeeLabel,
 }: {
   mechanic: { id: string; name: string; rateCents: number };
   services: ServiceOpt[];
@@ -41,6 +43,8 @@ export function BookingWizard({
   busy: Busy[];
   initialService: string;
   publishableKey: string | null;
+  initialPhone: string;
+  noShowFeeLabel: string;
 }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -50,6 +54,7 @@ export function BookingWizard({
   const [vehicleId, setVehicleId] = useState(vehicles.length === 1 ? vehicles[0]!.id : "");
   const [addingVehicle, setAddingVehicle] = useState(vehicles.length === 0);
   const [address, setAddress] = useState("");
+  const [phone, setPhone] = useState(initialPhone);
   const [start, setStart] = useState("");
   const [dayIdx, setDayIdx] = useState(0);
   const [terms, setTerms] = useState(false);
@@ -73,6 +78,7 @@ export function BookingWizard({
     if (step === 0 && !service) return setError("Pick a service to continue.");
     if (step === 1 && !vehicleId) return setError("Pick or add the vehicle.");
     if (step === 1 && address.trim().length < 5) return setError("Enter the address where the car will be.");
+    if (step === 1 && phone.replace(/\D/g, "").length < 7) return setError("Enter a phone number your mechanic can reach you at.");
     if (step === 2 && !start) return setError("Pick a time.");
     setStep((s) => s + 1);
   }
@@ -86,6 +92,7 @@ export function BookingWizard({
         serviceSlug,
         vehicleId,
         address,
+        phone,
         problem,
         urgency,
         start,
@@ -191,6 +198,9 @@ export function BookingWizard({
             <Field label="Where will the car be?" htmlFor="address" hint="Street address, plus any notes like “level 2 of the garage”.">
               <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} autoComplete="street-address" maxLength={300} placeholder="1234 Main St, Denver, CO 80205" />
             </Field>
+            <Field label="Your phone number" htmlFor="phone" hint="Your mechanic calls or texts this when they arrive.">
+              <Input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" maxLength={32} placeholder="(303) 555-0100" />
+            </Field>
           </div>
         )}
 
@@ -249,7 +259,16 @@ export function BookingWizard({
                 <li>We place a hold of {money(estMax)} on your card now. You aren&apos;t charged yet.</li>
                 <li>When the job is done, you&apos;re charged the final amount — never more than {money(estMax)}. The rest of the hold is released.</li>
                 <li>Cancel free any time before your mechanic heads out and the full hold is released.</li>
-                <li>All payments go through WrenchNow. Never pay your mechanic directly.</li>
+                <li>
+                  If your mechanic checks in at the address and you don&apos;t respond within 15 minutes, a {noShowFeeLabel} no-show fee is charged instead of the job.
+                </li>
+                <li>
+                  All payments go through WrenchNow. Never pay your mechanic directly —{" "}
+                  <Link href="/payment-protection" target="_blank" className="text-ore hover:underline">
+                    here&apos;s why
+                  </Link>
+                  .
+                </li>
               </ul>
             </div>
             {payment && publishableKey ? (

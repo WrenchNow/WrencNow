@@ -80,6 +80,9 @@ export type Database = {
           accepted_at: string | null;
           address: string;
           admin_override: boolean;
+          arrived_at: string | null;
+          arrived_distance_m: number | null;
+          arrived_location: unknown;
           cancel_reason: string | null;
           cancelled_at: string | null;
           cancelled_by: string | null;
@@ -87,6 +90,7 @@ export type Database = {
           created_at: string;
           currency: string;
           customer_id: string;
+          customer_no_show_fee_cents: number | null;
           en_route_at: string | null;
           estimated_max_cents: number;
           final_amount_cents: number | null;
@@ -115,6 +119,9 @@ export type Database = {
           accepted_at?: string | null;
           address: string;
           admin_override?: boolean;
+          arrived_at?: string | null;
+          arrived_distance_m?: number | null;
+          arrived_location?: unknown;
           cancel_reason?: string | null;
           cancelled_at?: string | null;
           cancelled_by?: string | null;
@@ -122,6 +129,7 @@ export type Database = {
           created_at?: string;
           currency?: string;
           customer_id: string;
+          customer_no_show_fee_cents?: number | null;
           en_route_at?: string | null;
           estimated_max_cents: number;
           final_amount_cents?: number | null;
@@ -149,6 +157,9 @@ export type Database = {
           accepted_at?: string | null;
           address?: string;
           admin_override?: boolean;
+          arrived_at?: string | null;
+          arrived_distance_m?: number | null;
+          arrived_location?: unknown;
           cancel_reason?: string | null;
           cancelled_at?: string | null;
           cancelled_by?: string | null;
@@ -156,6 +167,7 @@ export type Database = {
           created_at?: string;
           currency?: string;
           customer_id?: string;
+          customer_no_show_fee_cents?: number | null;
           en_route_at?: string | null;
           estimated_max_cents?: number;
           final_amount_cents?: number | null;
@@ -509,6 +521,62 @@ export type Database = {
           },
         ];
       };
+      payment_reports: {
+        Row: {
+          booking_id: string | null;
+          created_at: string;
+          details: string | null;
+          id: string;
+          mechanic_id: string | null;
+          method: string | null;
+          reporter_id: string;
+          status: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          booking_id?: string | null;
+          created_at?: string;
+          details?: string | null;
+          id?: string;
+          mechanic_id?: string | null;
+          method?: string | null;
+          reporter_id: string;
+          status?: string;
+        };
+        Update: {
+          booking_id?: string | null;
+          created_at?: string;
+          details?: string | null;
+          id?: string;
+          mechanic_id?: string | null;
+          method?: string | null;
+          reporter_id?: string;
+          status?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "payment_reports_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "payment_reports_mechanic_id_fkey";
+            columns: ["mechanic_id"];
+            isOneToOne: false;
+            referencedRelation: "mechanics";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "payment_reports_reporter_id_fkey";
+            columns: ["reporter_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       profiles: {
         Row: {
           created_at: string;
@@ -747,6 +815,10 @@ export type Database = {
         Args: { p_booking_id: string; p_per_job_cents: number };
         Returns: number;
       };
+      distance_to_booking_m: {
+        Args: { p_booking_id: string; p_lat: number; p_lng: number };
+        Returns: number;
+      };
       get_public_mechanic: {
         Args: { mechanic_id: string };
         Returns: {
@@ -812,7 +884,8 @@ export type Database = {
         | "in_progress"
         | "completed"
         | "cancelled"
-        | "no_show";
+        | "no_show"
+        | "customer_no_show";
       check_status:
         | "not_started"
         | "invited"
@@ -960,6 +1033,7 @@ export const Constants = {
         "completed",
         "cancelled",
         "no_show",
+        "customer_no_show",
       ],
       check_status: [
         "not_started",

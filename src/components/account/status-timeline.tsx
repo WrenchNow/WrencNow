@@ -3,7 +3,7 @@ import { STATUS_LABEL, type BookingStatus } from "@/lib/booking-status";
 const FLOW: BookingStatus[] = ["requested", "accepted", "en_route", "in_progress", "completed"];
 
 export function StatusTimeline({ status }: { status: BookingStatus }) {
-  if (status === "cancelled" || status === "no_show") {
+  if (status === "cancelled" || status === "no_show" || status === "customer_no_show") {
     return <p className="rounded-[var(--radius-control)] border border-danger/25 bg-danger-dim px-4 py-3 text-sm font-semibold text-danger">{STATUS_LABEL[status]}</p>;
   }
   const idx = FLOW.indexOf(status);
@@ -29,7 +29,7 @@ export function StatusBadge({ status }: { status: BookingStatus }) {
   const tone =
     status === "completed"
       ? "border-ok/25 bg-ok-dim text-ok"
-      : status === "cancelled" || status === "no_show"
+      : status === "cancelled" || status === "no_show" || status === "customer_no_show"
         ? "border-danger/25 bg-danger-dim text-danger"
         : status === "requested"
           ? "border-warn/25 bg-warn-dim text-warn"

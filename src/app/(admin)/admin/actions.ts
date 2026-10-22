@@ -111,3 +111,13 @@ export async function waiveVerificationFee(_: FormState, formData: FormData): Pr
   revalidatePath("/admin", "layout");
   return { ok: true, message: "Fee waived." };
 }
+
+export async function resolvePaymentReport(_: FormState, formData: FormData): Promise<FormState> {
+  const viewer = await requireAdmin();
+  const id = z.uuid().parse(formData.get("id"));
+  const admin = createAdminClient();
+  await admin.from("payment_reports").update({ status: "resolved" }).eq("id", id);
+  await admin.from("audit_log").insert({ actor_id: viewer.id, action: "payment_report.resolved", entity: "payment_report", entity_id: id });
+  revalidatePath("/admin");
+  return { ok: true, message: "Marked resolved." };
+}

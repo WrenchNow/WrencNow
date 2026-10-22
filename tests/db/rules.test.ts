@@ -472,3 +472,65 @@ run("verification fee refunds", () => {
   });
 });
 
+run("customer no-shows", () => {
+  async function enRoute(q: (sql: string, params?: unknown[]) => Promise<pg.QueryResult>, startIso: string) {
+    const id = await insertBooking(q, ids["mechanic.basic"], "oil-change", startIso);
+    await q("update public.bookings set payment_status = 'authorized' where id = $1", [id]);
+    for (const st of ["accepted", "en_route"]) await q("update public.bookings set status = $2 where id = $1", [id, st]);
+    return id;
+  }
+  const past = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
+
+  it("requires the mechanic to have checked in at the address", async () => {
+    await expect(
+      tx(async (q) => {
+        const id = await enRoute(q, future(2));
+        await q("update public.bookings set payment_status = 'captured', status = 'customer_no_show' where id = $1", [id]);
+      }),
+    ).rejects.toThrow(/has not checked in/);
+  });
+
+  it("requires a 15-minute wait after check-in and the booked time", async () => {
+    await expect(
+      tx(async (q) => {
+        const id = await enRoute(q, future(2));
+        await q("update public.bookings set arrived_at = now() where id = $1", [id]);
+        await q("update public.bookings set payment_status = 'captured', status = 'customer_no_show' where id = $1", [id]);
+      }),
+    ).rejects.toThrow(/wait has not passed/);
+  });
+
+  it("allows it after the wait, and then the customer can't report the mechanic", async () => {
+    await tx(async (q) => {
+      // Booked and en route earlier; checked in 20 minutes ago, 20 minutes after the start time.
+      const id = await enRoute(q, future(2));
+      await q("update public.bookings set scheduled_start = $2, scheduled_end = $3, arrived_at = $4 where id = $1", [id, past(40), past(-20), past(20)]);
+      await q("update public.bookings set payment_status = 'captured', final_amount_cents = 2500, customer_no_show_fee_cents = 2500, status = 'customer_no_show' where id = $1", [id]);
+      expect((await q("select status from public.bookings where id = $1", [id])).rows[0].status).toBe("customer_no_show");
+    });
+    await expect(
+      tx(async (q) => {
+        const id = await enRoute(q, future(2));
+        await q("update public.bookings set arrived_at = now() where id = $1", [id]);
+        await q("update public.bookings set status = 'no_show', payment_status = 'canceled' where id = $1", [id]);
+      }),
+    ).rejects.toThrow(/checked in at the address/);
+  });
+});
+
+run("off-platform payment reports", () => {
+  it("customers can't write reports directly (server only) but can read their own", async () => {
+    await expect(
+      tx((q) => q("insert into public.payment_reports (reporter_id, method) values (auth.uid(), 'Venmo')"), asUser(ids["customer"])),
+    ).rejects.toThrow(/permission denied/);
+    await tx(async (q) => {
+      await q("insert into public.payment_reports (reporter_id, method) values ($1, 'Venmo')", [ids["customer"]]);
+      await q("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: ids["customer"], role: "authenticated" })]);
+      await q("set local role authenticated");
+      expect((await q("select count(*)::int as n from public.payment_reports")).rows[0].n).toBe(1);
+      await q("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: ids["mechanic.basic"], role: "authenticated" })]);
+      expect((await q("select count(*)::int as n from public.payment_reports")).rows[0].n).toBe(0);
+    });
+  });
+});
+

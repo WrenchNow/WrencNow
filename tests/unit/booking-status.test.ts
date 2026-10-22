@@ -37,10 +37,12 @@ describe("booking status machine", () => {
   it("no-show can be reported only after the 30-minute grace period", () => {
     const start = "2026-10-22T16:00:00Z";
     const t = Date.parse(start);
-    expect(noShowReportable("accepted", start, t + 29 * 60_000)).toBe(false);
-    expect(noShowReportable("accepted", start, t + 31 * 60_000)).toBe(true);
-    expect(noShowReportable("requested", start, t + 60 * 60_000)).toBe(false);
-    expect(noShowReportable("in_progress", start, t + 60 * 60_000)).toBe(false);
+    expect(noShowReportable("accepted", start, null, t + 29 * 60_000)).toBe(false);
+    expect(noShowReportable("accepted", start, null, t + 31 * 60_000)).toBe(true);
+    expect(noShowReportable("requested", start, null, t + 60 * 60_000)).toBe(false);
+    expect(noShowReportable("in_progress", start, null, t + 60 * 60_000)).toBe(false);
+    // Mechanic checked in at the address: no no-show report.
+    expect(noShowReportable("en_route", start, "2026-10-22T16:05:00Z", t + 60 * 60_000)).toBe(false);
   });
   it("mechanics can only decline; once accepted they're committed", () => {
     expect(canCancel("mechanic", "requested")).toBe(true);

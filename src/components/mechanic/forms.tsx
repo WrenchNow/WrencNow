@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
-import { mechanicTransition, saveMechanicProfile, savePhotoUrl, saveServices, submitApplication, submitInsurance, type FormState } from "@/app/(mechanic)/mechanic/actions";
+import { useActionState, useEffect, useRef, useState } from "react";
+import { checkIn, mechanicTransition, saveMechanicProfile, savePhotoUrl, saveServices, submitApplication, submitInsurance, type FormState } from "@/app/(mechanic)/mechanic/actions";
 import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/feedback";
 import { Checkbox, Field, Input, Textarea } from "@/components/ui/form";
@@ -178,7 +178,23 @@ export function PhotoUpload({ userId, current }: { userId: string; current: stri
   );
 }
 
-export function JobActions({ id, status, estimateLabel, estimateMax }: { id: string; status: string; estimateLabel: string; estimateMax: number }) {
+export function JobActions({
+  id,
+  status,
+  estimateLabel,
+  estimateMax,
+  arrivedAt,
+  noShowAt,
+  noShowFeeLabel,
+}: {
+  id: string;
+  status: string;
+  estimateLabel: string;
+  estimateMax: number;
+  arrivedAt?: string | null;
+  noShowAt?: number | null;
+  noShowFeeLabel?: string;
+}) {
   const [state, action, pending] = useActionState(mechanicTransition, {});
   const [confirmDecline, setConfirmDecline] = useState(false);
   if (state.ok) return <StateNotice state={state} />;
@@ -236,6 +252,10 @@ export function JobActions({ id, status, estimateLabel, estimateMax }: { id: str
             .
           </p>
         </div>
+      )}
+      {status === "en_route" && !arrivedAt && <CheckInButton id={id} />}
+      {status === "en_route" && arrivedAt && noShowAt && (
+        <CustomerNoShow id={id} noShowAt={noShowAt} feeLabel={noShowFeeLabel ?? ""} action={action} pending={pending} />
       )}
       {status === "en_route" && (
         <form action={action} className="flex flex-col gap-2 sm:flex-row sm:items-end">
@@ -319,5 +339,81 @@ export function InsuranceForm({ userId, defaults }: { userId: string; defaults: 
         </Button>
       </div>
     </form>
+  );
+}
+
+function CheckInButton({ id }: { id: string }) {
+  const [state, setState] = useState<FormState>({});
+  const [busy, setBusy] = useState(false);
+  function go() {
+    if (!("geolocation" in navigator)) return setState({ error: "Your browser can't share location. Turn on location to check in." });
+    setBusy(true);
+    setState({});
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        setState(await checkIn(id, pos.coords.latitude, pos.coords.longitude));
+        setBusy(false);
+      },
+      () => {
+        setState({ error: "Location is off. Allow location for this site to check in at the address." });
+        setBusy(false);
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+    );
+  }
+  return (
+    <div className="flex flex-col gap-2">
+      <StateNotice state={state} />
+      <Button variant="subtle" onClick={go} disabled={busy}>
+        {busy ? "Checking your location…" : "📍 I'm here"}
+      </Button>
+      <p className="text-xs text-muted">Check in when you reach the address. The customer is told you&apos;ve arrived.</p>
+    </div>
+  );
+}
+
+function CustomerNoShow({
+  id,
+  noShowAt,
+  feeLabel,
+  action,
+  pending,
+}: {
+  id: string;
+  noShowAt: number;
+  feeLabel: string;
+  action: (fd: FormData) => void;
+  pending: boolean;
+}) {
+  const [now, setNow] = useState(() => Date.now());
+  const [confirm, setConfirm] = useState(false);
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 15_000);
+    return () => clearInterval(t);
+  }, []);
+  const minsLeft = Math.ceil((noShowAt - now) / 60_000);
+  if (minsLeft > 0) {
+    return <p className="text-sm text-muted">Checked in. Call or text the customer. If they don&apos;t respond, you can mark a no-show in {minsLeft} min.</p>;
+  }
+  return confirm ? (
+    <form action={action} className="flex flex-col gap-2 rounded-[var(--radius-control)] border border-warn/30 bg-warn-dim p-3">
+      <input type="hidden" name="id" value={id} />
+      <input type="hidden" name="to" value="customer_no_show" />
+      <p className="text-sm text-ink">
+        The customer will be charged a {feeLabel} no-show fee and you&apos;ll get your share. Only do this if you&apos;re at the address and tried to reach them.
+      </p>
+      <div className="flex gap-2">
+        <Button type="submit" variant="danger" disabled={pending}>
+          Customer didn&apos;t show — charge {feeLabel}
+        </Button>
+        <Button variant="subtle" onClick={() => setConfirm(false)}>
+          Keep waiting
+        </Button>
+      </div>
+    </form>
+  ) : (
+    <Button variant="subtle" onClick={() => setConfirm(true)}>
+      Customer isn&apos;t here
+    </Button>
   );
 }

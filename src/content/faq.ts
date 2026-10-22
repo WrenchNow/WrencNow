@@ -19,7 +19,7 @@ export const CUSTOMER_FAQ: Faq[] = [
   },
   {
     q: "Can I pay the mechanic directly?",
-    a: "No. All payments go through WrenchNow so your booking is protected, reviews stay honest, and there's a record if anything goes wrong.",
+    a: "No — never. All payments go through WrenchNow so your booking is protected, you're never charged more than your estimate, and we can help if anything goes wrong. If a mechanic asks for cash, Venmo, Zelle, or anything else, don't pay and report it from your booking. See our Payment protection page for details.",
   },
   {
     q: "How do I know it's really my mechanic?",

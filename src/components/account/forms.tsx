@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { addVehicle, customerTransition, submitReview, updateProfile, type FormState } from "@/app/(customer)/account/actions";
+import { addVehicle, customerTransition, reportOffPlatformPayment, submitReview, updateProfile, type FormState } from "@/app/(customer)/account/actions";
 import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/feedback";
 import { Field, Input, Textarea } from "@/components/ui/form";
@@ -140,5 +140,40 @@ export function ReviewForm({ bookingId }: { bookingId: string }) {
         {pending ? "Posting…" : "Post review"}
       </Button>
     </form>
+  );
+}
+
+export function OffPlatformReport({ bookingId }: { bookingId: string }) {
+  const [state, action, pending] = useActionState(reportOffPlatformPayment, {});
+  const [open, setOpen] = useState(false);
+  if (state.ok) return <StateNotice state={state} />;
+  return (
+    <div className="rounded-[var(--radius-control)] border border-line bg-raised p-4">
+      {!open ? (
+        <button type="button" onClick={() => setOpen(true)} className="text-sm font-semibold text-ore hover:underline">
+          Asked to pay outside WrenchNow? Report it
+        </button>
+      ) : (
+        <form action={action} className="flex flex-col gap-3">
+          <StateNotice state={state} />
+          <input type="hidden" name="bookingId" value={bookingId} />
+          <p className="text-sm text-ink">Don&apos;t pay. Tell us what happened and we&apos;ll look into it.</p>
+          <Field label="How did they ask you to pay? (optional)" htmlFor="method">
+            <Input id="method" name="method" maxLength={60} placeholder="Cash, Venmo, Zelle…" />
+          </Field>
+          <Field label="What happened? (optional)" htmlFor="details">
+            <Textarea id="details" name="details" maxLength={2000} />
+          </Field>
+          <div className="flex gap-2">
+            <Button type="submit" variant="danger" disabled={pending}>
+              {pending ? "Sending…" : "Send report"}
+            </Button>
+            <Button variant="subtle" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+          </div>
+        </form>
+      )}
+    </div>
   );
 }

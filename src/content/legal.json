@@ -93,6 +93,12 @@
      },
      {
       "p": "All sales are final unless WrenchNow determines at its sole discretion that a refund is warranted. Disputes regarding payment must be raised within 30 days of the transaction."
+     },
+     {
+      "p": "Customer no-shows: if your Mechanic checks in at the service address and you do not respond within 15 minutes of the later of the check-in time or the booked start time, the booking may be marked as a customer no-show and a no-show fee of {{CUSTOMER_NO_SHOW_FEE}} (never more than your estimate) will be charged to your payment method instead of the job. You can cancel without charge any time before your Mechanic is on the way."
+     },
+     {
+      "p": "Never pay a Mechanic outside WrenchNow. Payments made outside the platform are not protected, and WrenchNow cannot refund them."
      }
     ]
    },

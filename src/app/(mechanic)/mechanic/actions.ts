@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
-import { BookingError, transitionBooking } from "@/lib/bookings";
+import { BookingError, checkInAtAddress, transitionBooking } from "@/lib/bookings";
 import { featuredPriceCents, siteUrl, stripeConfigured, verificationFeeCents, verificationRefundPerJobCents } from "@/lib/env";
 import { money } from "@/lib/format";
 import { geocode } from "@/lib/geocode";
@@ -209,7 +209,7 @@ export async function setOnline(formData: FormData) {
 export async function mechanicTransition(_: FormState, formData: FormData): Promise<FormState> {
   const viewer = await requireRole(["mechanic"], "/mechanic/jobs");
   const id = z.uuid().parse(formData.get("id"));
-  const to = z.enum(["accepted", "en_route", "in_progress", "completed", "cancelled"]).parse(formData.get("to"));
+  const to = z.enum(["accepted", "en_route", "in_progress", "completed", "cancelled", "customer_no_show"]).parse(formData.get("to"));
   let finalAmountCents: number | undefined;
   if (to === "completed") {
     const raw = Number(String(formData.get("final_amount") ?? "").replace(/[$,\s]/g, ""));
@@ -232,6 +232,7 @@ export async function mechanicTransition(_: FormState, formData: FormData): Prom
     in_progress: "Code verified — job started.",
     completed: "Job complete — payment captured.",
     cancelled: "Job declined. The customer's card hold was released.",
+    customer_no_show: "Marked as a customer no-show. The no-show fee was charged and your share is on its way.",
   };
   return { ok: true, message: messages[to] };
 }
@@ -320,4 +321,15 @@ export async function submitInsurance(input: z.input<typeof insuranceSchema>): P
   await admin.from("audit_log").insert({ actor_id: viewer.id, action: "mechanic.insurance_submitted", entity: "mechanic", entity_id: viewer.id });
   revalidatePath("/mechanic", "layout");
   return { ok: true, message: renewing ? "Renewal submitted. You stay live while we review it." : "Insurance submitted. We'll verify it shortly." };
+}
+
+export async function checkIn(bookingId: string, lat: number, lng: number): Promise<FormState> {
+  const viewer = await requireRole(["mechanic"], "/mechanic/jobs");
+  try {
+    await checkInAtAddress(z.uuid().parse(bookingId), viewer.id, lat, lng);
+  } catch (e) {
+    return { error: e instanceof BookingError ? e.message : "Check-in failed. Please try again." };
+  }
+  revalidatePath("/mechanic", "layout");
+  return { ok: true, message: "Checked in. The customer has been told you're here." };
 }

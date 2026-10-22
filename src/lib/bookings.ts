@@ -1,7 +1,18 @@
 import "server-only";
 import { randomInt } from "node:crypto";
-import { actorMayTransition, ARRIVAL_CODE_MAX_ATTEMPTS, canCancel, canTransition, NO_SHOW_GRACE_MINUTES, type Actor, type BookingStatus } from "@/lib/booking-status";
-import { platformFeeBps } from "@/lib/env";
+import {
+  actorMayTransition,
+  ARRIVAL_CODE_MAX_ATTEMPTS,
+  ARRIVAL_RADIUS_METERS,
+  canCancel,
+  canTransition,
+  customerNoShowAt,
+  NO_SHOW_GRACE_MINUTES,
+  type Actor,
+  type BookingStatus,
+} from "@/lib/booking-status";
+import { customerNoShowFeeCents, platformFeeBps } from "@/lib/env";
+import { geocode } from "@/lib/geocode";
 import { estimateMaxCents, platformFeeCents } from "@/lib/fees";
 import { isOfferedSlot } from "@/lib/slots";
 import { getStripe } from "@/lib/stripe";
@@ -108,6 +119,15 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
 
   await releaseStaleUnpaid(mechanic.id);
 
+  // Geocode the job address so a mechanic's arrival check-in can be verified against it.
+  let lat = input.lat;
+  let lng = input.lng;
+  if (lat === null || lng === null) {
+    const point = await geocode(input.address);
+    lat = point?.lat ?? null;
+    lng = point?.lng ?? null;
+  }
+
   const start = new Date(input.start);
   const end = new Date(start.getTime() + service.est_minutes_max * 60_000);
   const estimate = estimateMaxCents(mechanic.hourly_rate_cents, service.est_minutes_max);
@@ -123,7 +143,7 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
       vehicle_id: vehicle.id,
       vehicle_desc: vehicleDesc,
       address: input.address,
-      location: input.lat !== null && input.lng !== null ? `SRID=4326;POINT(${input.lng} ${input.lat})` : null,
+      location: lat !== null && lng !== null ? `SRID=4326;POINT(${lng} ${lat})` : null,
       problem_description: input.problem,
       urgency: input.urgency,
       scheduled_start: start.toISOString(),
@@ -274,6 +294,7 @@ async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor
       break;
     }
     case "no_show": {
+      if (b.arrived_at && role !== "admin") throw new BookingError("Your mechanic checked in at your address. Contact support if something's wrong.");
       const graceEnds = new Date(b.scheduled_start).getTime() + NO_SHOW_GRACE_MINUTES * 60_000;
       if (role !== "admin" && Date.now() < graceEnds) {
         throw new BookingError("You can report a no-show 30 minutes after the scheduled time.");
@@ -282,6 +303,34 @@ async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor
         await stripe.paymentIntents.cancel(b.stripe_payment_intent_id, { cancellation_reason: "abandoned" });
       }
       update.payment_status = "canceled";
+      break;
+    }
+    case "customer_no_show": {
+      if (!b.arrived_at) throw new BookingError("Check in at the address first.");
+      const waitEnds = customerNoShowAt(b.arrived_at, b.scheduled_start);
+      if (role !== "admin" && Date.now() < waitEnds) {
+        const mins = Math.ceil((waitEnds - Date.now()) / 60_000);
+        throw new BookingError(`Give the customer ${mins} more minute${mins === 1 ? "" : "s"} to respond.`);
+      }
+      if (!b.stripe_payment_intent_id || b.payment_status !== "authorized") throw new BookingError("There's no card hold to charge the no-show fee to.");
+      const fee = Math.min(customerNoShowFeeCents(), b.estimated_max_cents);
+      const pi = await stripe.paymentIntents.retrieve(b.stripe_payment_intent_id);
+      let charged = fee;
+      if (pi.status === "requires_capture") {
+        await stripe.paymentIntents.capture(
+          b.stripe_payment_intent_id,
+          { amount_to_capture: fee, application_fee_amount: platformFeeCents(fee, platformFeeBps()) },
+          { idempotencyKey: `customer-no-show-${b.id}` },
+        );
+      } else if (pi.status === "succeeded") {
+        charged = pi.amount_received;
+      } else {
+        throw new BookingError("The customer's card hold is no longer available. Contact support.");
+      }
+      update.customer_no_show_fee_cents = charged;
+      update.final_amount_cents = charged;
+      update.platform_fee_cents = platformFeeCents(charged, platformFeeBps());
+      update.payment_status = "captured";
       break;
     }
     case "completed": {
@@ -347,4 +396,28 @@ export async function cancelOpenBookingsForMechanic(mechanicId: string, actorId:
     }
   }
   return n;
+}
+
+/**
+ * Mechanic checks in at the job address. Requires their device location within
+ * ARRIVAL_RADIUS_METERS of the address (when the address could be geocoded), so a
+ * customer no-show can't be claimed from somewhere else.
+ */
+export async function checkInAtAddress(bookingId: string, mechanicId: string, lat: number, lng: number) {
+  const admin = createAdminClient();
+  const { data: b } = await admin.from("bookings").select("id, mechanic_id, status, arrived_at").eq("id", bookingId).maybeSingle();
+  if (!b || b.mechanic_id !== mechanicId) throw new BookingError("Booking not found.");
+  if (b.status !== "en_route") throw new BookingError("Tap “I'm on my way” first.");
+  if (b.arrived_at) return;
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) throw new BookingError("We couldn't read your location.");
+  const { data: distance } = await admin.rpc("distance_to_booking_m", { p_booking_id: bookingId, p_lat: lat, p_lng: lng });
+  if (typeof distance === "number" && distance > ARRIVAL_RADIUS_METERS) {
+    throw new BookingError(`You're about ${(distance / 1609.344).toFixed(1)} miles from the address. Check in when you get there.`);
+  }
+  await admin
+    .from("bookings")
+    .update({ arrived_at: new Date().toISOString(), arrived_location: `SRID=4326;POINT(${lng} ${lat})`, arrived_distance_m: typeof distance === "number" ? distance : null })
+    .eq("id", bookingId)
+    .is("arrived_at", null);
+  await audit(mechanicId, "booking.arrived", bookingId, { distance_m: distance ?? null });
 }

@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { BookingWizard } from "@/components/booking/booking-wizard";
 import { Container, PageHeader } from "@/components/ui/layout";
 import { requireRole } from "@/lib/auth";
-import { platformFeeBps, stripeConfigured } from "@/lib/env";
+import { customerNoShowFeeCents, platformFeeBps, stripeConfigured } from "@/lib/env";
+import { money } from "@/lib/format";
 import { getPublicMechanic } from "@/lib/public-data";
 import { BOOKING_WINDOW_DAYS } from "@/lib/slots";
 import { createClient } from "@/lib/supabase/server";
@@ -40,6 +41,8 @@ export default async function BookPage({ params, searchParams }: PageProps<"/boo
         busy={busy ?? []}
         initialService={typeof sp.service === "string" ? sp.service : ""}
         publishableKey={stripeConfigured() ? process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY! : null}
+        initialPhone={viewer.profile.phone ?? ""}
+        noShowFeeLabel={money(customerNoShowFeeCents(), { whole: true })}
       />
     </Container>
   );

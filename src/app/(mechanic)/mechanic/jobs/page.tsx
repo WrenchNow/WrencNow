@@ -5,7 +5,8 @@ import { JobActions } from "@/components/mechanic/forms";
 import { EmptyState } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/layout";
 import { requireRole } from "@/lib/auth";
-import { platformFeeBps } from "@/lib/env";
+import { customerNoShowAt } from "@/lib/booking-status";
+import { customerNoShowFeeCents, platformFeeBps } from "@/lib/env";
 import { mechanicPayoutCents } from "@/lib/fees";
 import { dateTime, money } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
@@ -95,7 +96,11 @@ export default async function MechanicJobsPage() {
                           <>
                             {" · "}
                             <a href={`tel:${contact.phone}`} className="text-ore hover:underline">
-                              {contact.phone}
+                              Call {contact.phone}
+                            </a>
+                            {" · "}
+                            <a href={`sms:${contact.phone}`} className="text-ore hover:underline">
+                              Text
                             </a>
                           </>
                         )}
@@ -104,7 +109,15 @@ export default async function MechanicJobsPage() {
                   )}
                 </dl>
                 <div className="mt-5">
-                  <JobActions id={j.id} status={j.status} estimateLabel={money(j.estimated_max_cents)} estimateMax={j.estimated_max_cents} />
+                  <JobActions
+                    id={j.id}
+                    status={j.status}
+                    estimateLabel={money(j.estimated_max_cents)}
+                    estimateMax={j.estimated_max_cents}
+                    arrivedAt={j.arrived_at}
+                    noShowAt={j.arrived_at ? customerNoShowAt(j.arrived_at, j.scheduled_start) : null}
+                    noShowFeeLabel={money(Math.min(customerNoShowFeeCents(), j.estimated_max_cents))}
+                  />
                 </div>
               </li>
             );

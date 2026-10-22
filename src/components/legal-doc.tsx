@@ -1,5 +1,5 @@
 import legal from "@/content/legal.json";
-import { platformFeeBps, verificationFeeCents, verificationRefundPerJobCents } from "@/lib/env";
+import { customerNoShowFeeCents, platformFeeBps, verificationFeeCents, verificationRefundPerJobCents } from "@/lib/env";
 import { money } from "@/lib/format";
 import { Container } from "./ui/layout";
 
@@ -32,7 +32,8 @@ function Blocks({ blocks }: { blocks: Block[] }) {
             {b
               .p!.replace("{{PLATFORM_FEE_PERCENT}}", fee)
               .replace("{{VERIFICATION_FEE}}", money(verificationFeeCents(), { whole: true }))
-              .replace("{{VERIFICATION_REFUND}}", money(verificationRefundPerJobCents(), { whole: true }))}
+              .replace("{{VERIFICATION_REFUND}}", money(verificationRefundPerJobCents(), { whole: true }))
+              .replace("{{CUSTOMER_NO_SHOW_FEE}}", money(customerNoShowFeeCents(), { whole: true }))}
           </p>
         ),
       )}

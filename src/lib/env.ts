@@ -44,3 +44,9 @@ export function verificationRefundPerJobCents(): number {
   const n = Number(process.env.VERIFICATION_REFUND_PER_JOB_CENTS || 1000);
   return Number.isInteger(n) && n > 0 ? n : 1000;
 }
+
+/** Fee a customer pays when the mechanic checked in and waited but the customer never showed. */
+export function customerNoShowFeeCents(): number {
+  const n = Number(process.env.CUSTOMER_NO_SHOW_FEE_CENTS || 2500);
+  return Number.isInteger(n) && n > 0 ? n : 2500;
+}
