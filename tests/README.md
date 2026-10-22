@@ -1,7 +1,8 @@
 # Pantry Pal tests
 
-Regression tests for the built app (`pantry-pal.html`) and the real Worker (`pantry-pal-worker/src/index.js`).
-Nothing to install: they use Node 22+ and the Playwright + Chromium already on the dev machine.
+Regression tests for the built app (`pantry-pal.html`) and the real backend (Netlify Functions in `netlify/`).
+Nothing to install: they use Node 22+ and the Playwright + Chromium already on the dev machine. `worker-test` uses the
+real Anthropic SDK when `npm ci` has been run, and a small stand-in otherwise; Netlify Blobs and `Netlify.env` are always mocked.
 
     python3 build.py              # tests run against the built file, so rebuild first
     node tests/run-all.mjs        # every suite; one line each, then PASS/FAIL (exit code 1 on any failure)
@@ -19,6 +20,8 @@ backend, Open Food Facts or library download they need. Nothing real is called.
 | `TEST_LIBS` optional real barcode/OCR libraries (see notes) | unset: those checks are skipped |
 
 Notes
+- `headers-test` reads `netlify.toml` (via `python3`'s tomllib) and serves the built `site/` from a fake https origin with those headers, checking every page type for CSP violations. With `TEST_LIBS` it also runs the real barcode WASM and Tesseract worker under the CSP. It skips the browser part if `site/` isn't built.
+- `worker-test` (name kept from the Cloudflare days) loads `netlify/functions/*.mjs` with Node module hooks (`tests/mocks/hooks.mjs`): `@netlify/blobs` becomes an in-memory store with the same compare-and-swap rules, and every HTTP call (Anthropic, Spoonacular) goes to a fake `fetch`. Nothing real is called. `paste-test` and `scan-cost-test` also read `netlify/lib/claude-rules.mjs` to check that every request the app makes passes the server's `validateClaudeBody`.
 - `upgrade-test` reads an old build from git (`git show 9c1ea6e:pantry-pal.html`), so it needs full git history.
 - `shots` also checks the static site when `site/` has been built (`node build-site.js https://example.com`), and skips that part otherwise.
 - `fixtures/order-samples.mjs` and `fixtures/receipt-ocr-samples.mjs` are hand-written, synthetic text. No real orders or receipts.

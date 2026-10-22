@@ -14,7 +14,9 @@ const OUT = process.env.TEST_OUT || path.join(os.tmpdir(), 'pantry-pal-tests');
 fs.mkdirSync(OUT, { recursive: true });
 
 const SUITES = [
-  ['worker-test.mjs', 'Worker: free AI caps (8/person, 300/day), request checks, community posts, CORS'],
+  ['worker-test.mjs', 'Backend (Netlify Functions): free AI caps, list/Premium tiers, request checks, community, same-origin guard'],
+  ['headers-test.mjs', 'netlify.toml: security headers and CSP on every page; real barcode/OCR libraries still run'],
+  ['tier-test.mjs', 'Free vs Premium: shopping-list photo to Amazon, Premium lock, codes, expiry, 402/403/429, backups, own key'],
   ['parse-table.mjs', 'Paste-order parser reads every sample order correctly'],
   ['paste-test.mjs', 'Paste order screen: local parsing, review, AI fallback only when set up'],
   ['arrive-test.mjs', '"Did your order arrive?" card: review, snooze, clear, safe import'],

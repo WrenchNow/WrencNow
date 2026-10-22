@@ -1,0 +1,58 @@
+# Pantry Pal on Netlify: the recipe site (/), the app (/app/) and the API (/api/*, Netlify Functions),
+# all in ONE project on ONE domain. Netlify builds this on every push to main once the GitHub repo is
+# connected (docs/setup/RUNBOOK.md). Nothing here is secret: keys live in the Netlify UI
+# (Project configuration > Environment variables), never in this file.
+#
+# This project must never be the getwrenchnow.com project. WrenchNow's index.html at the repo root is
+# not published: only site/ is.
+
+[build]
+  # 1. Backend tests (mocked Blobs and AI, about 2 s): a broken function never reaches production.
+  # 2. Inline src/ into pantry-pal.html.  3. Build the recipe site into site/, app copied to site/app/.
+  # $URL is Netlify's main address for this project (the custom domain once one is added).
+  command = "node tests/worker-test.mjs && python3 build.py && node build-site.js \"$URL\""
+  publish = "site"
+  functions = "netlify/functions"
+  # Skip the build (and the 15-credit production deploy) when a push only touches docs, marketing or
+  # notes. Exit 0 = skip. A first build, a manual redeploy of the same commit, or any git error builds.
+  ignore = "[ \"$CACHED_COMMIT_REF\" != \"$COMMIT_REF\" ] && git diff --quiet \"$CACHED_COMMIT_REF\" \"$COMMIT_REF\" -- src/ netlify/ netlify.toml build.py build-site.js sw.js assets/ package.json package-lock.json tests/worker-test.mjs tests/mocks/"
+
+[build.environment]
+  NODE_VERSION = "22"
+  # Python 3 comes with Netlify's Ubuntu 24.04 build image; build.py only uses the standard library.
+  # If a build ever says "python3: not found", add PYTHON_VERSION = "3.13" here.
+
+# Deploy previews and branch deploys link to their own preview address.
+[context.deploy-preview]
+  command = "node tests/worker-test.mjs && python3 build.py && node build-site.js \"$DEPLOY_PRIME_URL\""
+[context.branch-deploy]
+  command = "node tests/worker-test.mjs && python3 build.py && node build-site.js \"$DEPLOY_PRIME_URL\""
+
+[functions]
+  node_bundler = "esbuild"
+
+# Security headers for the static pages (functions set their own). One policy for every page: it fits
+# the app (the strictest needs) and the site. Allowed outside sources:
+#   cdn.jsdelivr.net      pinned barcode / OCR libraries (scripts, wasm, Tesseract worker + language data)
+#   fonts.googleapis.com, fonts.gstatic.com   Fraunces + Inter
+#   world.openfoodfacts.org   barcode lookups (the number only)
+#   api.anthropic.com     only when a user adds their OWN key (browser -> Anthropic directly)
+#   img-src https:        product photos in the Amazon picker (once the Creators API is on)
+# 'unsafe-inline' is needed because the app is one self-contained HTML file. 'wasm-unsafe-eval' lets the
+# barcode and OCR libraries run WebAssembly; it does not allow eval(). blob: covers the OCR worker, photo
+# previews and the app's install manifest. If the Meta pixel is ever turned on (/start/), add its domains here.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net blob:; worker-src 'self' blob: https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://cdn.jsdelivr.net https://world.openfoodfacts.org https://api.anthropic.com data: blob:; media-src 'self' blob:; manifest-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(self), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"
+    Strict-Transport-Security = "max-age=31536000"
+
+# The app shell should always be fresh so fixes reach phones quickly (the service worker handles offline).
+[[headers]]
+  for = "/app/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
