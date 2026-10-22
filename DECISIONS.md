@@ -2,6 +2,15 @@
 
 Newest first. One entry per decision: the date, what was decided and why.
 
+## 2026-10-22 (overnight #2)
+- **Go-live is automated with GitHub Actions.** Wyatt only creates accounts and pastes keys into GitHub secrets (~35 min on his phone). The workflow refuses any Netlify project without "pantry" in its name or that mentions "wrench".
+- **deploy.mjs CI mode** (API token, `--keep-vars`, `ALLOWED_ORIGIN`). Tests moved into `tests/` with `run-all.mjs`.
+- **WCAG AA color fixes and the tomato jar icon shipped.**
+- **Ad landing page at `/start/`** (no Amazon links, per the Associates paid-ads rule). Every recipe has a PNG title card. Privacy text says receipts are read on the phone unless the user opts into the AI scan.
+- **Paid social plan:** organic first, then $5/day boosts, with a $150 cap for month one (awaiting Wyatt's OK). The policy section is fact-checked.
+- **Weekly background run** scheduled for Mondays at 8:37am America/Denver (a scheduled task in this session).
+- **Free on-device scanning** (barcode + Open Food Facts, receipt OCR into the local parser) was interrupted by a usage limit and resumed in the morning.
+
 ## 2026-10-22
 - **Pantry Pal and WrenchNow will be fully separate.** Creating the new private `pantry-pal` repo was blocked: this session has no permission to create repos. Wyatt will create it and grant Claude access, then everything moves over with its history.
 - **Meal planning approved and in progress**: "Plan my week" (3–7 days, starting today or a chosen date) plus "What's for dinner tonight?" quick picks. Free, no AI.

@@ -1,15 +1,15 @@
 # Roadmap
 
 Ranked: the top item is next. Updated at the end of every session.
-_Last updated: 2026-10-22 (afternoon)_
+_Last updated: 2026-10-22 (morning after overnight #2)_
 
-**Done since last update:** meal planning (week plan + tonight picks + combined cart) ✅ · AI scan cost roughly halved ✅ · "Did your order arrive?" + Paste order ✅
+**Done since last update:** go-live automation + runbook ✅ · deploy.mjs CI mode ✅ · tests in repo ✅ · AA colors + tomato icon ✅ · `/start/` ad landing page ✅ · recipe images ✅ · ad plan ✅ ·  meal planning (week plan + tonight picks + combined cart) ✅ · AI scan cost roughly halved ✅ · "Did your order arrive?" + Paste order ✅
 
 ## Now: make the app usable by strangers (nothing else matters until this is done)
 | # | Task | Owner | Time | Blocked on |
 |---|---|---|---|---|
 | 1 | **Move Pantry Pal to its own private repo** (decided: fully separate). Wyatt creates an empty `pantry-pal` repo and gives Claude access; Claude moves it with history and sets up its own Netlify site. | Wyatt, then Claude | 10 + 15 min | Wyatt creates the repo |
-| 2 | **Deploy the Worker** (`node deploy.mjs`) and set an Anthropic monthly spend limit. Without this, scanning only works for people who paste their own API key. | Wyatt + product-dev | 30 min | — |
+| 2 | **Go live:** Wyatt does the ~35-min phone checklist in `docs/setup/RUNBOOK.md` (keys go into GitHub secrets), then merges the PR. CI deploys the Worker, app and site. | Wyatt | 35 min | #1 |
 | 3 | Set `ALLOWED_ORIGIN` on the Worker. Fill in the About/Privacy placeholders. Put the site and app on a real domain. | Wyatt | 30 min | #1, #2 |
 | 4 | Fix PWA install: a real manifest file and PNG icons (loosens the "one file" rule a little; needs Wyatt's OK) | product-dev | 1–2 hrs | OK |
 | 5 | Make the free-AI counter exact with a Durable Object (bursts can exceed the caps today) | product-dev | 2–3 hrs | OK |
@@ -30,7 +30,6 @@ _Last updated: 2026-10-22 (afternoon)_
 | 12 | Quantity tracking: "I made this" → confirm what you used → deduct (half an onion stays) | product-dev | 10–14 hrs |
 | 13 | Email sign-in, which unlocks the weekly "use it up" reminder by **email**, Pro, and **auto-forwarded order emails** (web push only works on iPhone after Add to Home Screen). Needs email sign-in. | product-dev | 10–16 hrs incl. accounts |
 | 14 | "$ saved from the trash" counter plus a shareable card | product-dev, website | 3–4 hrs |
-| 15 | Recipe images (generated title cards) so Google shows rich results | website | 2–3 hrs |
 | 16 | Ingredient-combination SEO pages | website, recipes | 3–4 hrs |
 | 17 | "Gear for this recipe" kitchen links (~4.5% commission vs 1% for grocery) | amazon, product-dev | 2 hrs, after approval |
 | 18 | King Soopers price check via the Kroger API | product-dev | 1–2 days |
