@@ -15,8 +15,13 @@ Branch: `claude/wrenchnow-bootstrap` (not merged to `main`, nothing deployed).
    `customer.subscription.*` and `checkout.session.completed`, and copy its signing secret.
 3. **Checkr** — sign up, get a staging API key, pick a package slug, and set the webhook URL to
    `https://getwrenchnow.com/api/checks/webhook`.
-4. **Netlify** — connect the GitHub repo, set the build command to `npm run build`, and add every variable from
-   `.env.example` with real values (`NEXT_PUBLIC_SITE_URL=https://getwrenchnow.com`, `PLATFORM_FEE_BPS=500`).
+4. **Netlify** — `getwrenchnow.com` is served by the Netlify project **wondrous-granita-ea4a9e**. Its current
+   deploy (Oct 12) came from Netlify's agent runner, not from this GitHub repo. To switch to this app, link that
+   project to `WrenchNow/WrencNow` (branch `main`, build `npm run build`; `netlify.toml` is included), then merge PR #2.
+   This replaces the current live site. Add every variable from `.env.example` with real values. The app reads
+   `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` and `STRIPE_WEBHOOK_SECRET`; if your Stripe keys are already
+   saved in Netlify under different names, rename them or tell me the names. The repo only has the **publishable**
+   test key (`pk_test_51ToxK…`, in `legacy/index.html`); there is no secret key in the repo.
 5. **Make yourself admin** — sign up on the site, then run `npm run make-admin -- you@email.com`.
 6. **Nightly workflow** — run `/install-github-app`, then add the GitHub secrets `CLAUDE_CODE_OAUTH_TOKEN`,
    `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `STRIPE_TEST_SECRET_KEY`.
