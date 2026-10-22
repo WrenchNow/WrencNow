@@ -29,3 +29,4 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PLATFORM_FEE_BPS: "500"
