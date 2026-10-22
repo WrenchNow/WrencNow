@@ -2,6 +2,15 @@
 
 Newest first. One entry per decision: the date, what was decided and why.
 
+## 2026-10-22 (afternoon)
+- **Two tiers (Wyatt):**
+  - **Free:** shopping-list photo (read on the phone; handwriting gets a small monthly allowance on the cheapest AI) → Amazon links/cart, plus barcode, receipt, paste order, recipes and plans.
+  - **Premium ($4.99/mo or $29.99/yr):** AI identifies everything in cabinet/fridge/pantry/freezer photos, 100 a month.
+- **Cloudflare dropped (Wyatt no longer uses it). The backend moves to Netlify Functions + Netlify Blobs** on the same site, so the API is same-origin with no CORS. The Netlify AI Gateway can supply Claude with no Anthropic account (billed in Netlify credits), or Wyatt's own key can be used instead.
+- **Risk:** Wyatt's Netlify team is on the Free credit-based plan, shared with getwrenchnow.com. Running out of credits could pause both. **No Netlify deploys until Wyatt picks how to protect WrenchNow.**
+- Premium access uses signed tokens checked by the backend. Stripe checkout comes after Wyatt creates a Stripe account. Until then, owner test codes only.
+- Creating the GitHub repo is still blocked (this session can't create repos); Wyatt has to create it.
+
 ## 2026-10-22 (overnight #2)
 - **Go-live is automated with GitHub Actions.** Wyatt only creates accounts and pastes keys into GitHub secrets (~35 min on his phone). The workflow refuses any Netlify project without "pantry" in its name or that mentions "wrench".
 - **deploy.mjs CI mode** (API token, `--keep-vars`, `ALLOWED_ORIGIN`). Tests moved into `tests/` with `run-all.mjs`.
