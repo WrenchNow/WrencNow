@@ -581,6 +581,9 @@
       "p": "WrenchNow charges a platform fee on each completed transaction. The current platform fee is {{PLATFORM_FEE_PERCENT}} of the total job value. This fee is subject to change with 30 days' notice."
      },
      {
+      "p": "Verification fee: when you apply, you pay a one-time verification fee of {{VERIFICATION_FEE}} that covers your background check. After each of your first completed jobs that is paid through WrenchNow, {{VERIFICATION_REFUND}} of the fee is refunded to the card you paid with, until the full fee has been returned. If you stop working on WrenchNow before then, the unreturned balance is not refunded. The fee is not refunded if your background check does not clear."
+     },
+     {
       "p": "Payments are processed through Stripe Connect. You are required to maintain a valid Stripe Connect account to receive payments. WrenchNow is not responsible for delays or failures in payment processing caused by Stripe or by errors in your account information."
      }
     ]

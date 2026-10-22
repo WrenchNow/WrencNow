@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { platformFeeBps } from "@/lib/env";
-import { estimateMaxCents, estimateMinCents, mechanicNetCents, mechanicPayoutCents, platformFeeCents } from "@/lib/fees";
+import { estimateMaxCents, estimateMinCents, mechanicNetCents, mechanicPayoutCents, platformFeeCents, verificationJobsRemaining } from "@/lib/fees";
 import { monthKey } from "@/lib/format";
 
 describe("platformFeeCents", () => {
@@ -74,5 +74,14 @@ describe("monthKey", () => {
   it("uses Denver time, not UTC", () => {
     expect(monthKey(new Date("2026-11-01T03:00:00Z"))).toBe("2026-10"); // 9pm Oct 31 in Denver
     expect(monthKey(new Date("2026-11-01T08:00:00Z"))).toBe("2026-11");
+  });
+});
+
+describe("verification fee refunds", () => {
+  it("counts jobs left until the fee is fully returned", () => {
+    expect(verificationJobsRemaining(5000, 0, 1000)).toBe(5);
+    expect(verificationJobsRemaining(5000, 2000, 1000)).toBe(3);
+    expect(verificationJobsRemaining(5000, 5000, 1000)).toBe(0);
+    expect(verificationJobsRemaining(4500, 0, 1000)).toBe(5); // last installment is $5
   });
 });

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { InsuranceReviewForm, ReviewMechanicForm } from "@/components/admin-forms";
+import { InsuranceReviewForm, ReviewMechanicForm, WaiveFeeForm } from "@/components/admin-forms";
 import { Badge, EmptyState } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/layout";
 import { money, shortDate } from "@/lib/format";
@@ -68,6 +68,10 @@ export default async function AdminMechanicsPage({ searchParams }: PageProps<"/a
                       Insurance: {m.insurance_status}
                       {m.insurance_expires_on ? ` · exp ${m.insurance_expires_on}` : ""}
                     </Badge>
+                    <Badge tone={m.verification_fee_status === "unpaid" ? "neutral" : "ok"}>
+                      Fee: {m.verification_fee_status}
+                      {m.verification_fee_status === "paid" ? ` · ${money(m.verification_refunded_cents)}/${money(m.verification_paid_cents)} returned` : ""}
+                    </Badge>
                     {m.is_live && <Badge tone="ok">● Live</Badge>}
                   </div>
                   {(m.insurance_status === "submitted" || m.insurance_pending_expires_on) && (
@@ -91,8 +95,9 @@ export default async function AdminMechanicsPage({ searchParams }: PageProps<"/a
                   {m.certifications.length > 0 && <p className="mt-2 text-sm text-ink">Certs: {m.certifications.join(", ")}</p>}
                   {m.bio && <p className="mt-2 line-clamp-3 max-w-2xl text-sm text-ink">{m.bio}</p>}
                 </div>
-                <div className="shrink-0">
+                <div className="flex shrink-0 flex-col gap-3">
                   <ReviewMechanicForm id={m.id} status={m.status} tier={m.skill_tier} />
+                  {m.verification_fee_status === "unpaid" && <WaiveFeeForm id={m.id} />}
                 </div>
               </div>
             </li>

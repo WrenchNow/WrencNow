@@ -68,6 +68,7 @@ for (const m of mechanics) {
       agreed_terms_at: new Date().toISOString(),
       online: !m.pending,
       insurance_status: m.pending ? "submitted" : "verified",
+      verification_fee_status: m.pending ? "unpaid" : "waived",
       insurance_provider: "TEST INSURER (fake)",
       insurance_policy_number: "TEST-0000",
       insurance_expires_on: new Date(Date.now() + 365 * 86_400_000).toISOString().slice(0, 10),

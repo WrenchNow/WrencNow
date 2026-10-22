@@ -316,6 +316,11 @@ async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor
   const { data: updated, error } = await admin.from("bookings").update(update).eq("id", b.id).eq("status", b.status).select("*").single();
   if (error || !updated) throw new BookingError("That change didn't go through. Refresh and try again.");
 
+  if (to === "completed") {
+    // Return the next $10 (or configured amount) of the mechanic's verification fee.
+    const { refundVerificationInstallment } = await import("@/lib/verification");
+    await refundVerificationInstallment(b.id).catch((e) => console.error("refundVerificationInstallment", e));
+  }
   if (to === "no_show") {
     await admin.from("no_shows").insert({ booking_id: b.id, mechanic_id: b.mechanic_id, reported_by: actor.id, reason: opts.reason?.slice(0, 1000) ?? null });
   }

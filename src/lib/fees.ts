@@ -39,3 +39,9 @@ export function mechanicNetCents(grossCents: number, feeCents: number, refundedC
   const share = grossCents - feeCents;
   return Math.round(share * (1 - refunded / grossCents));
 }
+
+/** How many more completed jobs until the verification fee is fully returned. */
+export function verificationJobsRemaining(paidCents: number, refundedCents: number, perJobCents: number): number {
+  const left = Math.max(paidCents - refundedCents, 0);
+  return perJobCents > 0 ? Math.ceil(left / perJobCents) : 0;
+}

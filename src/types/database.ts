@@ -341,6 +341,11 @@ export type Database = {
           stripe_payouts_enabled: boolean;
           stripe_subscription_id: string | null;
           updated_at: string;
+          verification_fee_status: Database["public"]["Enums"]["verification_fee_status"];
+          verification_paid_at: string | null;
+          verification_paid_cents: number;
+          verification_payment_intent_id: string | null;
+          verification_refunded_cents: number;
           years_experience: number | null;
         };
         ComputedFields: never;
@@ -387,6 +392,11 @@ export type Database = {
           stripe_payouts_enabled?: boolean;
           stripe_subscription_id?: string | null;
           updated_at?: string;
+          verification_fee_status?: Database["public"]["Enums"]["verification_fee_status"];
+          verification_paid_at?: string | null;
+          verification_paid_cents?: number;
+          verification_payment_intent_id?: string | null;
+          verification_refunded_cents?: number;
           years_experience?: number | null;
         };
         Update: {
@@ -432,6 +442,11 @@ export type Database = {
           stripe_payouts_enabled?: boolean;
           stripe_subscription_id?: string | null;
           updated_at?: string;
+          verification_fee_status?: Database["public"]["Enums"]["verification_fee_status"];
+          verification_paid_at?: string | null;
+          verification_paid_cents?: number;
+          verification_payment_intent_id?: string | null;
+          verification_refunded_cents?: number;
           years_experience?: number | null;
         };
         Relationships: [
@@ -660,6 +675,46 @@ export type Database = {
           },
         ];
       };
+      verification_refunds: {
+        Row: {
+          amount_cents: number;
+          booking_id: string;
+          created_at: string;
+          mechanic_id: string;
+          stripe_refund_id: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          amount_cents: number;
+          booking_id: string;
+          created_at?: string;
+          mechanic_id: string;
+          stripe_refund_id?: string | null;
+        };
+        Update: {
+          amount_cents?: number;
+          booking_id?: string;
+          created_at?: string;
+          mechanic_id?: string;
+          stripe_refund_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "verification_refunds_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: true;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "verification_refunds_mechanic_id_fkey";
+            columns: ["mechanic_id"];
+            isOneToOne: false;
+            referencedRelation: "mechanics";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       webhook_events: {
         Row: {
           event_id: string;
@@ -688,6 +743,10 @@ export type Database = {
     };
     Functions: {
       choose_role: { Args: { r: Database["public"]["Enums"]["user_role"] }; Returns: undefined };
+      claim_verification_refund: {
+        Args: { p_booking_id: string; p_per_job_cents: number };
+        Returns: number;
+      };
       get_public_mechanic: {
         Args: { mechanic_id: string };
         Returns: {
@@ -722,6 +781,7 @@ export type Database = {
       };
       mechanic_is_live: { Args: { mid: string }; Returns: boolean };
       refresh_mechanic_stats: { Args: { mid: string }; Returns: undefined };
+      release_verification_refund: { Args: { p_booking_id: string }; Returns: undefined };
       search_mechanics: {
         Args: { lat: number; lng: number; max_results?: number; service_slug?: string };
         Returns: {
@@ -776,6 +836,7 @@ export type Database = {
       skill_tier: "basic" | "certified" | "master";
       urgency: "flexible" | "soon" | "today" | "stranded";
       user_role: "customer" | "mechanic" | "admin";
+      verification_fee_status: "unpaid" | "paid" | "waived";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -925,6 +986,7 @@ export const Constants = {
       skill_tier: ["basic", "certified", "master"],
       urgency: ["flexible", "soon", "today", "stranded"],
       user_role: ["customer", "mechanic", "admin"],
+      verification_fee_status: ["unpaid", "paid", "waived"],
     },
   },
 } as const;

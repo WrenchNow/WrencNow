@@ -20,7 +20,7 @@ export default async function SignupPage({ searchParams }: PageProps<"/signup">)
     <Container className="flex justify-center py-12 sm:py-20">
       <Card className="w-full max-w-md">
         <h1 className="text-4xl font-extrabold uppercase">{role === "mechanic" ? "Join as a mechanic" : "Create account"}</h1>
-        <p className="mt-1 text-sm text-muted">{role === "mechanic" ? "Free to apply. Takes about 5 minutes." : "Free to join. No card needed until you book."}</p>
+        <p className="mt-1 text-sm text-muted">{role === "mechanic" ? "Takes about 5 minutes. The background check fee comes back to you over your first jobs." : "Free to join. No card needed until you book."}</p>
         <div className="mt-6 flex flex-col gap-4">
           <GoogleButton next={next} />
           <div className="flex items-center gap-3 text-xs text-muted">

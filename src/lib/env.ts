@@ -32,3 +32,15 @@ export function featuredPriceCents(): number {
   const n = Number(process.env.FEATURED_PRICE_CENTS || 2900);
   return Number.isInteger(n) && n > 0 ? n : 2900;
 }
+
+/** One-time verification fee mechanics pay when applying (covers the background check). */
+export function verificationFeeCents(): number {
+  const n = Number(process.env.VERIFICATION_FEE_CENTS || 5000);
+  return Number.isInteger(n) && n >= 0 ? n : 5000;
+}
+
+/** Amount of the verification fee returned after each completed job until it's all back. */
+export function verificationRefundPerJobCents(): number {
+  const n = Number(process.env.VERIFICATION_REFUND_PER_JOB_CENTS || 1000);
+  return Number.isInteger(n) && n > 0 ? n : 1000;
+}

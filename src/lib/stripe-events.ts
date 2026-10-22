@@ -2,6 +2,7 @@ import "server-only";
 import type Stripe from "stripe";
 import { cancelOpenBookingsForMechanic } from "@/lib/bookings";
 import { getStripe } from "@/lib/stripe";
+import { markVerificationPaid } from "@/lib/verification";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type Admin = ReturnType<typeof createAdminClient>;
@@ -133,6 +134,11 @@ async function onSubscription(admin: Admin, event: Stripe.Event) {
 async function onCheckoutCompleted(admin: Admin, event: Stripe.Event) {
   const session = event.data.object as Stripe.Checkout.Session;
   const mechanicId = session.metadata?.mechanic_id;
+  if (session.mode === "payment" && session.metadata?.kind === "verification_fee" && mechanicId && session.payment_status === "paid") {
+    const pi = typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id;
+    if (pi) await markVerificationPaid(mechanicId, pi, session.amount_total ?? 0);
+    return;
+  }
   if (session.mode !== "subscription" || !mechanicId) return;
   const customerId = typeof session.customer === "string" ? session.customer : session.customer?.id;
   const subId = typeof session.subscription === "string" ? session.subscription : session.subscription?.id;

@@ -42,7 +42,7 @@ export const CUSTOMER_FAQ: Faq[] = [
 export const MECHANIC_FAQ: Faq[] = [
   {
     q: "What does it cost to join?",
-    a: "Applying is free. WrenchNow takes a platform fee on each completed job; the rest is paid out to your bank through Stripe.",
+    a: "A one-time $50 verification fee covers your background check — and you get it all back: $10 is refunded to your card after each of your first 5 completed jobs. After that, WrenchNow takes a platform fee on each completed job and the rest is paid out to your bank through Stripe.",
   },
   {
     q: "What do I need to get started?",

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Container, PageHeader } from "@/components/ui/layout";
-import { featuredPriceCents, platformFeeBps } from "@/lib/env";
+import { featuredPriceCents, platformFeeBps, verificationFeeCents } from "@/lib/env";
 import { money } from "@/lib/format";
 import { getServices } from "@/lib/public-data";
 import { TIER_LABEL } from "@/lib/tiers";
@@ -42,7 +42,7 @@ export default async function PricingPage() {
         </Card>
         <Card>
           <h2 className="text-xl font-bold uppercase">For mechanics</h2>
-          <p className="mt-2 text-sm text-ink">Free to join. WrenchNow keeps a {fee} platform fee on each completed job. Card processing and payouts run through Stripe.</p>
+          <p className="mt-2 text-sm text-ink">A {money(verificationFeeCents(), { whole: true })} verification fee covers your background check, and you get it all back over your first jobs. WrenchNow keeps a {fee} platform fee on each completed job. Card processing and payouts run through Stripe.</p>
         </Card>
         <Card>
           <h2 className="text-xl font-bold uppercase">Featured mechanics</h2>

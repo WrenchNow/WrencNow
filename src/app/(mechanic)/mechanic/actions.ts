@@ -5,12 +5,13 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { BookingError, transitionBooking } from "@/lib/bookings";
-import { startBackgroundCheck } from "@/lib/checkr";
-import { checkrConfigured, featuredPriceCents, siteUrl, stripeConfigured } from "@/lib/env";
+import { featuredPriceCents, siteUrl, stripeConfigured, verificationFeeCents, verificationRefundPerJobCents } from "@/lib/env";
+import { money } from "@/lib/format";
 import { geocode } from "@/lib/geocode";
 import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { startCheckIfReady } from "@/lib/verification";
 
 export type FormState = { ok?: boolean; error?: string; message?: string };
 
@@ -96,7 +97,7 @@ export async function saveServices(_: FormState, formData: FormData): Promise<Fo
   return { ok: true, message: "Services saved." };
 }
 
-/** Marks the application submitted and kicks off the background check invitation. */
+/** Marks the application submitted; the background check starts once the verification fee is paid. */
 export async function submitApplication(_: FormState, formData: FormData): Promise<FormState> {
   const viewer = await requireRole(["mechanic"], "/mechanic/onboarding");
   if (formData.get("agree") !== "on") return { error: "Please agree to the Mechanic Agreement." };
@@ -107,29 +108,53 @@ export async function submitApplication(_: FormState, formData: FormData): Promi
   const { count } = await admin.from("mechanic_services").select("*", { count: "exact", head: true }).eq("mechanic_id", viewer.id);
   if (!count) return { error: "Pick at least one service you offer." };
 
-  const update: { onboarding_submitted_at: string; agreed_terms_at: string; checkr_candidate_id?: string; checkr_invitation_id?: string; check_status?: "invited" } = {
-    onboarding_submitted_at: m.onboarding_submitted_at ?? new Date().toISOString(),
-    agreed_terms_at: new Date().toISOString(),
-  };
-
-  let message = "Application submitted. We'll review it shortly.";
-  if (checkrConfigured() && !m.checkr_candidate_id) {
-    const [first, ...rest] = (viewer.profile.full_name ?? m.display_name).trim().split(/\s+/);
-    try {
-      const res = await startBackgroundCheck({ email: viewer.email!, firstName: first!, lastName: rest.join(" ") || first!, city: m.city });
-      update.checkr_candidate_id = res.candidateId;
-      update.checkr_invitation_id = res.invitationId;
-      update.check_status = "invited";
-      message = `Application submitted. Check ${viewer.email} for an email from Checkr to complete your background check.`;
-    } catch (e) {
-      console.error("startBackgroundCheck failed", e);
-      message = "Application submitted. We couldn't start your background check automatically — we'll email you the link.";
-    }
-  }
-  await admin.from("mechanics").update(update).eq("id", viewer.id);
+  await admin
+    .from("mechanics")
+    .update({ onboarding_submitted_at: m.onboarding_submitted_at ?? new Date().toISOString(), agreed_terms_at: new Date().toISOString() })
+    .eq("id", viewer.id);
   await admin.from("audit_log").insert({ actor_id: viewer.id, action: "mechanic.application_submitted", entity: "mechanic", entity_id: viewer.id });
+
+  const check = await startCheckIfReady(viewer.id);
   revalidatePath("/mechanic", "layout");
-  return { ok: true, message };
+  const messages: Record<typeof check, string> = {
+    started: `Application submitted. Check ${viewer.email} for an email from Checkr to complete your background check.`,
+    waiting: "Application submitted. Pay the verification fee below to start your background check.",
+    "not-configured": "Application submitted. We'll email you the background check link shortly.",
+    failed: "Application submitted. We couldn't start your background check automatically — we'll email you the link.",
+  };
+  return { ok: true, message: messages[check] };
+}
+
+/** Stripe Checkout for the one-time verification fee. */
+export async function startVerificationCheckout() {
+  const viewer = await requireRole(["mechanic"], "/mechanic/onboarding");
+  if (!stripeConfigured()) redirect("/mechanic/onboarding?fee=not-configured");
+  const admin = createAdminClient();
+  const { data: m } = await admin.from("mechanics").select("verification_fee_status").eq("id", viewer.id).single();
+  if (m?.verification_fee_status !== "unpaid") redirect("/mechanic/onboarding");
+  const meta = { kind: "verification_fee", mechanic_id: viewer.id };
+  const session = await getStripe().checkout.sessions.create({
+    mode: "payment",
+    customer_email: viewer.email ?? undefined,
+    line_items: [
+      {
+        quantity: 1,
+        price_data: {
+          currency: "usd",
+          unit_amount: verificationFeeCents(),
+          product_data: {
+            name: "WrenchNow verification fee",
+            description: `Covers your background check. ${money(verificationRefundPerJobCents(), { whole: true })} comes back after each of your first completed jobs until it's all returned.`,
+          },
+        },
+      },
+    ],
+    metadata: meta,
+    payment_intent_data: { metadata: meta, description: "WrenchNow verification fee" },
+    success_url: `${siteUrl()}/mechanic/onboarding?fee=paid&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${siteUrl()}/mechanic/onboarding?fee=cancelled`,
+  });
+  redirect(session.url!);
 }
 
 export async function startStripeOnboarding() {

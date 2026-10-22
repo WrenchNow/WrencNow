@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { adminCancelBooking, refundBooking, reviewInsurance, reviewMechanic, type FormState } from "@/app/(admin)/admin/actions";
+import { adminCancelBooking, refundBooking, reviewInsurance, reviewMechanic, waiveVerificationFee, type FormState } from "@/app/(admin)/admin/actions";
 import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/feedback";
 import { Input, Select } from "@/components/ui/form";
@@ -95,6 +95,19 @@ export function InsuranceReviewForm({ id, pendingExpiry }: { id: string; pending
           Reject
         </Button>
       </div>
+    </form>
+  );
+}
+
+export function WaiveFeeForm({ id }: { id: string }) {
+  const [s, action, pending] = useActionState(waiveVerificationFee, {});
+  return (
+    <form action={action} className="flex flex-col gap-2">
+      <Msg s={s} />
+      <input type="hidden" name="id" value={id} />
+      <Button type="submit" size="sm" variant="subtle" disabled={pending}>
+        Waive verification fee
+      </Button>
     </form>
   );
 }

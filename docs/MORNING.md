@@ -36,6 +36,11 @@ Branch: `claude/wrenchnow-bootstrap` (not merged to `main`, nothing deployed).
   Google instead (that needs an API key)?
 
 ## Decided
+- **Verification fee:** mechanics pay $50 when they apply (Stripe Checkout). The background check is ordered only
+  after it's paid. $10 is refunded to their card after each of their first 5 completed jobs. You can waive it per
+  mechanic from Admin → Mechanics. Amounts come from `VERIFICATION_FEE_CENTS` / `VERIFICATION_REFUND_PER_JOB_CENTS`.
+  Not refunded if the check doesn't clear or they stop before 5 jobs; this is in the Mechanic Agreement, so have the
+  lawyer confirm it.
 - **Platform fee:** 5% from day one (`PLATFORM_FEE_BPS=500`), with no free launch period.
 - **Arrival codes:** the customer gets a 4-digit code when a mechanic accepts. The mechanic must enter it to start
   the job, which proves they arrived. The customer's page shows the mechanic's photo and name to check against.

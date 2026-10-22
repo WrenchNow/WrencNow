@@ -36,3 +36,10 @@ Stripe Checkout in subscription mode (price set by `FEATURED_PRICE_CENTS`, $29/m
 Live keys are refused unless `STRIPE_LIVE_MODE_CONFIRMED=true` is set. Set it only once the business entity is set up.
 Webhooks are signature-verified, and every event id is stored in `webhook_events` so a retried delivery is processed
 only once.
+
+## Mechanic verification fee
+Mechanics pay a one-time fee (`VERIFICATION_FEE_CENTS`, $50) through Stripe Checkout when they apply. The Checkr
+invitation goes out only once the fee is paid (or an admin waives it). After each completed job,
+`claim_verification_refund()` reserves the next installment (`VERIFICATION_REFUND_PER_JOB_CENTS`, $10) under a row
+lock, one per booking, and we refund it to the original card. If Stripe rejects the refund, the reservation is
+released so a later retry can claim it again.

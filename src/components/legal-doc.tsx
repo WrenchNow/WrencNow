@@ -1,5 +1,6 @@
 import legal from "@/content/legal.json";
-import { platformFeeBps } from "@/lib/env";
+import { platformFeeBps, verificationFeeCents, verificationRefundPerJobCents } from "@/lib/env";
+import { money } from "@/lib/format";
 import { Container } from "./ui/layout";
 
 type Block = { p?: string; ul?: string[] };
@@ -28,7 +29,10 @@ function Blocks({ blocks }: { blocks: Block[] }) {
           </ul>
         ) : (
           <p key={i} className={`my-3 ${b.p!.endsWith(":") ? "font-semibold text-cream" : ""}`}>
-            {b.p!.replace("{{PLATFORM_FEE_PERCENT}}", fee)}
+            {b
+              .p!.replace("{{PLATFORM_FEE_PERCENT}}", fee)
+              .replace("{{VERIFICATION_FEE}}", money(verificationFeeCents(), { whole: true }))
+              .replace("{{VERIFICATION_REFUND}}", money(verificationRefundPerJobCents(), { whole: true }))}
           </p>
         ),
       )}

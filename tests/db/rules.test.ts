@@ -413,3 +413,62 @@ run("insurance", () => {
   });
 });
 
+run("verification fee refunds", () => {
+  async function completedJob(q: (sql: string, params?: unknown[]) => Promise<pg.QueryResult>, day: number) {
+    const id = await insertBooking(q, ids["mechanic.basic"], "oil-change", future(day, 15));
+    await q("update public.bookings set payment_status = 'authorized' where id = $1", [id]);
+    await verifiedCode(q, id);
+    for (const st of ["accepted", "en_route", "in_progress"]) await q("update public.bookings set status = $2 where id = $1", [id, st]);
+    await q("update public.bookings set payment_status = 'captured', final_amount_cents = 5000, status = 'completed' where id = $1", [id]);
+    return id;
+  }
+
+  it("refunds $10 per completed job until the $50 is back, never twice for one job", async () => {
+    await tx(async (q) => {
+      await q(
+        "update public.mechanics set verification_fee_status = 'paid', verification_payment_intent_id = 'pi_test_fee', verification_paid_cents = 5000 where id = $1",
+        [ids["mechanic.basic"]],
+      );
+      const amounts: number[] = [];
+      for (let day = 1; day <= 6; day++) {
+        const id = await completedJob(q, day);
+        amounts.push((await q("select public.claim_verification_refund($1, 1000) as a", [id])).rows[0].a);
+        if (day === 1) expect((await q("select public.claim_verification_refund($1, 1000) as a", [id])).rows[0].a).toBe(0); // same job again
+      }
+      expect(amounts).toEqual([1000, 1000, 1000, 1000, 1000, 0]);
+      const m = await q("select verification_refunded_cents from public.mechanics where id = $1", [ids["mechanic.basic"]]);
+      expect(m.rows[0].verification_refunded_cents).toBe(5000);
+    });
+  });
+
+  it("a failed Stripe refund releases the installment so it can be retried", async () => {
+    await tx(async (q) => {
+      await q(
+        "update public.mechanics set verification_fee_status = 'paid', verification_payment_intent_id = 'pi_test_fee', verification_paid_cents = 5000 where id = $1",
+        [ids["mechanic.basic"]],
+      );
+      const id = await completedJob(q, 1);
+      expect((await q("select public.claim_verification_refund($1, 1000) as a", [id])).rows[0].a).toBe(1000);
+      await q("select public.release_verification_refund($1)", [id]);
+      expect((await q("select verification_refunded_cents from public.mechanics where id = $1", [ids["mechanic.basic"]])).rows[0].verification_refunded_cents).toBe(0);
+      expect((await q("select public.claim_verification_refund($1, 1000) as a", [id])).rows[0].a).toBe(1000);
+    });
+  });
+
+  it("waived or unpaid fees are never refunded", async () => {
+    await tx(async (q) => {
+      const id = await completedJob(q, 1); // seed mechanic's fee is waived
+      expect((await q("select public.claim_verification_refund($1, 1000) as a", [id])).rows[0].a).toBe(0);
+    });
+  });
+
+  it("users can't call the refund functions or mark their fee paid", async () => {
+    await expect(
+      tx((q) => q("select public.claim_verification_refund(gen_random_uuid(), 1000)"), asUser(ids["mechanic.basic"])),
+    ).rejects.toThrow(/permission denied/);
+    await expect(
+      tx((q) => q("update public.mechanics set verification_fee_status = 'paid' where id = auth.uid()"), asUser(ids["mechanic.pending"])),
+    ).rejects.toThrow(/permission denied/);
+  });
+});
+

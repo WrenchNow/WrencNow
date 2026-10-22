@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/feedback";
+import { EmptyState, Notice } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/layout";
 import { requireRole } from "@/lib/auth";
-import { mechanicNetCents } from "@/lib/fees";
+import { mechanicNetCents, verificationJobsRemaining } from "@/lib/fees";
+import { verificationRefundPerJobCents } from "@/lib/env";
 import { dateTime, monthKey, money } from "@/lib/format";
 import { getMyMechanic } from "@/lib/mechanic";
 import { createClient } from "@/lib/supabase/server";
@@ -53,6 +54,15 @@ export default async function EarningsPage() {
         Your share after the platform fee. Payouts land in your bank on Stripe&apos;s schedule.
       </PageHeader>
 
+      {m?.verification_fee_status === "paid" && m.verification_refunded_cents < m.verification_paid_cents && (
+        <div className="mb-6">
+          <Notice tone="info" title="Verification fee refund">
+            {money(m.verification_refunded_cents)} of your {money(m.verification_paid_cents)} returned ·{" "}
+            {verificationJobsRemaining(m.verification_paid_cents, m.verification_refunded_cents, verificationRefundPerJobCents())} more completed job(s) to get the rest
+            back. Refunds go to the card you paid with.
+          </Notice>
+        </div>
+      )}
       <div className="mb-8 grid gap-4 sm:grid-cols-3">
         <Card>
           <p className="text-xs tracking-wider text-muted uppercase">This month</p>

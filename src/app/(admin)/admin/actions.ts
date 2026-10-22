@@ -6,6 +6,7 @@ import { requireAdmin as requireAdminViewer } from "@/lib/auth";
 import { BookingError, cancelOpenBookingsForMechanic, transitionBooking } from "@/lib/bookings";
 import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { startCheckIfReady } from "@/lib/verification";
 
 export type FormState = { ok?: boolean; error?: string; message?: string };
 
@@ -96,4 +97,17 @@ export async function reviewInsurance(_: FormState, formData: FormData): Promise
   const cancelled = decision === "rejected" ? await cancelOpenBookingsForMechanic(id, viewer.id, "Mechanic is no longer available") : 0;
   revalidatePath("/admin", "layout");
   return { ok: true, message: decision === "verified" ? `Insurance verified through ${expires_on}.` : `Insurance rejected.${cancelled ? ` Cancelled ${cancelled} open booking(s).` : ""}` };
+}
+
+/** Let a mechanic skip the verification fee (e.g. founding mechanics); starts their check if they've applied. */
+export async function waiveVerificationFee(_: FormState, formData: FormData): Promise<FormState> {
+  const viewer = await requireAdmin();
+  const id = z.uuid().parse(formData.get("id"));
+  const admin = createAdminClient();
+  const { data } = await admin.from("mechanics").update({ verification_fee_status: "waived" }).eq("id", id).eq("verification_fee_status", "unpaid").select("id").maybeSingle();
+  if (!data) return { error: "This mechanic has already paid or been waived." };
+  await admin.from("audit_log").insert({ actor_id: viewer.id, action: "mechanic.verification_fee_waived", entity: "mechanic", entity_id: id });
+  await startCheckIfReady(id);
+  revalidatePath("/admin", "layout");
+  return { ok: true, message: "Fee waived." };
 }
