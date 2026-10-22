@@ -1,0 +1,127 @@
+# Pantry Pal: checks on every push and pull request. This workflow never deploys and needs no secrets.
+#
+# Deploys happen on Netlify: the GitHub repo is connected to the Pantry Pal Netlify project
+# (docs/setup/RUNBOOK.md), so every push to main builds and publishes there using netlify.toml.
+# That Netlify build also runs the backend tests first, so a broken function never goes live.
+# This workflow adds the slower checks Netlify doesn't run: the app build is committed up to date,
+# every script parses, and the full browser test suite at 390px wide.
+
+name: Checks
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - 'marketing/**'
+      - '.claude/**'
+      - '**/*.md'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Build, syntax and backend tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Get the code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1 (2026-07-17)
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0 (2026-07-13)
+        with:
+          node-version: '22'
+
+      - name: Install the backend libraries (exact versions from package-lock.json)
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: pantry-pal.html matches src/ (run python3 build.py and commit both if this fails)
+        run: |
+          python3 build.py
+          if ! git diff --quiet -- pantry-pal.html; then
+            echo "::error::pantry-pal.html doesn't match src/. Run 'python3 build.py' and commit pantry-pal.html."
+            git diff --stat -- pantry-pal.html
+            exit 1
+          fi
+
+      - name: Every script and function parses; netlify.toml is valid TOML
+        run: |
+          for f in netlify/functions/*.mjs netlify/lib/*.mjs scripts/*.mjs tests/*.mjs tests/mocks/*.mjs build-site.js; do
+            node --check "$f" || exit 1
+          done
+          python3 -c "import tomllib; tomllib.load(open('netlify.toml','rb')); print('netlify.toml OK')"
+
+      - name: Backend tests (Netlify Functions with mocked Blobs and a fake Anthropic API)
+        run: node tests/worker-test.mjs
+
+      - name: Build the recipe site
+        run: node build-site.js https://example.com --svg-only
+
+      - name: Setup check (report only)
+        continue-on-error: true
+        run: node scripts/check-setup.mjs --offline
+
+  browser:
+    name: Browser tests at 390px
+    needs: checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      PLAYWRIGHT_VERSION: 1.56.1   # same as the dev machine; published 2025
+    steps:
+      - name: "Get the code (full history, because upgrade-test reads an old build from git)"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1 (2026-07-17)
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0 (2026-07-13)
+        with:
+          node-version: '22'
+
+      - name: Install the backend libraries, Playwright and Chromium (outside the repo)
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          mkdir -p "$RUNNER_TEMP/pw"
+          npm install --prefix "$RUNNER_TEMP/pw" --no-audit --no-fund "playwright@${PLAYWRIGHT_VERSION}"
+          "$RUNNER_TEMP/pw/node_modules/.bin/playwright" install --with-deps chromium
+          echo "PLAYWRIGHT_MODULES=$RUNNER_TEMP/pw/node_modules/" >> "$GITHUB_ENV"
+          echo "TEST_OUT=$RUNNER_TEMP/pantry-pal-tests" >> "$GITHUB_ENV"
+
+      - name: Download the pinned barcode/OCR libraries (so the real ones run under the CSP)
+        run: |
+          L="$RUNNER_TEMP/libs"
+          while read -r dir pkg; do
+            mkdir -p "$L/$dir" && (cd "$L/$dir" && tar xzf "$(npm pack "$pkg" --silent)")
+          done <<'LIST'
+          bd barcode-detector@3.2.2
+          zx zxing-wasm@3.1.3
+          ts tesseract.js@7.0.0
+          core tesseract.js-core@7.0.0
+          eng @tesseract.js-data/eng@1.0.0
+          LIST
+          echo "TEST_LIBS=$L" >> "$GITHUB_ENV"
+
+      - name: Build the app and the site
+        run: |
+          python3 build.py
+          node build-site.js https://example.com --svg-only
+
+      - name: All test suites
+        run: node tests/run-all.mjs
+
+      - name: Keep logs and screenshots if something failed
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2 (2026-10-07)
+        with:
+          name: test-output
+          path: ${{ runner.temp }}/pantry-pal-tests
+          retention-days: 7

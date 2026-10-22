@@ -2,9 +2,9 @@
 /**
  * Pantry Pal setup check. It only reads things and never changes a file or a service.
  *
- *   node scripts/check-setup.mjs                         # checks the files in this folder + the Worker in BACKEND_URL
- *   node scripts/check-setup.mjs --site https://x.netlify.app   # also checks the live site and app
- *   node scripts/check-setup.mjs --backend https://pantry-pal.you.workers.dev   # check a Worker that isn't in src/app.js yet
+ *   node scripts/check-setup.mjs                         # checks the files in this folder
+ *   node scripts/check-setup.mjs --site https://x.netlify.app   # also checks the live site, the app and its /api (Netlify Functions)
+ *   node scripts/check-setup.mjs --backend https://other.example  # check a backend on another address (only if BACKEND_URL points there)
  *   node scripts/check-setup.mjs --offline               # skip everything that needs the internet
  *   node scripts/check-setup.mjs --root path/to/copy     # check another copy of the project
  *
@@ -55,10 +55,32 @@ async function main() {
 
     const url = configValue(appJs, 'BACKEND_URL');
     if (url === null) bad('Couldn’t find BACKEND_URL in src/app.js');
-    else if (!url) (backend ? warn : bad)('BACKEND_URL is empty in src/app.js, so free AI scanning won’t work for visitors.', 'The deploy workflow fills it in after the Worker deploys. Ask Claude to commit the address it printed.');
-    else if (!/^https:\/\/[a-z0-9.-]+$/i.test(url)) bad(`BACKEND_URL "${url}" isn’t a plain https:// address`, 'It should look like https://pantry-pal.yourname.workers.dev (no slash at the end).');
-    else ok(`BACKEND_URL is set (${url})`);
+    else if (!url) ok('BACKEND_URL is empty: the app uses its own site’s /api (Netlify Functions). That’s the normal setup.');
+    else if (!/^https:\/\/[a-z0-9.-]+$/i.test(url)) bad(`BACKEND_URL "${url}" isn’t a plain https:// address`, 'Leave it empty to use the same site, or use https://address with no slash at the end.');
+    else warn(`BACKEND_URL points at another address (${url}), not the app’s own site`, 'Usually it should be empty, so the app uses /api on its own Netlify site.');
     if (!backend && url) backend = url;
+  }
+
+  /* ---------- 1b. Netlify project files ---------- */
+  head('Netlify setup files');
+  const toml = read('netlify.toml');
+  if (!toml) bad('netlify.toml is missing', 'It tells Netlify how to build. Ask Claude to restore it.');
+  else {
+    if (/publish\s*=\s*"site"/.test(toml) && /functions\s*=\s*"netlify\/functions"/.test(toml)) ok('netlify.toml publishes site/ and the functions in netlify/functions');
+    else bad('netlify.toml doesn’t publish site/ with functions from netlify/functions');
+    if (/Content-Security-Policy/.test(toml)) ok('netlify.toml sets security headers'); else warn('netlify.toml has no security headers');
+  }
+  const fns = walk('netlify/functions').filter(f => f.endsWith('.mjs'));
+  const want = ['health', 'claude', 'community', 'amazon-search', 'recipes-search', 'premium-redeem', 'admin-mint', 'cleanup-usage'];
+  const missingFns = want.filter(n => !fns.some(f => f.endsWith(n + '.mjs')));
+  if (missingFns.length) bad(`Missing functions: ${missingFns.join(', ')}`); else ok(`All ${want.length} backend functions are there`);
+  const pkg = (() => { try { return JSON.parse(read('package.json') || ''); } catch { return null; } })();
+  if (!pkg) bad('package.json is missing or broken', 'Netlify needs it to install the AI and storage libraries.');
+  else {
+    const loose = Object.entries(pkg.dependencies || {}).filter(([, v]) => !/^\d+\.\d+\.\d+$/.test(v));
+    if (loose.length) warn(`Dependencies not pinned to an exact version: ${loose.map(([k, v]) => k + '@' + v).join(', ')}`); else ok('Dependencies are pinned to exact versions');
+    if (pkg.type === 'module') bad('package.json has "type": "module", which breaks build-site.js', 'Remove that line; the functions use .mjs files and don’t need it.');
+    if (!read('package-lock.json')) warn('package-lock.json is missing', 'Run: npm install --package-lock-only');
   }
 
   /* ---------- 2. Build ---------- */
@@ -106,42 +128,41 @@ async function main() {
 
   /* ---------- 4. Secrets stay out of the code ---------- */
   head('Secrets');
-  const scan = ['pantry-pal.html', ...walk('src'), ...pages, ...walk('pantry-pal-worker/src')];
+  const scan = ['pantry-pal.html', 'netlify.toml', ...walk('src'), ...pages, ...walk('netlify')];
   const keyPattern = /sk-ant-[A-Za-z0-9_-]{16,}|sk_live_[A-Za-z0-9]{16,}|rk_live_[A-Za-z0-9]{16,}/;
   const leaks = scan.filter(p => keyPattern.test(read(p) || ''));
-  if (leaks.length) bad(`Something that looks like a secret key is inside ${leaks.join(', ')}`, 'Remove it, make a new key (the old one is exposed) and store keys only in Cloudflare/GitHub/Netlify settings.');
-  else ok(`No API keys found in the app, site or Worker code (${scan.length} files)`);
+  if (leaks.length) bad(`Something that looks like a secret key is inside ${leaks.join(', ')}`, 'Remove it, make a new key (the old one is exposed) and store keys only in Netlify environment variables or GitHub secrets.');
+  else ok(`No API keys found in the app, site or backend code (${scan.length} files)`);
   const gi = read('.gitignore') || '';
-  const needed = ['wrangler.toml', '.dev.vars', '.env'].filter(x => !gi.includes(x));
+  const needed = ['wrangler.toml', '.dev.vars', '.env', '.netlify'].filter(x => !gi.includes(x));
   if (needed.length) warn(`.gitignore doesn’t cover ${needed.join(', ')}`, 'Add them so secrets files can’t be committed by accident.');
-  else ok('.gitignore covers wrangler.toml, .dev.vars and .env files');
+  else ok('.gitignore covers .env files, .netlify/, .dev.vars and wrangler.toml');
 
-  /* ---------- 5. Worker (backend) ---------- */
-  head('Worker (free AI backend)');
+  /* ---------- 5. Backend (Netlify Functions at /api) ---------- */
+  head('Backend (free AI, Premium, community)');
+  if (!backend && SITE) backend = SITE;
   if (OFFLINE) warn('Skipped (--offline)');
-  else if (!backend) warn('No Worker address to check yet', 'Deploy the Worker first (the GitHub workflow does it once the Cloudflare secrets are set).');
+  else if (!backend) warn('No live address to check yet', 'Run this with --site https://your-site.netlify.app once Netlify has deployed.');
   else {
     try {
-      const h = await get(backend + '/api/health', SITE ? { headers: { Origin: SITE } } : {});
+      const h = await get(backend + '/api/health');
       let j = null; try { j = JSON.parse(h.text); } catch { }
-      if (h.status !== 200 || !j || j.ok !== true) bad(`${backend}/api/health didn’t answer correctly (HTTP ${h.status})`, 'Open that address on your phone. If it says "not found", the Worker isn’t deployed; re-run the GitHub workflow.');
+      if (h.status !== 200 || !j || j.ok !== true) bad(`${backend}/api/health didn’t answer correctly (HTTP ${h.status})`, 'Open Netlify → your project → Deploys and check the latest deploy finished. Functions appear under Logs → Functions.');
       else {
-        ok(`Worker is up at ${backend}`);
-        if (j.ai) ok('AI key is saved on the Worker');
-        else bad('The Worker has no AI key, so scanning fails for visitors', 'Add the ANTHROPIC_API_KEY secret in GitHub (Settings → Secrets and variables → Actions) and re-run the workflow.');
-        if (j.freePerDay > 0) ok(`Free AI limit is on (${j.freePerDay} per person per day)`);
-        else bad('Free AI limit is OFF (USAGE storage not connected), so there is no cap on your AI bill', 'Re-run the deploy; it creates and connects the USAGE storage.');
-        if (j.community) ok('Community recipes storage is connected'); else warn('Community recipes are off (COMMUNITY storage not connected)');
-        if (j.model) ok(`AI model: ${j.model}`);
-        const acao = h.headers.get('access-control-allow-origin');
-        if (SITE) {
-          const origin = new URL(SITE).origin;
-          if (acao === '*') warn('The Worker accepts requests from any website (ALLOWED_ORIGIN isn’t set)', `Set ALLOWED_ORIGIN to ${origin}. The workflow does this automatically when it knows the Netlify address.`);
-          else if (acao === origin) ok(`The Worker only accepts the app’s website (${origin})`);
-          else bad(`The Worker won’t accept requests from ${origin} (it allows ${acao || 'nothing'})`, `Add ${origin} to ALLOWED_ORIGIN (comma-separated) and re-run the deploy.`);
-        } else if (acao === '*') warn('ALLOWED_ORIGIN isn’t set, so any website can use your free AI allowance', 'Run this check with --site <your app address> after the site is live.');
+        ok(`Backend is up at ${backend}/api`);
+        if (j.ai && j.gateway) ok('AI is on through Netlify AI Gateway (billed in Netlify credits)');
+        else if (j.ai) ok('AI is on with your own Anthropic key (billed by Anthropic, not Netlify credits)');
+        else bad('AI is off: no Anthropic key yet', 'Either finish one production deploy (turns on Netlify AI Gateway) or add ANTHROPIC_API_KEY in Netlify → Project configuration → Environment variables, then redeploy.');
+        if (j.freePerDay > 0) ok(`Free AI limits are on (${j.freePerDay} per person per day${j.freeListPerMonth ? `, ${j.freeListPerMonth} list reads per month` : ''})`);
+        if (j.premium) ok('Premium codes can be checked (PREMIUM_SIGNING_SECRET is set)');
+        else warn('Premium is off (PREMIUM_SIGNING_SECRET missing or under 20 characters)', 'Add it in Netlify → Environment variables, then redeploy. See docs/setup/RUNBOOK.md step 5.');
+        if (j.community) ok('Community recipes are on'); else warn('Community recipes are switched off (COMMUNITY=off)');
+        if (j.model) ok(`AI model: ${j.model}${j.listModel ? `, lists: ${j.listModel}` : ''}`);
+        const x = await get(backend + '/api/health', { headers: { Origin: 'https://not-pantry-pal.example' } });
+        if (x.status === 403 && !x.headers.get('access-control-allow-origin')) ok('Other websites can’t use your free AI (cross-site requests are refused)');
+        else warn(`A request from another website got HTTP ${x.status}${x.headers.get('access-control-allow-origin') ? ' with CORS allowed' : ''}`, 'Check ALLOWED_ORIGIN in Netlify; normally it should be unset.');
       }
-    } catch (e) { bad(`Couldn’t reach ${backend} (${e.name === 'TimeoutError' ? 'timed out' : e.message})`, 'New workers.dev addresses can take a minute. Try again shortly.'); }
+    } catch (e) { bad(`Couldn’t reach ${backend} (${e.name === 'TimeoutError' ? 'timed out' : e.message})`, 'Check the address, and that the Netlify deploy finished.'); }
   }
 
   /* ---------- 6. Live site ---------- */
@@ -152,14 +173,15 @@ async function main() {
       for (const [path, label] of [['/', 'Recipe site home page'], ['/app/', 'The app']]) {
         try {
           const r = await get(SITE + path);
-          if (r.status !== 200) { bad(`${label} returns HTTP ${r.status} (${SITE + path})`, 'Check the Netlify deploy in the GitHub run log.'); continue; }
+          if (r.status !== 200) { bad(`${label} returns HTTP ${r.status} (${SITE + path})`, 'Check the latest deploy in Netlify → your project → Deploys.'); continue; }
+          if (!r.headers.get('content-security-policy')) warn(`${label} has no security headers`, 'netlify.toml sets them; check it was deployed.');
           ok(`${label} is live`);
           if (path === '/' && !r.text.includes(DISCLOSURE)) bad('The live home page is missing the Amazon disclosure');
           if (path === '/app/') {
             const liveBackend = configValue(r.text, 'BACKEND_URL');
-            if (!liveBackend) bad('The live app has no BACKEND_URL, so free AI won’t work there', 'Re-run the workflow after the Worker deploys.');
-            else if (backend && liveBackend !== backend) warn(`The live app points at ${liveBackend}, not ${backend}`);
-            else ok(`The live app talks to ${liveBackend}`);
+            if (liveBackend === null) warn('Couldn’t find BACKEND_URL in the live app');
+            else if (!liveBackend) ok('The live app uses its own site’s /api');
+            else warn(`The live app points at ${liveBackend}, not its own site’s /api`);
             if (/sk-ant-[A-Za-z0-9_-]{16,}/.test(r.text)) bad('The live app contains something that looks like an Anthropic key!', 'Revoke that key in the Anthropic console right away.');
           }
         } catch (e) { bad(`Couldn’t open ${SITE + path} (${e.message})`); }
