@@ -1856,12 +1856,11 @@ document.addEventListener('submit', e => {
 
 /* ================= BOOT ================= */
 function setupPWA() {
-  const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="112" fill="#2E6A4E"/><text x="256" y="330" font-size="280" text-anchor="middle">🥕</text></svg>`;
-  const iconUrl = 'data:image/svg+xml,' + encodeURIComponent(icon);
-  const manifest = { name: 'Pantry Pal', short_name: 'Pantry Pal', start_url: location.href.split('#')[0], display: 'standalone', background_color: '#FAF6EF', theme_color: '#2E6A4E', icons: [{ src: iconUrl, sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }] };
+  // Tomato jar icon: src/icon.svg, inlined into <link rel="icon"> by build.py. The apple-touch-icon PNG is in the shell.
+  const iconUrl = document.querySelector('link[rel="icon"]')?.href || '';
+  const manifest = { name: 'Pantry Pal', short_name: 'Pantry Pal', start_url: location.href.split('#')[0], display: 'standalone', background_color: '#FAF6EF', theme_color: '#2E6A4E', icons: iconUrl ? [{ src: iconUrl, sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }] : [] };
   try {
     const link = document.createElement('link'); link.rel = 'manifest'; link.href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' })); document.head.appendChild(link);
-    const ap = document.createElement('link'); ap.rel = 'apple-touch-icon'; ap.href = iconUrl; document.head.appendChild(ap);
   } catch (e) { }
   if ('serviceWorker' in navigator && location.protocol === 'https:' && !hasClaudeBuiltin() && !window.storage) {
     navigator.serviceWorker.register('sw.js').catch(() => { /* optional: add sw.js next to this file for offline support */ });

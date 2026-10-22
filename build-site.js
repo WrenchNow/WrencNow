@@ -5,6 +5,9 @@ const SITE = (process.argv[2] || 'https://YOUR-DOMAIN.com').replace(/\/$/, '');
 const src = ['data.js', 'data2.js', 'data3.js'].map(f => fs.readFileSync(path.join(__dirname, 'src', f), 'utf8')).join('\n');
 const LIB = new Function(src + '; return LIB;')();
 
+// App icon (same as the app): src/icon.svg is the favicon and nav mark, src/apple-touch-icon.png is for iOS.
+const ICON_SVG = fs.readFileSync(path.join(__dirname, 'src', 'icon.svg'), 'utf8').trim();
+const NAV_ICON = ICON_SVG.replace('<svg ', '<svg width="28" height="28" aria-hidden="true" focusable="false" style="vertical-align:-6px;margin-right:8px" ');
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const slug = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 const FR = [[0, ''], [1 / 8, '⅛'], [1 / 4, '¼'], [1 / 3, '⅓'], [1 / 2, '½'], [2 / 3, '⅔'], [3 / 4, '¾'], [1, '']];
@@ -38,8 +41,9 @@ const head = (title, desc, canonical, extra = '', type = 'website') => `<!doctyp
 <meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}"><meta property="og:type" content="${type}"><meta property="og:url" content="${canonical}"><meta property="og:site_name" content="Pantry Pal">
 <meta name="twitter:card" content="summary"><meta name="twitter:title" content="${esc(title)}"><meta name="twitter:description" content="${esc(desc)}">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="${SITE}/favicon.svg"><link rel="apple-touch-icon" href="${SITE}/apple-touch-icon.png">
 <style>${CSS}</style>${extra}</head><body><div class="wrap">
-<div class="nav"><a href="${SITE}/" style="text-decoration:none;color:inherit"><b>🥕 Pantry Pal</b></a><a class="cta" href="${SITE}/app/">Open the app</a></div>`;
+<div class="nav"><a href="${SITE}/" style="text-decoration:none;color:inherit"><b>${NAV_ICON}Pantry Pal</b></a><a class="cta" href="${SITE}/app/">Open the app</a></div>`;
 const foot = `<footer><nav><a href="${SITE}/">Recipes</a><a href="${SITE}/cuisine/">Cuisines</a><a href="${SITE}/about.html">About</a><a href="${SITE}/privacy.html">Privacy</a></nav>Pantry Pal recipes are written for home cooks. As an Amazon Associate, Pantry Pal earns from qualifying purchases.</footer></div></body></html>`;
 
 const out = path.join(__dirname, 'site'); fs.rmSync(out, { recursive: true, force: true });
@@ -131,4 +135,6 @@ fs.writeFileSync(path.join(out, 'sitemap.xml'), `<?xml version="1.0" encoding="U
 fs.writeFileSync(path.join(out, 'robots.txt'), `User-agent: *\nAllow: /\nSitemap: ${SITE}/sitemap.xml\n`);
 fs.copyFileSync(path.join(__dirname, 'pantry-pal.html'), path.join(out, 'app', 'index.html'));
 fs.copyFileSync(path.join(__dirname, 'sw.js'), path.join(out, 'app', 'sw.js'));
+fs.writeFileSync(path.join(out, 'favicon.svg'), ICON_SVG + '\n');
+fs.copyFileSync(path.join(__dirname, 'src', 'apple-touch-icon.png'), path.join(out, 'apple-touch-icon.png'));
 console.log(`Built ${LIB.length} recipe pages, ${CUISINES.length} cuisine pages, index, about and privacy into site/ for ${SITE} (${urls.length} URLs in sitemap)`);

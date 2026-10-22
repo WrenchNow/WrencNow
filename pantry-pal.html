@@ -11,6 +11,8 @@
 <meta name="apple-mobile-web-app-title" content="Pantry Pal">
 <meta name="description" content="Scan receipts and your fridge, track what you have, and get recipes you can cook right now.">
 <title>Pantry Pal</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 512 512%22%3E%3Crect width=%22512%22 height=%22512%22 rx=%22112%22 fill=%22%23D9572F%22/%3E%3Cpath fill=%22%23FAF6EF%22 fill-rule=%22evenodd%22 d=%22M172 88h168a20 20 0 0 1 20 20v32a20 20 0 0 1-20 20H172a20 20 0 0 1-20-20v-32a20 20 0 0 1 20-20z M190 180h132c0 16 50 24 50 68v138c0 38-24 58-62 58H202c-38 0-62-20-62-58V248c0-44 50-52 50-68z M198 266v94h116v-94z%22/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0BAMAAADP4xsBAAAAMFBMVEX69u/25dvz1MXyzr/wxrbuvKntt6TrsJrppo/nm4HjiWzhf2Dhf1/fdFPbXznZVy90djrlAAACV0lEQVR42u3au0oDQRQG4JnchNhstBR0QbASAtpZqPgAEvAF8gb2gmAlWFnY2AhqYWvewEuvWHjByohYiSRaabIXO212zjl7lmA0/5S7O9/Onp3b7oyNTa9SzoAGDRo0aNCgQYMG/efo7ool01SDtGN3impcwYotIjtFv/EPXSWyUwHZ5ul74pwlPjis4F3FqtcYSapBU0UHEvq030qNhg4adL/Qko7PeCpa9EC+qr+O8gK65alKvcjLBU837D7y9LhybBzzONmeKStf/o6x7bqvHHaNiS9JepK8tcUvRNB0S2WvuK4nHi6fZ6f3LhIPD7EZ2Xodum7+4GeN9Y3rxDw/QaZTx/28x0xWhqY+Z4ZamegD6oHHstDPdDBXycxkDYlG23QdePW0NWSHlk00ra0hH3xjPlbGeoOny7pYd0uCPohok0SsbyXd24KmD4lH2gI6HyhK/SmRTdhQ1JArWYc/oZg97cvoF0WsK6KAmEI3NR0WZKV2/7ZwBiSUjq5Xqemgd7R4LtjsHd1XpcZ08n/NVE1uM+HgblPQBTjS+/cVpaTTPzPjquaTFDUENGjQoEGDBg0a9KBO3YOthIOnkq93durOJEzdQYNOdU8/tWCltDcgpbaZS+388SnuuJzr/+5Se8Iqlj4gpi6ji4omU5PRJQU9K6OXTOrXKNvDQa2euEst2cNhTNFPP+yK9nCQuziy7mrRrSbl9nl52DeagMQdttXYE+0q6RNHL+sXYA9peS7LsvEtERO7nmlFOg6PZipJbmVyjVnrjrFhBjRo0KBBgwb9W/QX/khjVXCKznMAAAAASUVORK5CYII=">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -2957,12 +2959,11 @@ document.addEventListener('submit', e => {
 
 /* ================= BOOT ================= */
 function setupPWA() {
-  const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="112" fill="#2E6A4E"/><text x="256" y="330" font-size="280" text-anchor="middle">🥕</text></svg>`;
-  const iconUrl = 'data:image/svg+xml,' + encodeURIComponent(icon);
-  const manifest = { name: 'Pantry Pal', short_name: 'Pantry Pal', start_url: location.href.split('#')[0], display: 'standalone', background_color: '#FAF6EF', theme_color: '#2E6A4E', icons: [{ src: iconUrl, sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }] };
+  // Tomato jar icon: src/icon.svg, inlined into <link rel="icon"> by build.py. The apple-touch-icon PNG is in the shell.
+  const iconUrl = document.querySelector('link[rel="icon"]')?.href || '';
+  const manifest = { name: 'Pantry Pal', short_name: 'Pantry Pal', start_url: location.href.split('#')[0], display: 'standalone', background_color: '#FAF6EF', theme_color: '#2E6A4E', icons: iconUrl ? [{ src: iconUrl, sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }] : [] };
   try {
     const link = document.createElement('link'); link.rel = 'manifest'; link.href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' })); document.head.appendChild(link);
-    const ap = document.createElement('link'); ap.rel = 'apple-touch-icon'; ap.href = iconUrl; document.head.appendChild(ap);
   } catch (e) { }
   if ('serviceWorker' in navigator && location.protocol === 'https:' && !hasClaudeBuiltin() && !window.storage) {
     navigator.serviceWorker.register('sw.js').catch(() => { /* optional: add sw.js next to this file for offline support */ });
