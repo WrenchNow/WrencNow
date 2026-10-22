@@ -2,18 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { requireRole } from "@/lib/auth";
-import { BookingError, transitionBooking } from "@/lib/bookings";
+import { requireAdmin as requireAdminViewer } from "@/lib/auth";
+import { BookingError, cancelOpenBookingsForMechanic, transitionBooking } from "@/lib/bookings";
 import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type FormState = { ok?: boolean; error?: string; message?: string };
 
-async function requireAdmin() {
-  const viewer = await requireRole(["admin"], "/admin");
-  if (viewer.profile.role !== "admin") throw new Error("forbidden");
-  return viewer;
-}
+const requireAdmin = requireAdminViewer;
 
 export async function reviewMechanic(_: FormState, formData: FormData): Promise<FormState> {
   const viewer = await requireAdmin();
@@ -29,8 +25,9 @@ export async function reviewMechanic(_: FormState, formData: FormData): Promise<
   const { error } = await admin.from("mechanics").update({ status: parsed.data.status, skill_tier: parsed.data.skill_tier }).eq("id", parsed.data.id);
   if (error) return { error: error.message };
   await admin.from("audit_log").insert({ actor_id: viewer.id, action: `mechanic.${parsed.data.status}`, entity: "mechanic", entity_id: parsed.data.id, data: { skill_tier: parsed.data.skill_tier } });
+  const cancelled = parsed.data.status === "approved" ? 0 : await cancelOpenBookingsForMechanic(parsed.data.id, viewer.id, "Mechanic is no longer available");
   revalidatePath("/admin", "layout");
-  return { ok: true, message: `Saved: ${parsed.data.status}, ${parsed.data.skill_tier} tier.` };
+  return { ok: true, message: `Saved: ${parsed.data.status}, ${parsed.data.skill_tier} tier.${cancelled ? ` Cancelled ${cancelled} open booking(s) and released the holds.` : ""}` };
 }
 
 export async function refundBooking(_: FormState, formData: FormData): Promise<FormState> {

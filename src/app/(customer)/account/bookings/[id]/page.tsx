@@ -10,6 +10,8 @@ import { Notice } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/layout";
 import { requireRole } from "@/lib/auth";
 import { noShowReportable } from "@/lib/booking-status";
+import { syncBookingPayment } from "@/lib/bookings";
+import { stripeConfigured } from "@/lib/env";
 import { dateTime, money } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 
@@ -31,6 +33,11 @@ export default async function BookingDetailPage({ params, searchParams }: PagePr
   const sp = await searchParams;
   const viewer = await requireRole(["customer"], `/account/bookings/${id}`);
   const supabase = await createClient();
+  // Back from Stripe: confirm the hold directly instead of waiting on the webhook.
+  if (sp.paid === "1" && stripeConfigured()) {
+    const { data: own } = await supabase.from("bookings").select("id, payment_status").eq("id", id).maybeSingle();
+    if (own?.payment_status === "unpaid") await syncBookingPayment(own.id).catch((e) => console.error("syncBookingPayment", e));
+  }
   const { data: b } = await supabase.from("bookings").select("*, services(name, icon), mechanics(display_name)").eq("id", id).maybeSingle();
   if (!b || (b.customer_id !== viewer.id && viewer.profile.role !== "admin")) notFound();
   const { data: review } = await supabase.from("reviews").select("rating, body").eq("booking_id", b.id).maybeSingle();

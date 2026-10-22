@@ -1,5 +1,7 @@
 import "server-only";
 import type Stripe from "stripe";
+import { cancelOpenBookingsForMechanic } from "@/lib/bookings";
+import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type Admin = ReturnType<typeof createAdminClient>;
@@ -33,11 +35,24 @@ async function onPaymentIntent(admin: Admin, event: Stripe.Event) {
     case "payment_intent.payment_failed":
       await admin.from("bookings").update({ payment_status: "failed" }).eq("id", bookingId).eq("payment_status", "unpaid");
       break;
-    case "payment_intent.canceled":
+    case "payment_intent.canceled": {
       await admin.from("bookings").update({ payment_status: "canceled" }).eq("id", bookingId).in("payment_status", ["unpaid", "authorized", "failed"]);
-      // A hold that expired or was voided before the job was accepted ends the request.
-      await admin.from("bookings").update({ status: "cancelled", cancel_reason: "Payment hold released" }).eq("id", bookingId).eq("status", "requested");
+      // A released hold (expired, voided in Stripe) means nobody gets paid — end any job that hasn't started
+      // so a mechanic never shows up to unpaid work. The mechanic's job list updates live.
+      const { data: ended } = await admin
+        .from("bookings")
+        .update({ status: "cancelled", cancel_reason: "Payment hold released" })
+        .eq("id", bookingId)
+        .in("status", ["requested", "accepted", "en_route"])
+        .select("id");
+      if (!ended?.length) {
+        const { data: b } = await admin.from("bookings").select("status").eq("id", bookingId).maybeSingle();
+        if (b?.status === "in_progress") {
+          await admin.from("audit_log").insert({ action: "booking.hold_released_in_progress", entity: "booking", entity_id: bookingId, data: { payment_intent: pi.id } });
+        }
+      }
       break;
+    }
   }
 }
 
@@ -53,13 +68,15 @@ async function onCharge(admin: Admin, event: Stripe.Event) {
     await admin
       .from("bookings")
       .update({ refunded_cents: refunded, payment_status: refunded >= charge.amount_captured ? "refunded" : "partially_refunded" })
-      .eq("id", b.id);
-    await admin
-      .from("ledger_entries")
-      .upsert([{ booking_id: b.id, mechanic_id: b.mechanic_id, type: "refund", amount_cents: -refunded, stripe_object_id: `${charge.id}:${refunded}` }], {
-        onConflict: "type,stripe_object_id",
-        ignoreDuplicates: true,
-      });
+      .eq("id", b.id)
+      .neq("payment_status", "disputed");
+    await admin.from("bookings").update({ refunded_cents: refunded }).eq("id", b.id).eq("payment_status", "disputed");
+    // One ledger row per refund (keyed by refund id), so partial refunds aren't double-counted.
+    const refunds = await getStripe().refunds.list({ charge: charge.id, limit: 100 });
+    const rows = refunds.data
+      .filter((r) => r.status === "succeeded" || r.status === "pending")
+      .map((r) => ({ booking_id: b.id, mechanic_id: b.mechanic_id, type: "refund" as const, amount_cents: -r.amount, stripe_object_id: r.id }));
+    if (rows.length) await admin.from("ledger_entries").upsert(rows, { onConflict: "type,stripe_object_id", ignoreDuplicates: true });
   }
 }
 
@@ -81,10 +98,15 @@ async function onDispute(admin: Admin, event: Stripe.Event) {
 
 async function onAccount(admin: Admin, event: Stripe.Event) {
   const account = event.data.object as Stripe.Account;
-  await admin
+  const { data: m } = await admin
     .from("mechanics")
     .update({ stripe_charges_enabled: account.charges_enabled, stripe_payouts_enabled: account.payouts_enabled })
-    .eq("stripe_account_id", account.id);
+    .eq("stripe_account_id", account.id)
+    .select("id")
+    .maybeSingle();
+  if (m && !(account.charges_enabled && account.payouts_enabled)) {
+    await cancelOpenBookingsForMechanic(m.id, null, "Mechanic's payout account needs attention");
+  }
 }
 
 /** Featured subscription period end. Newer API versions moved it onto subscription items. */

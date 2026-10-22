@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { platformFeeBps } from "@/lib/env";
-import { estimateMaxCents, estimateMinCents, mechanicPayoutCents, platformFeeCents } from "@/lib/fees";
+import { estimateMaxCents, estimateMinCents, mechanicNetCents, mechanicPayoutCents, platformFeeCents } from "@/lib/fees";
+import { monthKey } from "@/lib/format";
 
 describe("platformFeeCents", () => {
   it("takes 5% at 500 bps", () => {
@@ -54,5 +55,24 @@ describe("PLATFORM_FEE_BPS env", () => {
     expect(() => platformFeeBps()).toThrow();
     vi.stubEnv("PLATFORM_FEE_BPS", "99999");
     expect(() => platformFeeBps()).toThrow();
+  });
+});
+
+describe("mechanic net after refunds", () => {
+  it("returns the fee in proportion to the refund", () => {
+    expect(mechanicNetCents(10_000, 500, 0)).toBe(9_500);
+    expect(mechanicNetCents(10_000, 500, 10_000)).toBe(0);
+    expect(mechanicNetCents(10_000, 500, 2_000)).toBe(7_600); // 9,500 × 0.8
+  });
+  it("clamps nonsense refunds", () => {
+    expect(mechanicNetCents(10_000, 500, 50_000)).toBe(0);
+    expect(mechanicNetCents(0, 0, 0)).toBe(0);
+  });
+});
+
+describe("monthKey", () => {
+  it("uses Denver time, not UTC", () => {
+    expect(monthKey(new Date("2026-11-01T03:00:00Z"))).toBe("2026-10"); // 9pm Oct 31 in Denver
+    expect(monthKey(new Date("2026-11-01T08:00:00Z"))).toBe("2026-11");
   });
 });

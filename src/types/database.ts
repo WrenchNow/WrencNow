@@ -63,6 +63,7 @@ export type Database = {
           payment_status: Database["public"]["Enums"]["payment_status"];
           platform_fee_cents: number | null;
           problem_description: string | null;
+          processing_until: string | null;
           refunded_cents: number;
           scheduled_end: string;
           scheduled_start: string;
@@ -96,6 +97,7 @@ export type Database = {
           payment_status?: Database["public"]["Enums"]["payment_status"];
           platform_fee_cents?: number | null;
           problem_description?: string | null;
+          processing_until?: string | null;
           refunded_cents?: number;
           scheduled_end: string;
           scheduled_start: string;
@@ -128,6 +130,7 @@ export type Database = {
           payment_status?: Database["public"]["Enums"]["payment_status"];
           platform_fee_cents?: number | null;
           problem_description?: string | null;
+          processing_until?: string | null;
           refunded_cents?: number;
           scheduled_end?: string;
           scheduled_start?: string;
@@ -657,6 +660,7 @@ export type Database = {
           scheduled_start: string;
         }[];
       };
+      mechanic_is_live: { Args: { mid: string }; Returns: boolean };
       refresh_mechanic_stats: { Args: { mid: string }; Returns: undefined };
       search_mechanics: {
         Args: { lat: number; lng: number; max_results?: number; service_slug?: string };
