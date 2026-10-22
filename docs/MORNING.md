@@ -28,8 +28,6 @@ Branch: `claude/wrenchnow-bootstrap` (not merged to `main`, nothing deployed).
 
 ## Questions for you
 
-- **Fee:** the prototype says "0% during launch, 15% later", but CLAUDE.md says 5%. I built it at 5%, read from
-  `PLATFORM_FEE_BPS`. Should there be a 0% launch period? (Set `PLATFORM_FEE_BPS=0` to get one.)
 - **Legal entity:** the legal pages say "WrenchNow Inc." Is that the registered name and state? I also changed the
   contact emails to `@getwrenchnow.com`. Please have a lawyer review the Terms, Privacy Policy and Mechanic Agreement.
 - **Prototype stats I removed:** "4.9 average rating", "3 hrs vs 45 min", "$3,800+/month" and the demo bookings
@@ -38,6 +36,7 @@ Branch: `claude/wrenchnow-bootstrap` (not merged to `main`, nothing deployed).
   Google instead (that needs an API key)?
 
 ## Decided
+- **Platform fee:** 5% from day one (`PLATFORM_FEE_BPS=500`), with no free launch period.
 - **Arrival codes:** the customer gets a 4-digit code when a mechanic accepts. The mechanic must enter it to start
   the job, which proves they arrived. The customer's page shows the mechanic's photo and name to check against.
   After 5 wrong tries, the job locks until support steps in.
@@ -50,4 +49,5 @@ Branch: `claude/wrenchnow-bootstrap` (not merged to `main`, nothing deployed).
 
 ## Still open
 - **Customer no-show:** what happens if the mechanic arrives and the customer isn't there (so there's no code)?
-  Today an admin sorts it out. A "customer not present" button with a call-out fee is a possible next step.
+  Today an admin sorts it out. The owner doesn't want a call-out fee, because mechanics could game it. Proposed
+  instead: a "customer not here" check-in that records the mechanic's location, with no money moving automatically.
