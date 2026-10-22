@@ -42,3 +42,9 @@ export function publicName(fullName: string | null | undefined): string {
   const last = rest.at(-1);
   return last ? `${first} ${last[0]!.toUpperCase()}.` : first!;
 }
+
+/** "2026-10" in the marketplace time zone (so month totals don't flip at UTC midnight). */
+export function monthKey(d: Date): string {
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit" }).formatToParts(d);
+  return `${parts.find((p) => p.type === "year")!.value}-${parts.find((p) => p.type === "month")!.value}`;
+}

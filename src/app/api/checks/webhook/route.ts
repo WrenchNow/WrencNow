@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cancelOpenBookingsForMechanic } from "@/lib/bookings";
 import { statusFromEvent, verifyCheckrSignature, type CheckrEvent } from "@/lib/checkr";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { claimEvent, releaseEvent } from "@/lib/webhook-events";
@@ -34,6 +35,7 @@ export async function POST(request: Request) {
       const { data } = await admin.from("mechanics").update(update).eq("checkr_candidate_id", candidateId).select("id").maybeSingle();
       if (data) {
         await admin.from("audit_log").insert({ action: `check.${status}`, entity: "mechanic", entity_id: data.id, data: { event: event.type, object: obj.id } });
+        if (status !== "clear") await cancelOpenBookingsForMechanic(data.id, null, "Mechanic is temporarily unavailable");
       }
     }
   } catch (e) {

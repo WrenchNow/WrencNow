@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Barlow, Barlow_Condensed } from "next/font/google";
 import { siteUrl } from "@/lib/env";
+import { THEME } from "@/lib/theme";
 import "./globals.css";
 
 const barlow = Barlow({
@@ -33,7 +34,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0e0e0c",
+  themeColor: THEME.bg,
   width: "device-width",
   initialScale: 1,
 };

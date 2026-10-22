@@ -18,6 +18,28 @@ async function audit(actorId: string | null, action: string, entityId: string, d
   await admin.from("audit_log").insert({ actor_id: actorId, action, entity: "booking", entity_id: entityId, data: data as never });
 }
 
+/**
+ * Pull a booking's payment state straight from Stripe, so we don't depend on a
+ * webhook having arrived (used on the post-payment return and before cleanup).
+ * Returns the synced payment status, or null if there's nothing to sync.
+ */
+export async function syncBookingPayment(bookingId: string): Promise<BookingRow["payment_status"] | null> {
+  const admin = createAdminClient();
+  const { data: b } = await admin.from("bookings").select("id, status, payment_status, stripe_payment_intent_id").eq("id", bookingId).maybeSingle();
+  if (!b?.stripe_payment_intent_id || !["unpaid", "failed"].includes(b.payment_status)) return b?.payment_status ?? null;
+  const pi = await getStripe().paymentIntents.retrieve(b.stripe_payment_intent_id);
+  if (pi.status === "requires_capture") {
+    await admin.from("bookings").update({ payment_status: "authorized" }).eq("id", b.id).in("payment_status", ["unpaid", "failed"]);
+    return "authorized";
+  }
+  if (pi.status === "canceled") {
+    await admin.from("bookings").update({ payment_status: "canceled" }).eq("id", b.id);
+    if (b.status === "requested") await admin.from("bookings").update({ status: "cancelled", cancel_reason: "Payment hold released" }).eq("id", b.id).eq("status", "requested");
+    return "canceled";
+  }
+  return b.payment_status;
+}
+
 /** Release slots held by bookings that never got a card authorization. */
 async function releaseStaleUnpaid(mechanicId: string) {
   const admin = createAdminClient();
@@ -30,10 +52,20 @@ async function releaseStaleUnpaid(mechanicId: string) {
     .eq("payment_status", "unpaid")
     .lt("created_at", cutoff);
   for (const b of stale ?? []) {
-    if (b.stripe_payment_intent_id) {
-      await getStripe().paymentIntents.cancel(b.stripe_payment_intent_id).catch(() => undefined);
+    if (!b.stripe_payment_intent_id) {
+      await admin.from("bookings").update({ status: "cancelled", payment_status: "canceled", cancel_reason: "Payment not completed" }).eq("id", b.id);
+      continue;
     }
-    await admin.from("bookings").update({ status: "cancelled", payment_status: "canceled", cancel_reason: "Payment not completed" }).eq("id", b.id);
+    try {
+      // A late webhook may mean the hold actually succeeded — check before voiding anything.
+      const synced = await syncBookingPayment(b.id);
+      if (synced !== "unpaid" && synced !== "failed") continue;
+      await getStripe().paymentIntents.cancel(b.stripe_payment_intent_id);
+      await admin.from("bookings").update({ status: "cancelled", payment_status: "canceled", cancel_reason: "Payment not completed" }).eq("id", b.id).eq("status", "requested");
+    } catch (e) {
+      // Leave the booking alone if Stripe didn't confirm the cancel; never strand a live hold.
+      console.error("releaseStaleUnpaid failed", b.id, e);
+    }
   }
 }
 
@@ -58,8 +90,6 @@ export type CreateBookingInput = {
 export async function createBooking(input: CreateBookingInput): Promise<{ bookingId: string; clientSecret: string }> {
   const admin = createAdminClient();
   const now = new Date();
-  if (!isOfferedSlot(input.start, now)) throw new BookingError("That time isn't available. Please pick another slot.");
-
   const [{ data: mechanic }, { data: service }, { data: vehicle }] = await Promise.all([
     admin.from("mechanics").select("id, is_live, hourly_rate_cents, stripe_account_id, display_name").eq("id", input.mechanicId).maybeSingle(),
     admin.from("services").select("*").eq("slug", input.serviceSlug).eq("active", true).maybeSingle(),
@@ -67,6 +97,7 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
   ]);
   if (!mechanic?.is_live || !mechanic.stripe_account_id || !mechanic.hourly_rate_cents) throw new BookingError("This mechanic isn't taking bookings right now.");
   if (!service) throw new BookingError("Pick a service.");
+  if (!isOfferedSlot(input.start, now, service.est_minutes_max)) throw new BookingError("That time isn't available. Please pick another slot.");
   if (!vehicle || vehicle.owner_id !== input.customerId) throw new BookingError("Pick one of your vehicles.");
 
   const { data: offers } = await admin.from("mechanic_services").select("service_id").eq("mechanic_id", mechanic.id).eq("service_id", service.id).maybeSingle();
@@ -106,6 +137,7 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
     throw new BookingError("We couldn't create that booking. Please try again.");
   }
 
+  let piId: string | null = null;
   try {
     const pi = await getStripe().paymentIntents.create(
       {
@@ -120,10 +152,13 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
       },
       { idempotencyKey: `booking-${booking.id}` },
     );
-    await admin.from("bookings").update({ stripe_payment_intent_id: pi.id }).eq("id", booking.id);
+    piId = pi.id;
+    const { error: saveErr } = await admin.from("bookings").update({ stripe_payment_intent_id: pi.id }).eq("id", booking.id);
+    if (saveErr) throw new Error(`could not save PaymentIntent id: ${saveErr.message}`);
     await audit(input.customerId, "booking.created", booking.id, { estimate, fee });
     return { bookingId: booking.id, clientSecret: pi.client_secret! };
   } catch (e) {
+    if (piId) await getStripe().paymentIntents.cancel(piId).catch(() => undefined); // not yet confirmed by the customer, so no hold exists
     await admin.from("bookings").update({ status: "cancelled", payment_status: "failed", cancel_reason: "Payment setup failed" }).eq("id", booking.id);
     console.error("createBooking: PaymentIntent failed", e);
     throw new BookingError("We couldn't set up payment for this booking. Please try again.");
@@ -144,22 +179,45 @@ export async function transitionBooking(
   opts: TransitionOptions = {},
 ): Promise<BookingRow> {
   const admin = createAdminClient();
-  const { data: b } = await admin.from("bookings").select("*").eq("id", bookingId).maybeSingle();
-  if (!b) throw new BookingError("Booking not found.");
+  const { data: current } = await admin.from("bookings").select("*").eq("id", bookingId).maybeSingle();
+  if (!current) throw new BookingError("Booking not found.");
 
-  const isCustomer = b.customer_id === actor.id;
-  const isMechanic = b.mechanic_id === actor.id;
+  const isCustomer = current.customer_id === actor.id;
+  const isMechanic = current.mechanic_id === actor.id;
   const role: Actor = actor.role === "admin" ? "admin" : isMechanic ? "mechanic" : isCustomer ? "customer" : actor.role;
   if (role !== "admin" && !isCustomer && !isMechanic) throw new BookingError("Booking not found.");
   if (!actorMayTransition(role, to)) throw new BookingError("You can't make that change.");
-  if (!canTransition(b.status, to)) throw new BookingError(`This booking is already ${b.status.replace("_", " ")}.`);
+  if (!canTransition(current.status, to)) throw new BookingError(`This booking is already ${current.status.replace("_", " ")}.`);
 
+  // Claim the booking so a concurrent change (e.g. cancel vs. accept) can't also move money.
+  const now = new Date().toISOString();
+  const { data: b } = await admin
+    .from("bookings")
+    .update({ processing_until: new Date(Date.now() + 60_000).toISOString() })
+    .eq("id", current.id)
+    .eq("status", current.status)
+    .or(`processing_until.is.null,processing_until.lt.${now}`)
+    .select("*")
+    .maybeSingle();
+  if (!b) throw new BookingError("This booking is being updated. Refresh and try again.");
+
+  try {
+    return await applyTransition(b, actor, role, to, opts);
+  } finally {
+    await admin.from("bookings").update({ processing_until: null }).eq("id", b.id);
+  }
+}
+
+async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor, to: BookingStatus, opts: TransitionOptions): Promise<BookingRow> {
+  const admin = createAdminClient();
   const update: Database["public"]["Tables"]["bookings"]["Update"] = { status: to };
   const stripe = getStripe();
+
 
   switch (to) {
     case "accepted": {
       if (b.payment_status !== "authorized") throw new BookingError("The customer's payment hasn't gone through yet.");
+      if (new Date(b.scheduled_end).getTime() < Date.now()) throw new BookingError("This request's time has already passed.");
       break;
     }
     case "cancelled": {
@@ -196,25 +254,28 @@ export async function transitionBooking(
       if (!b.stripe_payment_intent_id || !["authorized", "captured"].includes(b.payment_status)) {
         throw new BookingError("There's no authorized payment to capture.");
       }
-      const fee = platformFeeCents(final, platformFeeBps());
-      // If a previous attempt captured but failed to save, don't capture twice.
+      // If a previous attempt captured but failed to save, don't capture twice — record what Stripe actually took.
       const pi = await stripe.paymentIntents.retrieve(b.stripe_payment_intent_id);
+      let captured = final;
       if (pi.status === "requires_capture") {
         await stripe.paymentIntents.capture(
           b.stripe_payment_intent_id,
-          { amount_to_capture: final, application_fee_amount: fee },
+          { amount_to_capture: final, application_fee_amount: platformFeeCents(final, platformFeeBps()) },
           { idempotencyKey: `capture-${b.id}-${final}` },
         );
-      } else if (pi.status !== "succeeded") {
+      } else if (pi.status === "succeeded") {
+        captured = pi.amount_received;
+      } else {
         throw new BookingError("The customer's payment can't be captured. Contact support.");
       }
-      update.final_amount_cents = final;
-      update.platform_fee_cents = fee;
+      update.final_amount_cents = captured;
+      update.platform_fee_cents = platformFeeCents(captured, platformFeeBps());
       update.payment_status = "captured";
       break;
     }
   }
 
+  update.processing_until = null;
   const { data: updated, error } = await admin.from("bookings").update(update).eq("id", b.id).eq("status", b.status).select("*").single();
   if (error || !updated) throw new BookingError("That change didn't go through. Refresh and try again.");
 
@@ -223,4 +284,25 @@ export async function transitionBooking(
   }
   await audit(actor.id, `booking.${to}`, b.id, { from: b.status, ...(opts.finalAmountCents ? { final: opts.finalAmountCents } : {}) });
   return updated;
+}
+
+/**
+ * When a mechanic stops being live (suspended, background check flagged, Stripe
+ * disabled), cancel their open jobs that haven't started and release the holds.
+ */
+export async function cancelOpenBookingsForMechanic(mechanicId: string, actorId: string | null, reason: string) {
+  const admin = createAdminClient();
+  const { data: m } = await admin.from("mechanics").select("is_live").eq("id", mechanicId).maybeSingle();
+  if (!m || m.is_live) return 0;
+  const { data: open } = await admin.from("bookings").select("id").eq("mechanic_id", mechanicId).in("status", ["requested", "accepted", "en_route"]);
+  let n = 0;
+  for (const b of open ?? []) {
+    try {
+      await transitionBooking(b.id, { id: actorId ?? mechanicId, role: "admin" }, "cancelled", { reason });
+      n++;
+    } catch (e) {
+      console.error("cancelOpenBookingsForMechanic", b.id, e);
+    }
+  }
+  return n;
 }

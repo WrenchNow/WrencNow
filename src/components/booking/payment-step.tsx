@@ -5,6 +5,7 @@ import { loadStripe, type Stripe } from "@stripe/stripe-js";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/feedback";
+import { THEME } from "@/lib/theme";
 
 let stripePromise: Promise<Stripe | null> | null = null;
 function getStripe(key: string) {
@@ -53,7 +54,7 @@ export function PaymentStep({ publishableKey, clientSecret, bookingId, amountLab
         clientSecret,
         appearance: {
           theme: "night",
-          variables: { colorPrimary: "#f25a00", colorBackground: "#1e1e1b", colorText: "#f0ebe0", fontFamily: "Barlow, sans-serif", borderRadius: "10px" },
+          variables: { colorPrimary: THEME.ore, colorBackground: THEME.raised, colorText: THEME.cream, fontFamily: "Barlow, sans-serif", borderRadius: THEME.radius },
         },
       }}
     >

@@ -5,6 +5,7 @@ import { StatusBadge } from "@/components/account/status-timeline";
 import { Badge, EmptyState } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/layout";
 import { dateTime, money } from "@/lib/format";
+import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const metadata: Metadata = { title: "Admin · Bookings" };
@@ -19,6 +20,7 @@ const FILTERS = [
 export default async function AdminBookingsPage({ searchParams }: PageProps<"/admin/bookings">) {
   const sp = await searchParams;
   const filter = FILTERS.some((f) => f.key === sp.filter) ? (sp.filter as string) : "active";
+  await requireAdmin();
   const admin = createAdminClient();
   let q = admin
     .from("bookings")

@@ -1,7 +1,7 @@
 /**
  * Booking time slots, computed in the marketplace's local time zone.
- * Card authorizations expire after ~7 days, so bookings are limited to the
- * next BOOKING_WINDOW_DAYS days (see docs/PAYMENTS.md).
+ * Card authorizations expire after ~7 days, so a job must END within
+ * BOOKING_WINDOW_DAYS of booking, leaving a day of margin to capture (see docs/PAYMENTS.md).
  */
 export const BOOKING_WINDOW_DAYS = 6;
 export const SLOT_HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
@@ -47,6 +47,7 @@ export type SlotDay = { date: string; label: string; slots: { start: string; lab
 export function buildSlots(now: Date, durationMinutes: number, busy: Busy[], tz = DEFAULT_TZ): SlotDay[] {
   const days: SlotDay[] = [];
   const earliest = now.getTime() + MIN_LEAD_MINUTES * 60_000;
+  const latestEnd = windowEnd(now);
   const ranges = busy.map((b) => [new Date(b.scheduled_start).getTime(), new Date(b.scheduled_end).getTime()] as const);
   const today = localYmd(now, tz);
   for (let i = 0; i <= BOOKING_WINDOW_DAYS; i++) {
@@ -60,7 +61,7 @@ export function buildSlots(now: Date, durationMinutes: number, busy: Busy[], tz 
       return {
         start: start.toISOString(),
         label: new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit" }).format(start),
-        available: s >= earliest && !overlaps,
+        available: s >= earliest && e <= latestEnd && !overlaps,
       };
     });
     days.push({
@@ -72,12 +73,17 @@ export function buildSlots(now: Date, durationMinutes: number, busy: Busy[], tz 
   return days;
 }
 
-/** Server-side check that a requested start time is one we actually offer. */
-export function isOfferedSlot(startIso: string, now: Date, tz = DEFAULT_TZ): boolean {
+/** Latest moment a booked job may end, so the card hold can still be captured. */
+export function windowEnd(now: Date): number {
+  return now.getTime() + BOOKING_WINDOW_DAYS * 86_400_000;
+}
+
+/** Server-side check that a requested start time is one we actually offer for a job of this length. */
+export function isOfferedSlot(startIso: string, now: Date, durationMinutes: number, tz = DEFAULT_TZ): boolean {
   const start = new Date(startIso);
   if (Number.isNaN(start.getTime())) return false;
   if (start.getTime() < now.getTime() + MIN_LEAD_MINUTES * 60_000) return false;
-  if (start.getTime() > now.getTime() + (BOOKING_WINDOW_DAYS + 1) * 86_400_000) return false;
+  if (start.getTime() + durationMinutes * 60_000 > windowEnd(now)) return false;
   const hour = Number(new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", hourCycle: "h23" }).format(start));
   const minute = start.getUTCMinutes();
   return SLOT_HOURS.includes(hour) && minute === 0 && start.getUTCSeconds() === 0;

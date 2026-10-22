@@ -3,11 +3,13 @@ import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/layout";
 import { dateTime } from "@/lib/format";
+import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const metadata: Metadata = { title: "Admin" };
 
 export default async function AdminPage() {
+  await requireAdmin();
   const admin = createAdminClient();
   const count = async (q: PromiseLike<{ count: number | null }>) => (await q).count ?? 0;
   const [awaitingReview, live, activeBookings, disputed, { data: log }] = await Promise.all([

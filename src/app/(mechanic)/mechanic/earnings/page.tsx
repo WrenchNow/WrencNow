@@ -4,7 +4,8 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/layout";
 import { requireRole } from "@/lib/auth";
-import { dateTime, money } from "@/lib/format";
+import { mechanicNetCents } from "@/lib/fees";
+import { dateTime, monthKey, money } from "@/lib/format";
 import { getMyMechanic } from "@/lib/mechanic";
 import { createClient } from "@/lib/supabase/server";
 import { openStripeDashboard } from "../actions";
@@ -28,13 +29,11 @@ export default async function EarningsPage() {
   const rows = (jobs ?? []).map((j) => {
     const gross = j.final_amount_cents ?? 0;
     const fee = j.platform_fee_cents ?? 0;
-    return { ...j, gross, fee, net: gross - fee - (j.refunded_cents ?? 0) };
+    return { ...j, gross, fee, net: mechanicNetCents(gross, fee, j.refunded_cents ?? 0) };
   });
-  const startOfMonth = new Date();
-  startOfMonth.setDate(1);
-  startOfMonth.setHours(0, 0, 0, 0);
   const sum = (list: typeof rows) => list.reduce((a, r) => a + r.net, 0);
-  const thisMonth = sum(rows.filter((r) => r.completed_at && new Date(r.completed_at) >= startOfMonth));
+  const month = monthKey(new Date());
+  const thisMonth = sum(rows.filter((r) => r.completed_at && monthKey(new Date(r.completed_at)) === month));
 
   return (
     <>

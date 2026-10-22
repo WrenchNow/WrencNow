@@ -27,3 +27,15 @@ export function estimateMinCents(hourlyRateCents: number, estMinutesMin: number)
   const raw = (hourlyRateCents * estMinutesMin) / 60;
   return Math.ceil(raw / 100) * 100;
 }
+
+/**
+ * What the mechanic keeps on a job after refunds. Refunds are issued with
+ * reverse_transfer + refund_application_fee, so the platform fee is returned in
+ * proportion: the mechanic's share shrinks by (1 − fee/gross) of each refund.
+ */
+export function mechanicNetCents(grossCents: number, feeCents: number, refundedCents: number): number {
+  if (grossCents <= 0) return 0;
+  const refunded = Math.min(Math.max(refundedCents, 0), grossCents);
+  const share = grossCents - feeCents;
+  return Math.round(share * (1 - refunded / grossCents));
+}

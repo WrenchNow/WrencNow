@@ -10,7 +10,8 @@ import { stripeConfigured } from "@/lib/env";
 import { getMyMechanic, readiness } from "@/lib/mechanic";
 import { getServices } from "@/lib/public-data";
 import { TIER_LABEL, tierRank } from "@/lib/tiers";
-import { startStripeOnboarding, syncStripeAccount } from "../actions";
+import { syncStripeAccount } from "@/lib/stripe-sync";
+import { startStripeOnboarding } from "../actions";
 
 export const metadata: Metadata = { title: "Profile & setup" };
 

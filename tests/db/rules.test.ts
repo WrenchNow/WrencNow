@@ -284,4 +284,55 @@ run("booking rules (enforced by triggers for every writer)", () => {
       expect(p.rows[0].role).toBeNull();
     });
   });
+
+  it("a mechanic who stops being live can't accept or head out", async () => {
+    await expect(
+      tx(async (q) => {
+        const id = await insertBooking(q, ids["mechanic.basic"], "oil-change", future(2));
+        await q("update public.bookings set payment_status = 'authorized' where id = $1", [id]);
+        await q("update public.mechanics set status = 'suspended' where id = $1", [ids["mechanic.basic"]]);
+        await q("update public.bookings set status = 'accepted' where id = $1", [id]);
+      }),
+    ).rejects.toThrow(/not live/);
+  });
+
+  it("reviewer names come from the profile, not the client", async () => {
+    await tx(async (q) => {
+      const id = await insertBooking(q, ids["mechanic.basic"], "oil-change", future(2));
+      await q("update public.bookings set payment_status = 'authorized' where id = $1", [id]);
+      for (const st of ["accepted", "en_route", "in_progress"]) await q("update public.bookings set status = $2 where id = $1", [id, st]);
+      await q("update public.bookings set payment_status = 'captured', final_amount_cents = 8000, status = 'completed' where id = $1", [id]);
+      await q("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: ids["customer"], role: "authenticated" })]);
+      await q("set local role authenticated");
+      const r = await q("insert into public.reviews (booking_id, customer_id, mechanic_id, reviewer_name, rating) values ($1, auth.uid(), $2, 'WrenchNow Team', 5) returning reviewer_name", [id, ids["mechanic.basic"]]);
+      expect(r.rows[0].reviewer_name).toBe("Test C.");
+    });
+  });
 });
+
+run("QA hardening", () => {
+  it("photo URLs must point at the mechanic's own storage folder", async () => {
+    await expect(
+      tx((q) => q("update public.mechanics set photo_url = 'https://evil.example/x.png' where id = auth.uid()"), asUser(ids["mechanic.basic"])),
+    ).rejects.toThrow(/mechanics_photo_url_own_folder/);
+    await tx(async (q) => {
+      const ok = `http://127.0.0.1:54321/storage/v1/object/public/mechanic-photos/${ids["mechanic.basic"]}/a.png`;
+      const r = await q("update public.mechanics set photo_url = $1 where id = auth.uid() returning id", [ok]);
+      expect(r.rowCount).toBe(1);
+    }, asUser(ids["mechanic.basic"]));
+  });
+
+  it("service lists of mechanics who aren't live are hidden from the public", async () => {
+    await tx(async (q) => {
+      const r = await q("select count(*)::int as n from public.mechanic_services where mechanic_id = $1", [ids["mechanic.pending"]]);
+      expect(r.rows[0].n).toBe(0);
+      const live = await q("select count(*)::int as n from public.mechanic_services where mechanic_id = $1", [ids["mechanic.basic"]]);
+      expect(live.rows[0].n).toBeGreaterThan(0);
+    }, anon);
+    await tx(async (q) => {
+      const r = await q("select count(*)::int as n from public.mechanic_services where mechanic_id = auth.uid()");
+      expect(r.rows[0].n).toBeGreaterThan(0);
+    }, asUser(ids["mechanic.pending"]));
+  });
+});
+

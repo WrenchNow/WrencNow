@@ -4,6 +4,7 @@ import { ReviewMechanicForm } from "@/components/admin-forms";
 import { Badge, EmptyState } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/layout";
 import { money, shortDate } from "@/lib/format";
+import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { TIER_LABEL } from "@/lib/tiers";
 
@@ -20,6 +21,7 @@ const CHECK_TONE = { clear: "ok", consider: "danger", suspended: "danger", cance
 export default async function AdminMechanicsPage({ searchParams }: PageProps<"/admin/mechanics">) {
   const sp = await searchParams;
   const filter = FILTERS.some((f) => f.key === sp.filter) ? (sp.filter as string) : "review";
+  await requireAdmin();
   const admin = createAdminClient();
   let q = admin.from("mechanics").select("*, profiles(full_name, phone)").order("onboarding_submitted_at", { ascending: true, nullsFirst: false }).limit(200);
   if (filter === "review") q = q.eq("status", "pending").not("onboarding_submitted_at", "is", null);

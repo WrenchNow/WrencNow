@@ -39,6 +39,13 @@ export async function requireRole(roles: Role[], next = "/"): Promise<Viewer & {
   return viewer as Viewer & { profile: Profile };
 }
 
+/** Admin-only pages and actions. Call at the top of every admin page, not just the layout. */
+export async function requireAdmin(): Promise<Viewer & { profile: Profile }> {
+  const viewer = await requireRole(["admin"], "/admin");
+  if (viewer.profile.role !== "admin") redirect(homeFor(viewer.profile.role));
+  return viewer;
+}
+
 export function homeFor(role: Role | null | undefined): string {
   switch (role) {
     case "mechanic":
