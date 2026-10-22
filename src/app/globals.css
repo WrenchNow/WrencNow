@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+/* WrenchNow design system — dark theme, orange ("ore") accent.
+   Colors come from the original prototype (legacy/index.html). Use these tokens
+   via Tailwind classes (bg-surface, text-ore, border-line…); no hex in components. */
+@theme {
+  --color-bg: #0e0e0c;
+  --color-surface: #161614;
+  --color-raised: #1e1e1b;
+  --color-line: rgb(255 255 255 / 0.07);
+  --color-line-strong: rgb(255 255 255 / 0.13);
+  --color-ore: #f25a00;
+  --color-ore-bright: #ff7a2f;
+  --color-ore-dim: rgb(242 90 0 / 0.12);
+  --color-cream: #f0ebe0;
+  --color-ink: #c8c2b5;
+  /* Prototype muted was #6e6b62; lightened to pass WCAG AA on the dark background. */
+  --color-muted: #8f8b80;
+  --color-ok: #2ec77a;
+  --color-ok-dim: rgb(46 199 122 / 0.1);
+  --color-warn: #f5b800;
+  --color-warn-dim: rgb(245 184 0 / 0.1);
+  --color-info: #3b9eff;
+  --color-info-dim: rgb(59 158 255 / 0.1);
+  --color-danger: #ff4d4d;
+  --color-danger-dim: rgb(255 77 77 / 0.1);
+  --color-on-ore: #ffffff;
+
+  --font-display: var(--font-barlow-condensed), "Barlow Condensed", sans-serif;
+  --font-body: var(--font-barlow), "Barlow", sans-serif;
+  --font-sans: var(--font-body);
+
+  --radius-card: 18px;
+  --radius-control: 10px;
+
+  --shadow-ore: 0 4px 20px rgb(242 90 0 / 0.3);
+}
+
+html {
+  color-scheme: dark;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+}
+
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-display);
+  color: var(--color-cream);
+  letter-spacing: 0.01em;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-ore-bright);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--color-ore);
+  color: var(--color-on-ore);
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
