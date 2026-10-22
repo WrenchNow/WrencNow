@@ -10,7 +10,7 @@
     "heading": "1. About WrenchNow",
     "blocks": [
      {
-      "p": "WrenchNow Inc. (\"WrenchNow,\" \"we,\" \"us,\" or \"our\") operates an online marketplace platform that connects vehicle owners (\"Customers\") with independent, self-employed automotive service providers (\"Mechanics\"). WrenchNow is a technology platform only — we do not employ Mechanics, perform automotive services, or guarantee the quality of any work performed."
+      "p": "WrenchNow (\"WrenchNow,\" \"we,\" \"us,\" or \"our\") operates an online marketplace platform that connects vehicle owners (\"Customers\") with independent, self-employed automotive service providers (\"Mechanics\"). WrenchNow is a technology platform only — we do not employ Mechanics, perform automotive services, or guarantee the quality of any work performed."
      },
      {
       "p": "By accessing or using WrenchNow, you confirm that you are at least 18 years of age, have the legal authority to enter into these Terms, and agree to be bound by them."
@@ -141,7 +141,7 @@
     "heading": "11. Intellectual Property",
     "blocks": [
      {
-      "p": "All content on the WrenchNow platform, including but not limited to text, graphics, logos, icons, and software, is the property of WrenchNow Inc. or its licensors and is protected by applicable intellectual property laws. You may not copy, reproduce, distribute, or create derivative works without express written permission."
+      "p": "All content on the WrenchNow platform, including but not limited to text, graphics, logos, icons, and software, is the property of WrenchNow or its licensors and is protected by applicable intellectual property laws. You may not copy, reproduce, distribute, or create derivative works without express written permission."
      }
     ]
    },
@@ -157,7 +157,7 @@
     "heading": "13. Indemnification",
     "blocks": [
      {
-      "p": "You agree to indemnify, defend, and hold harmless WrenchNow Inc. and its officers, directors, employees, agents, and affiliates from and against any and all claims, liabilities, damages, losses, costs, and expenses (including reasonable legal fees) arising out of or relating to your use of the platform, your violation of these Terms, or your violation of any rights of another person or entity."
+      "p": "You agree to indemnify, defend, and hold harmless WrenchNow and its officers, directors, employees, agents, and affiliates from and against any and all claims, liabilities, damages, losses, costs, and expenses (including reasonable legal fees) arising out of or relating to your use of the platform, your violation of these Terms, or your violation of any rights of another person or entity."
      }
     ]
    },
@@ -176,7 +176,7 @@
     "heading": "15. Governing Law",
     "blocks": [
      {
-      "p": "These Terms shall be governed by and construed in accordance with the laws of the jurisdiction in which WrenchNow Inc. is incorporated, without regard to its conflict of law provisions."
+      "p": "These Terms shall be governed by and construed in accordance with the laws of the State of Colorado, without regard to its conflict of law provisions."
      }
     ]
    },
@@ -468,7 +468,7 @@
  "mechanicAgreement": {
   "intro": [
    {
-    "p": "By submitting an application to join WrenchNow and by performing any services through the platform, you (\"Mechanic\") agree to this Independent Contractor Agreement with WrenchNow Inc. (\"WrenchNow\")."
+    "p": "By submitting an application to join WrenchNow and by performing any services through the platform, you (\"Mechanic\") agree to this Independent Contractor Agreement with WrenchNow (\"WrenchNow\")."
    }
   ],
   "sections": [
@@ -595,7 +595,7 @@
       "p": "WrenchNow assumes no liability for your work, your vehicle, your tools, or your conduct."
      },
      {
-      "p": "You agree to indemnify, defend, and hold harmless WrenchNow Inc. and its officers, directors, employees, and agents from and against any and all claims, liabilities, damages, losses, costs, and expenses (including reasonable legal fees) arising out of or relating to:"
+      "p": "You agree to indemnify, defend, and hold harmless WrenchNow and its officers, directors, employees, and agents from and against any and all claims, liabilities, damages, losses, costs, and expenses (including reasonable legal fees) arising out of or relating to:"
      },
      {
       "ul": [
@@ -659,7 +659,7 @@
     "heading": "12. Governing Law",
     "blocks": [
      {
-      "p": "This Agreement shall be governed by applicable law in the jurisdiction where WrenchNow Inc. is incorporated."
+      "p": "This Agreement shall be governed by the laws of the State of Colorado."
      }
     ]
    },
