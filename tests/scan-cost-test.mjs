@@ -36,7 +36,10 @@ async function scanWith(type, w, h, text) {
   await page.evaluate(() => { scan.items = null; scan.images = []; scan.error = ''; render(); });
   await page.setInputFiles('#gal', { name: 'p.png', mimeType: 'image/png', buffer: await png(w, h) }); await page.waitForTimeout(400);
   await page.click(`[data-act=scanType][data-v=${type}]`);  // switch type AFTER adding, to prove analyze-time resize
-  await page.click('[data-act=analyze]'); await page.waitForTimeout(800);
+  // Receipts now go to the free on-phone reader first; the AI scan is the "Try the AI scan" fallback, which calls the
+  // same analyzeScan(), so call it directly when there's no Analyze button.
+  if (await page.locator('[data-act=analyze]').count()) await page.click('[data-act=analyze]'); else await page.evaluate(() => ACT.analyze());
+  await page.waitForTimeout(800);
   const b = bodies.at(-1); const img = b.messages[0].content.find(c => c.type === 'image');
   const d = await dimsOf(img.source.data);
   return { body: b, dims: d, view: await page.locator('#view').innerText() };

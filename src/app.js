@@ -10,7 +10,8 @@ const CONFIG = {
   BACKEND_URL: '',         // ← your Cloudflare Worker URL, e.g. 'https://pantry-pal.yourname.workers.dev'
   ONLINE_RECIPES: false,   // true = show licensed web recipes (Spoonacular via the Worker). Adds source-credit links.
   ADMIN_CODE: 'owner',     // open the app with ?admin=owner to show owner settings on your device
-  MODEL: 'claude-sonnet-5-5'
+  MODEL: 'claude-sonnet-5-5',
+  ON_DEVICE_SCAN: true    // free Barcode + Receipt reading on the phone (no AI). Loads small libraries from jsDelivr on first use.
 };
 
 /* ---------- tiny utils ---------- */
@@ -259,7 +260,8 @@ function sanitizeBackup(d) {
 }
 
 /* transient (not persisted) */
-const scan = { type: 'receipt', images: [], busy: false, items: null, error: '', source: '' };
+const scan = { type: 'receipt', images: [], busy: false, mode: '', items: null, error: '', source: '' };
+const ocrBig = new Map();   // receipt photo → a sharper copy for on-phone reading (memory only)
 const paste = { empty: false, text: '' };   // memory only: text = junk-stripped order text, kept just for the optional AI read
 
 const feed = { busy: false, error: '', expanded: {} };
@@ -613,7 +615,9 @@ DIET (every recipe must fit all of these): ${diets.length ? diets.join(', ') : '
 // small print (1568px long side, ~1.15 MP, which is where Anthropic downscales anyway); shelf photos only
 // need to show what the food is, so 1024px is plenty.
 function fitDims(w, h, type) {
-  let s = type === 'receipt' ? Math.min(1, 1568 / Math.max(w, h), Math.sqrt(1.15e6 / (w * h))) : Math.min(1, 1024 / Math.max(w, h));
+  // 'ocr' = on-phone receipt reading (never uploaded): small print needs more pixels, up to ~4 MP.
+  let s = type === 'ocr' ? Math.min(1, 2400 / Math.max(w, h), Math.sqrt(4e6 / (w * h)))
+    : type === 'receipt' ? Math.min(1, 1568 / Math.max(w, h), Math.sqrt(1.15e6 / (w * h))) : Math.min(1, 1024 / Math.max(w, h));
   return [Math.max(1, Math.round(w * s)), Math.max(1, Math.round(h * s))];
 }
 async function toJpeg(src, type) {
@@ -624,9 +628,314 @@ async function toJpeg(src, type) {
   return c.toDataURL('image/jpeg', 0.8);
 }
 // Photos are stored at receipt size so switching the scan type later still works; analyzeScan shrinks them for the chosen type.
-async function fileToJpeg(file) {
+async function fileToJpeg(file, type = 'receipt') {
   const url = URL.createObjectURL(file);
-  try { return await toJpeg(url, 'receipt'); } finally { URL.revokeObjectURL(url); }
+  try { return await toJpeg(url, type); } finally { URL.revokeObjectURL(url); }
+}
+
+/* ---------- free on-device scanning (no AI, no cost) ----------
+   Barcode: the phone's own BarcodeDetector when it has one, otherwise a small WASM reader from jsDelivr.
+   Receipt: Tesseract.js OCR from jsDelivr, then the same local parser as "Paste order".
+   Libraries load only when the user opens these modes. Photos never leave the phone; the only thing sent
+   anywhere is the barcode number (to Open Food Facts, a free, open food database). */
+const LIBS = {
+  // barcode-detector 3.2.2 (2026-08-16, MIT) bundles zxing-wasm 3.1.3. The .wasm is checked against the
+  // SHA-256 the (SRI-checked) script carries before it runs.
+  barcode: { src: 'https://cdn.jsdelivr.net/npm/barcode-detector@3.2.2/dist/iife/ponyfill.js', integrity: 'sha384-KJVUIUGb4pmfpWXfD8j3y9ARn6KoGC2vPC/wNUX1O1ZkYemh0BsuvsmdEU2+wS7O',
+    wasm: 'https://cdn.jsdelivr.net/npm/zxing-wasm@3.1.3/dist/reader/zxing_reader.wasm' },
+  // tesseract.js 7.0.0 (2025-12-15, Apache-2.0) + tesseract.js-core 7.0.0 + English only (@tesseract.js-data/eng 1.0.0).
+  ocr: { src: 'https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.min.js', integrity: 'sha384-2BQ3U3OdKOb0Uczxqr41I9UvZkzr4V9Hv8uSzMMZAlmhsFClvdZX5wi5fDCzG+tM',
+    workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/worker.min.js', corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@7.0.0',
+    langPath: 'https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng@1.0.0/4.0.0_best_int' }
+};
+const _scripts = {};
+function loadScript(src, integrity) {
+  return _scripts[src] || (_scripts[src] = new Promise((res, rej) => {
+    const s = document.createElement('script'); s.src = src; s.integrity = integrity; s.crossOrigin = 'anonymous'; s.referrerPolicy = 'no-referrer';
+    s.onload = () => res(); s.onerror = () => { delete _scripts[src]; s.remove(); rej(new Error('download')); };
+    document.head.appendChild(s);
+  }));
+}
+const onDevice = () => CONFIG.ON_DEVICE_SCAN !== false;
+
+/* ---- barcode ---- */
+const BC_FORMATS = ['ean_13', 'ean_8', 'upc_a', 'upc_e'];
+const bc = { list: [], error: '', note: '', cam: null, detector: null, loading: false };   // memory only
+let _bcLib = null;
+async function barcodeDetector() {
+  if (bc.detector) return bc.detector;
+  if ('BarcodeDetector' in window) {
+    try { const sup = await window.BarcodeDetector.getSupportedFormats(); const f = BC_FORMATS.filter(x => sup.includes(x)); if (f.length) return (bc.detector = new window.BarcodeDetector({ formats: f })); } catch (e) { }
+  }
+  _bcLib = _bcLib || (async () => {
+    await loadScript(LIBS.barcode.src, LIBS.barcode.integrity);
+    const api = window.BarcodeDetectionAPI; if (!api || !api.BarcodeDetector) throw new Error('download');
+    const res = await fetch(LIBS.barcode.wasm, { credentials: 'omit', referrerPolicy: 'no-referrer' }); if (!res.ok) throw new Error('download');
+    const buf = await res.arrayBuffer();
+    const sum = [...new Uint8Array(await crypto.subtle.digest('SHA-256', buf))].map(b => b.toString(16).padStart(2, '0')).join('');
+    if (api.ZXING_WASM_SHA256 && sum !== api.ZXING_WASM_SHA256) throw new Error('download');
+    await api.prepareZXingModule({ overrides: { wasmBinary: buf }, fireImmediately: true });
+    return api;
+  })().catch(e => { _bcLib = null; throw e; });
+  const api = await _bcLib;
+  return (bc.detector = new api.BarcodeDetector({ formats: BC_FORMATS }));
+}
+// GTIN check digit (EAN-8/13, UPC-A, GTIN-14). 8-digit UPC-E codes use a different scheme, so they pass.
+function validBarcode(code) {
+  if (!/^(\d{8}|\d{12,14})$/.test(code)) return false;
+  const d = code.split('').map(Number), check = d.pop();
+  const ok = (10 - (d.reverse().reduce((s, n, i) => s + n * (i % 2 ? 1 : 3), 0) % 10)) % 10 === check;
+  return ok || (code.length === 8 && /^[01]/.test(code));
+}
+// Open Food Facts category tags → our categories. Tags are checked most-specific first.
+const OFF_SKIP = /^(plant-based-foods(-and-beverages)?|foods|beverages-and-beverages-preparations|groceries|products|fruits-and-vegetables-based-foods|cereals-and-potatoes|meals|sweet-snacks|salty-snacks)$/;
+const OFF_CATS = [
+  [/frozen/, 'Frozen'],
+  [/juice|drinks?$|-drinks?-|waters?$|sodas?|soft-drinks|coffees?$|teas?$|beverages?$|beers?|wines?|nectars?/, 'Beverages'],
+  [/(^|-)(meats?|poultr|chickens?|beef|pork|hams?|bacons?|sausages?|fish|fishes|seafood|salmons?|tunas?|shrimps?|turkeys?)(-|$)/, 'Meat & Seafood'],
+  [/dair|milks?$|-milks?-|cheeses?|yogh?urts?|eggs?$|butters?$|creams?$/, 'Dairy & Eggs'],
+  [/breads?|bakery|bagels?|tortillas?|buns?$|pastr|cakes?$|muffins?/, 'Bakery'],
+  [/spices?|herbs?|seasonings?|salts?$|peppers?$/, 'Spices'],
+  [/sauces?|condiments?|ketchups?|mustards?|mayonnaises?|dressings?|vinegars?|spreads?|jams?|honeys?|syrups?/, 'Condiments'],
+  [/snacks?|chips|crisps|candies|candy|confectioner|chocolates?|cookies|biscuits|crackers|popcorn|bars$/, 'Snacks'],
+  [/(^|-)(fruits?|vegetables?|salads?|apples?|bananas?|berries|potatoes|tomatoes|onions|lettuces?)(-|$)/, 'Produce'],
+  [/cereals?|pastas?|rices?|flours?|canned|legumes?|beans?|grains?|oils?|sugars?|baking|soups?|noodles?|broths?|nuts?/, 'Pantry']
+];
+function offCategory(tags) {
+  for (const t of (Array.isArray(tags) ? tags : []).slice().reverse()) {
+    const k = String(t).replace(/^[a-z]{2}:/, ''); if (OFF_SKIP.test(k)) continue;
+    const hit = OFF_CATS.find(([re]) => re.test(k)); if (hit) return hit[1];
+  }
+  return '';
+}
+// "1 gal", "500 g", "12 x 355 ml", "18 ct", "6 eggs" → { qty, unit } for one package.
+function offQuantity(q) {
+  q = String(q || '').toLowerCase().trim(); let m;
+  if ((m = q.match(/^(\d{1,3})\s*[x×]\s*\d/))) return { qty: +m[1], unit: '' };
+  if ((m = q.match(COUNT_RE))) return { qty: m[3] ? +m[3] * 12 : +(m[1] || m[2]), unit: '' };
+  if ((m = q.match(SIZE_RE))) { const n = toNum(m[1]), u = ORDER_UNITS[m[2].replace(/\s+/g, ' ').replace('fl. oz', 'fl oz')] || ''; if (n > 0 && u) return { qty: Math.round(n * 100) / 100, unit: u }; }
+  if ((m = q.match(/^(\d{1,3})\s*(eggs?|pieces?|pcs?|rolls?|bars?|cans?|bottles?)?$/)) && +m[1] > 0) return { qty: +m[1], unit: '' };
+  return { qty: 1, unit: '' };
+}
+function offToItem(p) {
+  const names = [p.product_name, p.generic_name].map(s => String(s || '').replace(/\s+/g, ' ').trim()).filter(s => /\p{L}{2}/u.test(s));
+  if (!names.length) return null;
+  let staple = null; for (const s of names) { staple = orderStaple(s); if (staple) break; }
+  let name = staple ? staple.name : '';
+  if (!name) {
+    const brands = String(p.brands || '').split(',').map(b => b.trim()).filter(b => b.length > 1);
+    let s = names[0]; for (const b of brands) s = s.replace(new RegExp('\\b' + b.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'ig'), ' ');
+    s = s.replace(SIZE_RE, ' ').replace(COUNT_RE, ' ').replace(ORDER_BRANDS, ' ').replace(ORDER_WORDS, ' ').replace(/[^\p{L}\s&'’-]/gu, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+    name = /\p{L}{2}/u.test(s) ? s.slice(0, 60) : names[0].toLowerCase().slice(0, 60);
+  }
+  const category = staple ? staple.cat : (offCategory(p.categories_tags) || guessCategory(name));
+  const { qty, unit } = offQuantity(p.quantity);
+  return { name, qty, unit, category, brand: String(p.brands || '').split(',')[0].trim().slice(0, 40) };
+}
+async function offLookup(code) {
+  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 12000);
+  try {
+    const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=product_name,generic_name,brands,quantity,categories_tags,allergens_tags`, { credentials: 'omit', referrerPolicy: 'no-referrer', signal: ctl.signal });
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error('lookup');
+    const d = await res.json();
+    return d && d.product && d.status !== 0 ? d.product : null;
+  } finally { clearTimeout(t); }
+}
+function bcAdd(code) {
+  code = String(code || '').replace(/\D/g, '');
+  const ex = bc.list.find(x => x.code === code);
+  if (ex) { ex.count++; bcCamMsg(`Added another ${ex.name || 'item'} (×${ex.count})`); render(); return; }
+  const it = { code, count: 1, status: 'looking', name: '', qty: 1, unit: '', category: 'Other', brand: '' };
+  bc.list.push(it); bc.error = ''; bcCamMsg('Looking up ' + code + '…'); render();
+  offLookup(code).then(p => {
+    const m = p && offToItem(p);
+    if (m) { Object.assign(it, m, { status: 'found' }); bcCamMsg('✓ ' + it.name); }
+    else { it.status = 'notfound'; bcCamMsg('Not in the database. You can type its name after.'); }
+  }).catch(() => { it.status = 'error'; bcCamMsg('Couldn’t look it up. You can type its name after.'); })
+    .finally(() => { if (S.ui.tab === 'scan') render(); });
+}
+function bcCamMsg(t) { const el = $('#bc-cam-msg'); if (el) el.textContent = t; }
+async function bcCamOpen() {
+  if (bc.cam) return;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { bc.error = 'This browser can’t use the camera here. Use “Take photo” or type the number.'; return render(); }
+  const ov = document.createElement('div'); ov.id = 'bc-cam'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', 'Barcode camera');
+  ov.innerHTML = `<video playsinline muted autoplay></video><div class="bc-frame" aria-hidden="true"></div>
+    <div class="bc-cam-bar"><p id="bc-cam-msg">Getting the camera ready…</p><button class="btn btn-primary btn-block" data-act="bcCamClose">Done</button></div>`;
+  document.body.appendChild(ov); document.body.classList.add('noscroll');
+  const cam = bc.cam = { ov, stream: null, stop: false, last: '', lastAt: 0 };
+  try {
+    const [stream, det] = await Promise.all([
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false }),
+      barcodeDetector()]);
+    if (cam.stop) { stream.getTracks().forEach(t => t.stop()); return; }
+    cam.stream = stream; const v = ov.querySelector('video'); v.srcObject = stream; await v.play().catch(() => { });
+    bcCamMsg('Point at a barcode. Scan as many items as you like, then tap Done.');
+    const tick = async () => {
+      if (cam.stop) return;
+      try {
+        if (v.readyState >= 2) {
+          const codes = await det.detect(v);
+          const c = (codes || []).map(x => String(x.rawValue || '')).find(validBarcode);
+          if (c && !(c === cam.last && Date.now() - cam.lastAt < 2500)) { cam.last = c; cam.lastAt = Date.now(); if (navigator.vibrate) navigator.vibrate(60); bcAdd(c); }
+        }
+      } catch (e) { }
+      setTimeout(tick, 250);
+    };
+    tick();
+  } catch (e) {
+    bcCamClose();
+    bc.error = e && e.message === 'download' ? 'Couldn’t download the free barcode reader. Check your connection, or type the number.'
+      : e && /NotAllowed|Security|Permission/i.test(e.name || '') ? 'Camera access is blocked. Allow it in your browser settings, or use “Take photo” or type the number.'
+        : 'Couldn’t start the camera. Use “Take photo” or type the number.';
+    render();
+  }
+}
+function bcCamClose() {
+  const cam = bc.cam; if (!cam) return; bc.cam = null; cam.stop = true;
+  if (cam.stream) cam.stream.getTracks().forEach(t => t.stop());
+  cam.ov.remove(); document.body.classList.remove('noscroll');
+  if (S.ui.tab === 'scan') render();
+}
+// Decode a still photo. It is drawn into a canvas on this phone and never uploaded.
+async function bcFromPhoto(file) {
+  if (!file) return;
+  bc.loading = true; bc.error = ''; bc.note = ''; render();
+  try {
+    const det = await barcodeDetector();
+    const bmp = await createImageBitmap(file);
+    const s = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas'); c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height); if (bmp.close) bmp.close();
+    const codes = (await det.detect(c)).map(x => String(x.rawValue || '')).filter(validBarcode);
+    bc.loading = false;
+    if (!codes.length) bc.note = 'No barcode found in that photo. Get close so the barcode fills most of the picture, or type the number.';
+    else [...new Set(codes)].forEach(bcAdd);
+  } catch (e) {
+    bc.loading = false;
+    bc.error = e && e.message === 'download' ? 'Couldn’t download the free barcode reader. Check your connection, or type the number.' : 'Couldn’t read that photo. Try again or type the number.';
+  }
+  render();
+}
+function bcReview() {
+  const named = bc.list.filter(x => x.name.trim());
+  if (!named.length) return toast(bc.list.length ? 'Type a name for the items first' : 'Scan a barcode first');
+  scan.items = named.map(x => {
+    const category = CATEGORIES.includes(x.category) && x.category !== 'Other' ? x.category : guessCategory(x.name);
+    return { on: true, name: x.name.trim(), qty: Math.round((Number(x.qty) || 1) * x.count * 100) / 100, unit: x.unit, category, days: SHELF[category], note: x.brand ? 'Scanned: ' + x.brand : '' };
+  });
+  scan.partial = false; scan.source = 'barcode'; bc.list = []; bc.note = ''; bc.error = ''; render();
+}
+function viewBarcode() {
+  const rows = bc.list.map((x, i) => `<div class="li bc-row">
+      <span class="ic" aria-hidden="true">${x.status === 'looking' ? '⏳' : x.status === 'found' ? (CAT_ICON[x.category] || '📦') : '❓'}</span>
+      <div class="grow">${x.status === 'found' ? `<div class="li-title">${esc(x.name)}${x.count > 1 ? ` <span class="muted">×${x.count}</span>` : ''}</div><div class="tiny muted">${esc([x.brand, fmtAmount(x.qty, x.unit)].filter(Boolean).join(' · '))}</div>`
+        : x.status === 'looking' ? `<div class="li-title muted">Looking up…</div><div class="tiny muted">${esc(x.code)}</div>`
+          : `<input class="input" data-bc="${i}" value="${esc(x.name)}" placeholder="What is it?" aria-label="Name for barcode ${esc(x.code)}"><div class="tiny muted" style="margin-top:4px">${x.status === 'error' ? 'Couldn’t look it up' : 'Not in the database'} · ${esc(x.code)}</div>`}</div>
+      <button class="icon-btn" style="min-width:36px;height:36px" data-act="bcRemove" data-i="${i}" aria-label="Remove">✕</button></div>`).join('');
+  const busy = bc.list.some(x => x.status === 'looking');
+  return `<div class="scan-btns">
+      <button class="scan-btn" data-act="bcCamera"><span class="ic">▦</span>Scan with camera</button>
+      <button class="scan-btn" data-act="bcPhoto"><span class="ic">📷</span>Take photo</button></div>
+    <form class="row" data-form="bcCode" style="margin-bottom:8px"><input class="input grow" name="code" inputmode="numeric" autocomplete="off" placeholder="Or type the barcode number" aria-label="Barcode number" maxlength="14"><button class="btn btn-soft" type="submit">Look up</button></form>
+    <p class="tiny muted" style="margin-bottom:14px">🔒 Free, no AI. The camera picture stays on this phone. Only the barcode number is looked up on Open Food Facts, a free food database.</p>
+    ${bc.loading ? `<div class="note" style="margin-bottom:12px">Reading the barcode…</div>` : ''}
+    ${bc.error ? `<div class="note danger" style="margin-bottom:12px">${esc(bc.error)}</div>` : ''}
+    ${bc.note ? `<div class="note warn" style="margin-bottom:12px">${esc(bc.note)}</div>` : ''}
+    ${bc.list.length ? `<div class="section-h"><h2>Scanned<span class="count">${bc.list.length}</span></h2></div><div class="list">${rows}</div>
+      <button class="btn btn-primary btn-block" data-act="bcReview" ${busy ? 'disabled' : ''}>Review ${bc.list.length} item${bc.list.length === 1 ? '' : 's'}</button>`
+      : `<p class="small muted" style="text-align:center">Scan packaged food one item after another, then review them all at once.</p>`}`;
+}
+
+/* ---- receipt OCR ---- */
+// Common US grocery receipt abbreviations, applied word by word before parsing. '' drops a store-brand prefix.
+const RECEIPT_ABBR = {
+  GV: '', KS: '', MM: '', KRO: '', KRGR: '', PRVT: '', SEL: '', MKTSD: '', SMPL: '', TRTH: '',
+  ORG: 'organic', ORGNC: 'organic', WHL: 'whole', MLK: 'milk', SKM: 'skim', BNLS: 'boneless', SKNLS: 'skinless',
+  CHKN: 'chicken', CHK: 'chicken', CKN: 'chicken', BRST: 'breast', BRS: 'breast', THGH: 'thighs', THGHS: 'thighs', GRD: 'ground', GRND: 'ground',
+  BF: 'beef', STK: 'steak', TRKY: 'turkey', TKY: 'turkey', PRK: 'pork', BCN: 'bacon', SSG: 'sausage', SAUS: 'sausage', SLMN: 'salmon', SHRMP: 'shrimp',
+  BNNA: 'bananas', BNNAS: 'bananas', YGRT: 'yogurt', YOG: 'yogurt', YGT: 'yogurt', GRK: 'greek', CHS: 'cheese', CHSE: 'cheese',
+  SHRD: 'shredded', CHDR: 'cheddar', CHED: 'cheddar', MOZZ: 'mozzarella', PARM: 'parmesan', BTR: 'butter', UNSLT: 'unsalted', CRM: 'cream', SR: 'sour', HVY: 'heavy',
+  LG: 'large', LRG: 'large', DZ: '12 ct', GAL: '1 gal', BRD: 'bread', WHT: 'white', TORT: 'tortillas', TORTL: 'tortillas',
+  APPL: 'apples', APLS: 'apples', STRWB: 'strawberries', STRWBRY: 'strawberries', BLUBRY: 'blueberries', BLBRY: 'blueberries', RASP: 'raspberries', GRPS: 'grapes',
+  AVO: 'avocado', AVOC: 'avocado', TOM: 'tomatoes', TOMS: 'tomatoes', TMTO: 'tomato', POTS: 'potatoes', ONN: 'onions', ONIO: 'onion', YEL: 'yellow', GRN: 'green',
+  PEPR: 'pepper', PEPP: 'pepper', LETT: 'lettuce', ROMN: 'romaine', SPNCH: 'spinach', BROC: 'broccoli', CRRT: 'carrots', CRTS: 'carrots', CUKE: 'cucumber', CELRY: 'celery',
+  MSHRM: 'mushrooms', GRLC: 'garlic', LMN: 'lemons', LMNS: 'lemons', OJ: 'orange juice', JCE: 'juice', ORNG: 'orange', PNT: 'peanut', PNUT: 'peanut', PB: 'peanut butter',
+  SPGTI: 'spaghetti', SPAG: 'spaghetti', SCE: 'sauce', MRNRA: 'marinara', CRL: 'cereal', RCE: 'rice', BRWN: 'brown', BLK: 'black', BNS: 'beans', FRZ: 'frozen', FRZN: 'frozen',
+  VEG: 'vegetable', VEGS: 'vegetables', BRTH: 'broth', WTR: 'water', COFF: 'coffee', SGR: 'sugar', FLR: 'flour', AP: 'all purpose', OLV: 'olive', EVOO: 'extra virgin olive oil',
+  VNLA: 'vanilla', VAN: 'vanilla', CRMY: 'creamy', CHOC: 'chocolate', CHPS: 'chips', CRKR: 'crackers', HNY: 'honey', KTCHP: 'ketchup', MSTRD: 'mustard', SLSA: 'salsa', ALMND: 'almond', ALM: 'almond'
+};
+// Receipt lines that are never items (register, payment and store lines). Totals, tax, cards, dates and addresses are
+// also dropped by the order parser itself.
+const RECEIPT_JUNK = /^(sub\s*-?total|total|tax|change( due)?|cash( tend| back)?|tend(er)?|balance|bal|amount|items? sold|# ?items|ref|aid|auth\w*|appr\w*|terminal|term|pin|signature|cashier|store|mgr|manager|survey|feedback|thank|save money|live better|you saved|total savings|savings|coupons?|supercenter|fuel|points|annual|acct|account|network|seq|validation|invoice|receipt|low prices|welcome|customer|returns?)\b|\b(tc|tr|st|op|te|ts)\s?#|\bsc\b.*\b(savings|kroger|plus)\b/i;
+const RECEIPT_AFTER_STORES = /walmart|wal-mart|save money\.? live better/i;
+const RECEIPT_BEFORE_STORES = /king soopers|kroger|fred meyer|ralphs|smith'?s food|fry'?s food|dillons|qfc|harris teeter/i;
+// Turns OCR'd receipt text into lines the order parser understands: prices get a "$", product codes go, quantity
+// lines sit after their item, abbreviations are spelled out. Exposed for tests.
+function receiptToOrderText(text) {
+  const raw = String(text || '');
+  const before = !RECEIPT_AFTER_STORES.test(raw) && RECEIPT_BEFORE_STORES.test(raw);
+  const out = []; let held = null;
+  for (let l of raw.split(/\r?\n/)) {
+    l = l.replace(/[|_~`¢©®]/g, ' ').replace(/\s+/g, ' ').trim().replace(/^[^a-z0-9]+/i, '');
+    if (!l) continue;
+    if (RECEIPT_JUNK.test(l)) continue;
+    if (/(\d\s?[.,]\s?\d{2}\s?-\s*[a-z]{0,2}\s*$)|(^|\s)-\s?\$?\d+\s?[.,]\s?\d{2}\b/i.test(l)) continue;   // discounts and savings
+    let m;
+    // "0.82 lb @ 1.99 /lb", "1.32 lb @ 1 lb /0.58" (weight) and "2 @ 1.25", "2 AT 1 FOR 1.25" (count): quantity lines
+    if ((m = l.match(/^(\d+[.,]\d+|\d+)\s*(lbs?|kg|oz)\s*@/i)) || (m = l.match(/^(\d{1,2})\s*(?:@|at\b)\s*(?:1\s*for\s*)?\$?\s*\d+\s?[.,]\s?\d{2}/i))) {
+      const q = m[2] ? `${m[1].replace(',', '.')} ${m[2].toLowerCase().replace(/s$/, '')} @ $0.00` : `${m[1]} @ $0.00`;
+      if (before) held = q; else out.push(q);
+      continue;
+    }
+    l = l.replace(/\s\$?(\d{1,4})\s?[.,]\s?(\d{2})\s*(?:[a-z]{1,2}|\*)?\s*$/i, ' $$$1.$2');  // trailing price (+ tax flag)
+    const name = l.replace(/\s\$\d+\.\d{2}$/, ''), price = l.slice(name.length);
+    const words = name.split(' ')
+      .filter(w => !/^[a-z]$/i.test(w) && !(/^[\dOoIl]{6,14}[a-z]{0,2}$/i.test(w) && (w.match(/\d/g) || []).length >= 5))   // tax flags, UPC/PLU codes (OCR may read 0 as O)
+      .map(w => { const k = w.toUpperCase().replace(/[^A-Z0-9%]/g, ''); return Object.prototype.hasOwnProperty.call(RECEIPT_ABBR, k) ? RECEIPT_ABBR[k] : w; });
+    l = (words.join(' ').replace(/\s+/g, ' ').trim() + price).trim();
+    if (!/[a-z]{2}/i.test(l)) continue;
+    out.push(l);
+    if (held) { out.push(held); held = null; }
+  }
+  return out.join('\n');
+}
+const ocr = { msg: '', pct: 0, few: false, found: null };   // memory only; the OCR text itself is never kept
+function ocrProgress(msg, pct) {
+  if (msg != null) ocr.msg = msg; if (pct != null) ocr.pct = clamp(Math.round(pct), 0, 100);
+  const m = $('#ocr-msg'), b = $('#ocr-bar'); if (m) m.textContent = ocr.msg; if (b) b.style.width = ocr.pct + '%';
+}
+async function readReceiptOnDevice() {
+  if (!scan.images.length || scan.busy) return;
+  scan.busy = true; scan.mode = 'ocr'; scan.error = ''; scan.errorCode = ''; ocr.few = false; ocr.found = null; ocr.msg = 'Getting the free reader ready…'; ocr.pct = 0; render();
+  let worker = null;
+  try {
+    try { await loadScript(LIBS.ocr.src, LIBS.ocr.integrity); } catch (e) { throw new Error('download'); }
+    const T = window.Tesseract; if (!T || !T.createWorker) throw new Error('download');
+    const n = scan.images.length; let page = 0;
+    ocrProgress('Getting the free reader ready (first time only, about 5 MB)…', 2);
+    worker = await T.createWorker('eng', 1, {
+      workerPath: LIBS.ocr.workerPath, corePath: LIBS.ocr.corePath, langPath: LIBS.ocr.langPath,
+      logger: m => { if (m && m.status === 'recognizing text') ocrProgress(`Reading photo ${page + 1} of ${n}…`, 10 + 90 * (page + (Number(m.progress) || 0)) / n); }
+    }).catch(() => { throw new Error('download'); });
+    if (worker.setParameters) await worker.setParameters({ tessedit_pageseg_mode: '4', preserve_interword_spaces: '1' }).catch(() => { });
+    let text = '';
+    for (; page < n; page++) {
+      ocrProgress(`Reading photo ${page + 1} of ${n}…`, 10 + 90 * page / n);
+      const { data } = await worker.recognize(ocrBig.get(scan.images[page]) || scan.images[page]);
+      text += (data && data.text || '') + '\n';
+    }
+    const items = parseOrderText(receiptToOrderText(text)); text = '';
+    const sure = items.filter(x => !x.maybe).length;
+    const rows = items.map(x => ({ on: !x.maybe, name: x.name, qty: x.qty, unit: x.unit, category: x.category, days: SHELF[x.category], note: x.maybe ? 'Not sure this is food, so it’s unchecked. Check it to add it.' : '' }));
+    if (sure >= 2) { scan.items = rows; scan.partial = false; scan.source = 'ocr'; }
+    else { ocr.few = true; ocr.found = rows; }
+  } catch (e) {
+    scan.error = e && e.message === 'download' ? 'Couldn’t download the free receipt reader. Check your connection and try again.' : 'Couldn’t read that photo. Try a flatter, brighter photo.';
+    scan.errorCode = 'ocr';
+  } finally { if (worker && worker.terminate) worker.terminate().catch(() => { }); }
+  scan.busy = false; scan.mode = '';
+  if (S.ui.tab === 'scan') render(); else if (scan.items) toast('Receipt ready to review');
 }
 
 /* ---------- Amazon ---------- */
@@ -1123,13 +1432,18 @@ function itemSheet() {
 
 /* ---- scan ---- */
 function viewScan() {
-  const types = [['receipt', '🧾', 'Receipt'], ['fridge', '🧊', 'Fridge'], ['pantry', '🥫', 'Pantry'], ['freezer', '❄️', 'Freezer'], ['paste', '📋', 'Paste order']];
-  const head = `<header class="top"><div><p class="eyebrow">AI scanner</p><h1>Scan</h1></div></header>`;
+  const free = onDevice();
+  // Free (on-phone) types first, so the second row is the AI-only photo types.
+  const types = free ? [['receipt', '🧾', 'Receipt'], ['barcode', '▦', 'Barcode'], ['paste', '📋', 'Paste order'], ['fridge', '🧊', 'Fridge'], ['pantry', '🥫', 'Pantry'], ['freezer', '❄️', 'Freezer']]
+    : [['receipt', '🧾', 'Receipt'], ['fridge', '🧊', 'Fridge'], ['pantry', '🥫', 'Pantry'], ['freezer', '❄️', 'Freezer'], ['paste', '📋', 'Paste order']];
+  const head = `<header class="top"><div><p class="eyebrow">${free ? 'Scanner' : 'AI scanner'}</p><h1>Scan</h1></div></header>`;
+  if (scan.busy && scan.mode === 'ocr') return head + `<div class="loading"><div class="spinner"></div><b>Reading your receipt on this phone…</b>
+    <p class="small" id="ocr-msg">${esc(ocr.msg)}</p><div class="ocr-track" aria-hidden="true"><span id="ocr-bar" style="width:${ocr.pct}%"></span></div><p class="tiny">Free. The photo isn’t uploaded.</p></div>`;
   if (scan.busy) return head + `<div class="loading"><div class="spinner"></div><b>Reading your ${scan.type === 'paste' ? 'order' : scan.type}…</b><p class="small">This usually takes 10–20 seconds.</p></div>`;
   if (scan.items) {
     const on = scan.items.filter(i => i.on).length;
     return head + `<div class="row" style="justify-content:space-between;margin-bottom:12px"><h2>Review ${scan.items.length} item${scan.items.length === 1 ? '' : 's'}</h2><button class="btn btn-ghost btn-sm" data-act="scanToggleAll">${on === scan.items.length ? 'Uncheck all' : 'Check all'}</button></div>
-      <p class="small muted" style="margin-bottom:12px">${scan.source === 'paste' ? 'Check the names and amounts, uncheck what you don’t want, then add.' : 'Fix anything the AI got wrong, uncheck what you don’t want, then add.'}</p>
+      <p class="small muted" style="margin-bottom:12px">${scan.source === 'photo' ? 'Fix anything the AI got wrong, uncheck what you don’t want, then add.' : scan.source === 'ocr' ? 'Receipts are hard to read, so check the names and amounts, uncheck what you don’t want, then add.' : 'Check the names and amounts, uncheck what you don’t want, then add.'}</p>
       ${scan.partial ? `<div class="note danger" style="margin-bottom:12px">The AI reply was cut off, so some items may be missing. Add these, then scan the rest with fewer photos at a time.</div>` : ''}
       ${hasAllergies() ? allergyNote('margin:-6px 0 12px') : ''}
       ${scan.items.map((it, i) => `<div class="review-item ${it.on ? '' : 'off'}">
@@ -1146,7 +1460,15 @@ function viewScan() {
         <button class="btn btn-primary btn-block" data-act="scanAdd">Add ${on} item${on === 1 ? '' : 's'} to pantry</button>
         <button class="btn btn-ghost btn-block" data-act="scanDiscard">Discard</button></div></div>`;
   }
-  const seg = `<div class="seg scan-types">${types.map(([k, ic, l]) => `<button class="${scan.type === k ? 'on' : ''}" data-act="scanType" data-v="${k}">${ic} ${l}</button>`).join('')}</div>`;
+  const seg = `<div class="seg scan-types${free ? ' six' : ''}">${types.map(([k, ic, l]) => `<button class="${scan.type === k ? 'on' : ''}" data-act="scanType" data-v="${k}">${ic} ${l}</button>`).join('')}</div>`;
+  if (free && scan.type === 'barcode') return head + seg + viewBarcode();
+  const ocrReceipt = free && scan.type === 'receipt', loose = ['fridge', 'pantry', 'freezer'].includes(scan.type);
+  // Loose food in a fridge or cupboard can't be recognized reliably on the phone, so those stay on AI.
+  if (free && loose && !canSeeImages()) return head + seg + `<div class="note warn"><b>Fridge, pantry and freezer photos need AI</b> to recognize loose food. These are free and work on your phone:
+      <div class="stack" style="margin-top:10px"><button class="btn btn-soft btn-block" data-act="scanType" data-v="barcode">▦ Scan barcodes on packages</button>
+      <button class="btn btn-soft btn-block" data-act="scanType" data-v="receipt">🧾 Read a store receipt</button>
+      <button class="btn btn-soft btn-block" data-act="scanType" data-v="paste">📋 Paste an online order</button></div>
+      <p class="small" style="margin-top:10px">Or add items by hand in Pantry, or <button class="linklike" data-act="goto" data-tab="settings">add your own AI key</button>.</p></div>`;
   if (scan.type === 'paste') return head + seg + `<div class="field"><label for="paste-text">Copy your Amazon, Instacart or Walmart order email or order page and paste it here</label>
       <textarea id="paste-text" class="input paste-box" placeholder="Paste your order here" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea></div>
     <button class="btn btn-primary btn-block" data-act="readPaste">Read items</button>
@@ -1154,14 +1476,20 @@ function viewScan() {
     ${paste.empty ? `<div class="note warn" style="margin-top:14px"><b>Couldn’t find food items in that text.</b> Try copying just the part with the items, or add them by hand in Pantry.
       ${paste.text && canSeeImages() ? `<br><button class="btn btn-sm btn-soft" data-act="pasteAI" style="margin-top:8px">Read it with AI (text only)</button>` : ''}</div>` : ''}
     ${scan.error ? `<div style="margin-top:14px">${aiErrorHtml(scan.error, scan.errorCode)}</div>` : ''}`;
-  return head + `<div class="seg scan-types">${types.map(([k, ic, l]) => `<button class="${scan.type === k ? 'on' : ''}" data-act="scanType" data-v="${k}">${ic} ${l}</button>`).join('')}</div>
+  return head + seg + `
     <div class="scan-btns">
       <button class="scan-btn" data-act="pickCam"><span class="ic">📷</span>Take photo</button>
       <button class="scan-btn" data-act="pickGal"><span class="ic">🖼️</span>Choose from gallery</button></div>
     ${scan.images.length ? `<div class="thumbs">${scan.images.map((src, i) => `<div class="thumb"><img src="${src}" alt="Photo ${i + 1}"><button data-act="rmImg" data-i="${i}" aria-label="Remove">✕</button></div>`).join('')}</div>
-      <button class="btn btn-primary btn-block" data-act="analyze">Analyze ${scan.images.length} photo${scan.images.length === 1 ? '' : 's'}</button>` : `<p class="small muted" style="text-align:center">${scan.type === 'receipt' ? 'Flatten the receipt and get every line in frame. Long receipts? Add a few photos.' : 'Open the door wide, use good light, and take one photo per shelf if it’s crowded.'}</p>`}
-    ${scan.error ? `<div style="margin-top:14px">${aiErrorHtml(scan.error, scan.errorCode)}</div>` : ''}
-    ${!canSeeImages() ? `<div class="note warn" style="margin-top:14px">Photo scanning needs AI. Add your own Anthropic key to turn it on — or add items by hand in Pantry. <button class="btn btn-sm btn-soft" data-act="goto" data-tab="settings" style="margin-top:8px">Add my key</button></div>` : ''}`;
+      ${ocrReceipt ? `<button class="btn btn-primary btn-block" data-act="ocrRead">Read receipt (free, on your phone)</button>
+      <p class="tiny muted" style="margin-top:8px">🔒 Free, no AI. The photo is read on this phone and never uploaded. The first time downloads the free reader (about 5 MB).</p>`
+        : `<button class="btn btn-primary btn-block" data-act="analyze">Analyze ${scan.images.length} photo${scan.images.length === 1 ? '' : 's'}</button>`}` : `<p class="small muted" style="text-align:center">${scan.type === 'receipt' ? 'Flatten the receipt and get every line in frame. Long receipts? Add a few photos.' : 'Open the door wide, use good light, and take one photo per shelf if it’s crowded.'}</p>`}
+    ${ocrReceipt && ocr.few && !scan.error ? `<div class="note warn" style="margin-top:14px">${canSeeImages() ? '<b>Couldn’t read much from that photo.</b> The AI scan reads receipts better.' : 'Couldn’t read much. Try a flatter, brighter photo, or add items by hand.'}
+      ${canSeeImages() ? `<br><button class="btn btn-sm btn-soft" data-act="analyze" style="margin-top:8px">Try the AI scan</button>` : ''}
+      ${ocr.found && ocr.found.length ? `<br><button class="btn btn-sm btn-ghost" data-act="ocrReview" style="margin-top:8px">Review the ${ocr.found.length} item${ocr.found.length === 1 ? '' : 's'} it found</button>` : ''}</div>` : ''}
+    ${scan.error && scan.errorCode === 'ocr' ? `<div class="note danger" style="margin-top:14px">${esc(scan.error)}${canSeeImages() ? `<br><button class="btn btn-sm btn-soft" data-act="analyze" style="margin-top:8px">Try the AI scan</button>` : ''}</div>` : ''}
+    ${scan.error && scan.errorCode !== 'ocr' ? `<div style="margin-top:14px">${aiErrorHtml(scan.error, scan.errorCode)}</div>` : ''}
+    ${!canSeeImages() && !ocrReceipt ? `<div class="note warn" style="margin-top:14px">Photo scanning needs AI. Add your own Anthropic key to turn it on — or add items by hand in Pantry. <button class="btn btn-sm btn-soft" data-act="goto" data-tab="settings" style="margin-top:8px">Add my key</button></div>` : ''}`;
 }
 
 /* ---- shop ---- */
@@ -1466,7 +1794,7 @@ function render() {
   const cartN = S.cart.length + S.shopping.filter(i => !i.done).length;
   const badge = $('#shop-badge'); if (badge) { badge.textContent = cartN; badge.hidden = !cartN; }
 }
-function goto(tab) { S.ui.tab = tab; persist(); render(); window.scrollTo(0, 0); }
+function goto(tab) { if (tab !== 'scan') bcCamClose(); S.ui.tab = tab; persist(); render(); window.scrollTo(0, 0); }
 
 async function checkHealth(silent) {
   const b = backend(); if (!b) { health = null; return; }
@@ -1568,7 +1896,9 @@ async function addFiles(files) {
   const list = [...(files || [])].filter(f => f.type.startsWith('image/') || /\.(heic|heif)$/i.test(f.name)).slice(0, 6 - scan.images.length);
   if (!list.length) { if ((files || []).length) toast('Up to 6 photos per scan'); return; }
   scan.error = '';
-  for (const f of list) { try { scan.images.push(await fileToJpeg(f)); } catch (e) { scan.error = e.message; } }
+  for (const f of list) {
+    try { const img = await fileToJpeg(f); scan.images.push(img); if (onDevice() && scan.type === 'receipt') ocrBig.set(img, await fileToJpeg(f, 'ocr')); } catch (e) { scan.error = e.message; }
+  }
   render();
 }
 function itemsFromMissing(r, servings, only) {
@@ -1672,7 +2002,14 @@ const ACT = {
   cartOpened: () => { arrival.left = true; recordPending(cartDraft.items.filter(i => i.on && i.asin)); toast('Opening Amazon… tap “Mark as bought” in Shop after checkout'); render(); setTimeout(drawSheet, 50); },
   searchOpened: el => { arrival.left = true; const it = cartDraft.items.find(i => i.key === el.dataset.key); if (it) recordPending([it]); render(); },
 
-  scanType: el => { scan.type = el.dataset.v; paste.empty = false; paste.text = ''; scan.error = ''; render(); },
+  scanType: el => { scan.type = el.dataset.v; paste.empty = false; paste.text = ''; scan.error = ''; ocr.few = false; ocr.found = null; render(); },
+  bcCamera: () => bcCamOpen(),
+  bcCamClose: () => bcCamClose(),
+  bcPhoto: () => $('#bc-photo').click(),
+  bcRemove: el => { bc.list.splice(Number(el.dataset.i), 1); render(); },
+  bcReview: () => bcReview(),
+  ocrRead: () => readReceiptOnDevice(),
+  ocrReview: () => { if (!ocr.found || !ocr.found.length) return; scan.items = ocr.found; scan.partial = false; scan.source = 'ocr'; ocr.found = null; ocr.few = false; render(); },
   readPaste: () => {
     const ta = $('#paste-text'), raw = ta ? ta.value : ''; if (ta) ta.value = '';   // the raw text is never kept
     if (!raw.trim()) return toast('Paste your order text first');
@@ -1684,15 +2021,17 @@ const ACT = {
   pasteAI: () => readPasteWithAI(),
   pickCam: () => $('#cam').click(),
   pickGal: () => $('#gal').click(),
-  rmImg: el => { scan.images.splice(Number(el.dataset.i), 1); render(); },
-  analyze: () => analyzeScan(),
+  rmImg: el => { ocrBig.delete(scan.images.splice(Number(el.dataset.i), 1)[0]); ocr.few = false; ocr.found = null; render(); },
+  analyze: () => { ocr.few = false; ocr.found = null; analyzeScan(); },
   scanToggleAll: () => { const all = scan.items.every(i => i.on); scan.items.forEach(i => i.on = !all); render(); },
   scanAdd: () => {
     const added = scan.items.filter(i => i.on), fromPaste = scan.source === 'paste';
-    const n = addToInventory(added); scan.items = null; scan.images = []; scan.source = '';
+    const fromPhotoAI = scan.source === 'photo';
+    const n = addToInventory(added); scan.items = null; scan.images = []; ocrBig.clear(); scan.source = '';
     // A pasted order is proof those pending Amazon items arrived, so "Did your order arrive?" won't ask about them.
     if (fromPaste) { S.cart = S.cart.filter(c => !added.some(i => nameMatch(i.name, c.name))); persist(); }
-    if (!fromPaste && S.settings.autoGen && aiMode() !== 'none') { online.items = null; S.ui.cookView = 'feed'; goto('cook'); toast(`Added ${n} item${n === 1 ? '' : 's'} · finding recipes…`); generateRecipes(true); }
+    // Only an AI photo scan goes on to AI recipes; the free scans (paste, barcode, receipt on the phone) never call AI.
+    if (fromPhotoAI && S.settings.autoGen && aiMode() !== 'none') { online.items = null; S.ui.cookView = 'feed'; goto('cook'); toast(`Added ${n} item${n === 1 ? '' : 's'} · finding recipes…`); generateRecipes(true); }
     else { toast(`Added ${n} item${n === 1 ? '' : 's'} to your pantry`); goto('pantry'); }
   },
   scanDiscard: () => { scan.items = null; scan.source = ''; render(); },
@@ -1799,6 +2138,7 @@ document.addEventListener('click', e => {
   fn(el, e);
 });
 document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && bc.cam) return bcCamClose();
   if (e.key === 'Escape' && sheet) closeSheet();
   if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.item[data-act]')) { e.preventDefault(); e.target.click(); }
 });
@@ -1807,6 +2147,7 @@ document.addEventListener('input', e => {
   if (ds.live === 'libq') { lib.q = el.value; $('#lib-results').innerHTML = libraryResults(); return; }
   if (ds.live === 'catq') { catQ = el.value; const q = norm(catQ); $('#cat-list').innerHTML = catalogList(S.catalog.filter(c => !q || norm(c.name).includes(q) || norm(c.cat).includes(q))); return; }
   if (ds.scan != null && ds.f !== 'on' && scan.items) { const it = scan.items[Number(ds.scan)]; if (it) it[ds.f] = el.value; return; }
+  if (ds.bc != null) { const x = bc.list[Number(ds.bc)]; if (x) x.name = el.value.slice(0, 60); return; }
   if (ds.draft && itemDraft) {
     itemDraft[ds.draft] = el.value;
     if (ds.draft === 'name' && !itemDraft.id && !itemDraft._catTouched) {
@@ -1833,6 +2174,7 @@ document.addEventListener('change', e => {
   if (ds.share && shareDraft) { shareDraft[ds.share] = el.value; return; }
   if (ds.plan && planDraft) { if (/^\d{4}-\d{2}-\d{2}$/.test(el.value)) planDraft.start = el.value < todayISO() ? todayISO() : el.value; drawSheet(); return; }
   if (el.id === 'cam' || el.id === 'gal') { addFiles(el.files); el.value = ''; return; }
+  if (el.id === 'bc-photo') { const f = el.files[0]; el.value = ''; bcFromPhoto(f); return; }
   if (el.id === 'import') {
     const f = el.files[0]; el.value = ''; if (!f) return;
     f.text().then(t => { const data = JSON.parse(t); if (!data || !Array.isArray(data.inventory)) throw new Error(); const { userKey, admin, backendUrl, appToken, tag } = S.settings; const keep = { userKey, admin, backendUrl, appToken, tag }; S = hydrate(sanitizeBackup(data)); Object.assign(S.settings, keep); persist(); render(); toast('Backup restored'); }).catch(() => toast('That file isn’t a Pantry Pal backup'));
@@ -1840,7 +2182,7 @@ document.addEventListener('change', e => {
 });
 // Coming back to the app (e.g. from an Amazon tab): refresh the "did your order arrive?" card.
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState !== 'visible') return;
+  if (document.visibilityState !== 'visible') { bcCamClose(); return; }   // release the camera when the app is hidden
   if (arrival.left) { arrival.left = false; arrival.soft = true; }
   if (S.onboarded && ['cook', 'pantry'].includes(S.ui.tab)) render();
 });
@@ -1848,6 +2190,7 @@ document.addEventListener('toggle', e => { const el = e.target; if (el.dataset &
 document.addEventListener('submit', e => {
   const form = e.target.closest('[data-form]'); if (!form) return; e.preventDefault();
   const kind = form.dataset.form; const inp = form.querySelector('input'); const v = inp.value.trim(); if (!v) return;
+  if (kind === 'bcCode') { const code = v.replace(/\D/g, ''); if (!validBarcode(code)) return toast('That doesn’t look like a barcode number. Check the digits under the bars.'); inp.value = ''; bc.note = ''; bcAdd(code); return; }
   if (kind === 'slAdd') { const p = parseIng(v); const hasNum = /^[\d.\/]/.test(v); S.shopping.push({ id: uid(), name: hasNum && p ? p.name : v, need: hasNum && p ? fmtAmount(p.qty, p.unit) : '', amount: hasNum && p ? p.qty : 1, unit: hasNum && p ? p.unit : '', done: false }); persist(); render(); $('[data-form="slAdd"] input')?.focus(); return; }
   if (kind === 'mCustom' && memberDraft) { if (!memberDraft.custom.some(t => norm(t) === norm(v))) memberDraft.custom.push(v.slice(0, 40)); drawSheet(); return; }
   if (kind === 'obCustom') { if (!ob.custom.some(t => norm(t) === norm(v))) ob.custom.push(v.slice(0, 40)); renderOnboard(); return; }

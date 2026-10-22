@@ -257,4 +257,17 @@ details.filters[open] summary::after{transform:rotate(180deg)}
 /* scan types: four photo types, then "Paste order" on its own row */
 .seg.scan-types{display:grid;grid-template-columns:repeat(4,1fr)}
 .seg.scan-types button:last-child{grid-column:1/-1}
+/* with free on-phone scanning: 3 + 3 (Receipt, Barcode, Paste order / Fridge, Pantry, Freezer) */
+.seg.scan-types.six{grid-template-columns:repeat(3,1fr)}
+.seg.scan-types.six button:last-child{grid-column:auto}
+.seg.scan-types.six button{padding:9px 2px;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ocr-track{width:min(260px,80%);height:8px;border-radius:99px;background:var(--surface-2);overflow:hidden}
+.ocr-track span{display:block;height:100%;background:var(--brand);transition:width .3s}
+.linklike{border:0;background:none;padding:0;color:inherit;font:inherit;text-decoration:underline;cursor:pointer}
+.bc-row .input{padding:8px 10px}
+#bc-cam{position:fixed;inset:0;z-index:85;background:#000;display:flex;flex-direction:column}
+#bc-cam video{flex:1;width:100%;min-height:0;object-fit:cover}
+#bc-cam .bc-frame{position:absolute;left:10%;right:10%;top:30%;height:22%;border:3px solid #fff;border-radius:14px;box-shadow:0 0 0 100vmax rgba(0,0,0,.35);pointer-events:none}
+#bc-cam .bc-cam-bar{position:relative;z-index:1;background:var(--surface);color:var(--ink);padding:14px 16px calc(14px + env(safe-area-inset-bottom))}
+#bc-cam #bc-cam-msg{margin-bottom:10px;font-weight:600;min-height:1.4em}
 .paste-box{min-height:170px;font-size:15px}
