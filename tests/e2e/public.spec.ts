@@ -71,3 +71,9 @@ test("webhooks reject unsigned requests", async ({ request }) => {
   const checkr = await request.post("/api/checks/webhook", { data: "{}" });
   expect(checkr.status()).toBe(401);
 });
+
+test("search never shows raw coordinates from 'use my location'", async ({ page }) => {
+  await page.goto("/search?loc=39.7392,-104.9903");
+  await expect(page.getByText("Near your current location")).toBeVisible();
+  await expect(page.locator("main")).not.toContainText("39.7392");
+});

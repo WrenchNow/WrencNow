@@ -21,6 +21,14 @@ function fee() {
   }
 }
 
+function keepPercent(): string | null {
+  try {
+    return `${100 - platformFeeBps() / 100}%`;
+  } catch {
+    return null;
+  }
+}
+
 const REQUIREMENTS = [
   "Valid driver's license",
   "Your own tools and a way to get to customers",
@@ -32,8 +40,12 @@ const REQUIREMENTS = [
 
 export default function ForMechanicsPage() {
   const f = fee();
+  const keep = keepPercent();
   const benefits = [
-    { title: "Keep more of what you earn", body: `You set your hourly rate. WrenchNow keeps a ${f} platform fee per completed job — no monthly fee to be listed.` },
+    {
+      title: keep ? `Keep ${keep} of every job` : "Keep more of what you earn",
+      body: `You set your hourly rate. WrenchNow keeps a ${f} platform fee per completed job and covers card processing — no monthly fee to be listed.`,
+    },
     { title: "You set the schedule", body: "Go online when you want work and offline when you don't. Accept the jobs you want." },
     { title: "Paid through the app", body: "Customers pay through WrenchNow. No invoicing, no chasing payments, no cash." },
     { title: "Start basic, grow from there", body: "Newer to the trade? Start with basic jobs and move up to certified work as you build experience." },
