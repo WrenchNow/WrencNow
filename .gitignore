@@ -1,7 +1,8 @@
 site/
-pantry-pal-worker/wrangler.toml
+wrangler.toml
 node_modules/
 .wrangler/
 .dev.vars
 .env
 .env.*
+.netlify/

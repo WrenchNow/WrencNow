@@ -1,0 +1,17 @@
+{
+  "name": "pantry-pal",
+  "private": true,
+  "description": "Pantry Pal: static app + recipe site + Netlify Functions backend",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node tests/run-all.mjs",
+    "test:functions": "node tests/worker-test.mjs",
+    "test:headers": "node tests/headers-test.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.132.1",
+    "@netlify/blobs": "11.1.3"
+  }
+}

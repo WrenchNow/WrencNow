@@ -12,7 +12,8 @@ import path from 'node:path';
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const APP_PATH = path.join(ROOT, 'pantry-pal.html');
 export const APP = pathToFileURL(APP_PATH).href;
-export const WORKER_SRC = path.join(ROOT, 'pantry-pal-worker', 'src', 'index.js');
+// The backend's request rules (validateClaudeBody, MAX_IMAGES, MAX_PROMPT_CHARS). Was the Cloudflare Worker; now Netlify Functions.
+export const WORKER_SRC = path.join(ROOT, 'netlify', 'lib', 'claude-rules.mjs');
 export const OUT = process.env.TEST_OUT || path.join(os.tmpdir(), 'pantry-pal-tests');
 fs.mkdirSync(OUT, { recursive: true });
 
