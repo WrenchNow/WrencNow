@@ -31,7 +31,7 @@ export default async function BookPage({ params, searchParams }: PageProps<"/boo
   return (
     <Container className="max-w-3xl py-10 sm:py-14">
       <PageHeader eyebrow="Book" title={`Book ${m.display_name ?? "a mechanic"}`}>
-        Three quick steps. You won&apos;t be charged until the job is done.
+        Four quick steps. You won&apos;t be charged until the job is done.
       </PageHeader>
       <BookingWizard
         mechanic={{ id: m.id, name: m.display_name ?? "your mechanic", rateCents: m.hourly_rate_cents ?? 0 }}
