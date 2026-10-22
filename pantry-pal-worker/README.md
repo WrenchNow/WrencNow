@@ -17,3 +17,5 @@ Change the free AI limits:  FREE_DAILY_PER_USER=10 FREE_DAILY_TOTAL=500 node dep
 (Cloudflare's free storage allows 1,000 writes a day; each free AI request uses 2 and each shared recipe uses 3
 (max 50 shares a day = 150), so keep FREE_DAILY_TOTAL under ~400 on the free plan. If the writes run out,
 free AI pauses until the next day instead of running uncapped.)
+
+CI / no-typing mode: `DEPLOY_NONINTERACTIVE=1` (or `CI=true`) signs in with `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID`, takes the key from `ANTHROPIC_API_KEY` (sent on stdin, never printed), sets `ALLOWED_ORIGIN` if given, deploys with `--keep-vars`, and stops with a clear error instead of waiting for input.
