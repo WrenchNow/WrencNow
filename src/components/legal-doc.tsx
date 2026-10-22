@@ -1,12 +1,5 @@
 import legal from "@/content/legal.json";
-import {
-  customerNoShowFeeCents,
-  platformFeeBps,
-  verificationFeeCents,
-  verificationRefundMinJobCents,
-  verificationRefundPerJobCents,
-  verificationRefundWaitDays,
-} from "@/lib/env";
+import { customerNoShowFeeCents, onboardingFeePerJobCents, onboardingFeeTotalCents, platformFeeBps } from "@/lib/env";
 import { money } from "@/lib/format";
 import { Container } from "./ui/layout";
 
@@ -38,11 +31,10 @@ function Blocks({ blocks }: { blocks: Block[] }) {
           <p key={i} className={`my-3 ${b.p!.endsWith(":") ? "font-semibold text-cream" : ""}`}>
             {b
               .p!.replace("{{PLATFORM_FEE_PERCENT}}", fee)
-              .replace("{{VERIFICATION_FEE}}", money(verificationFeeCents(), { whole: true }))
-              .replace("{{VERIFICATION_REFUND}}", money(verificationRefundPerJobCents(), { whole: true }))
+              .replace("{{ONBOARDING_TOTAL}}", money(onboardingFeeTotalCents(), { whole: true }))
+              .replace("{{ONBOARDING_PER_JOB}}", money(onboardingFeePerJobCents(), { whole: true }))
               .replace("{{CUSTOMER_NO_SHOW_FEE}}", money(customerNoShowFeeCents(), { whole: true }))
-              .replace("{{VERIFICATION_MIN_JOB}}", money(verificationRefundMinJobCents(), { whole: true }))
-              .replace("{{VERIFICATION_WAIT_DAYS}}", String(verificationRefundWaitDays()))}
+}
           </p>
         ),
       )}

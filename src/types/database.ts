@@ -86,7 +86,6 @@ export type Database = {
           cancel_reason: string | null;
           cancelled_at: string | null;
           cancelled_by: string | null;
-          card_fingerprint: string | null;
           completed_at: string | null;
           created_at: string;
           currency: string;
@@ -99,6 +98,7 @@ export type Database = {
           id: string;
           location: unknown;
           mechanic_id: string;
+          onboarding_fee_cents: number;
           payment_status: Database["public"]["Enums"]["payment_status"];
           platform_fee_cents: number | null;
           problem_description: string | null;
@@ -126,7 +126,6 @@ export type Database = {
           cancel_reason?: string | null;
           cancelled_at?: string | null;
           cancelled_by?: string | null;
-          card_fingerprint?: string | null;
           completed_at?: string | null;
           created_at?: string;
           currency?: string;
@@ -139,6 +138,7 @@ export type Database = {
           id?: string;
           location?: unknown;
           mechanic_id: string;
+          onboarding_fee_cents?: number;
           payment_status?: Database["public"]["Enums"]["payment_status"];
           platform_fee_cents?: number | null;
           problem_description?: string | null;
@@ -165,7 +165,6 @@ export type Database = {
           cancel_reason?: string | null;
           cancelled_at?: string | null;
           cancelled_by?: string | null;
-          card_fingerprint?: string | null;
           completed_at?: string | null;
           created_at?: string;
           currency?: string;
@@ -178,6 +177,7 @@ export type Database = {
           id?: string;
           location?: unknown;
           mechanic_id?: string;
+          onboarding_fee_cents?: number;
           payment_status?: Database["public"]["Enums"]["payment_status"];
           platform_fee_cents?: number | null;
           problem_description?: string | null;
@@ -341,6 +341,8 @@ export type Database = {
           is_live: boolean | null;
           location: unknown;
           no_show_count: number;
+          onboarding_fee_collected_cents: number;
+          onboarding_fee_total_cents: number;
           onboarding_submitted_at: string | null;
           online: boolean;
           photo_url: string | null;
@@ -356,12 +358,6 @@ export type Database = {
           stripe_payouts_enabled: boolean;
           stripe_subscription_id: string | null;
           updated_at: string;
-          verification_card_fingerprint: string | null;
-          verification_fee_status: Database["public"]["Enums"]["verification_fee_status"];
-          verification_paid_at: string | null;
-          verification_paid_cents: number;
-          verification_payment_intent_id: string | null;
-          verification_refunded_cents: number;
           years_experience: number | null;
         };
         ComputedFields: never;
@@ -393,6 +389,8 @@ export type Database = {
           is_live?: never;
           location?: unknown;
           no_show_count?: number;
+          onboarding_fee_collected_cents?: number;
+          onboarding_fee_total_cents?: number;
           onboarding_submitted_at?: string | null;
           online?: boolean;
           photo_url?: string | null;
@@ -408,12 +406,6 @@ export type Database = {
           stripe_payouts_enabled?: boolean;
           stripe_subscription_id?: string | null;
           updated_at?: string;
-          verification_card_fingerprint?: string | null;
-          verification_fee_status?: Database["public"]["Enums"]["verification_fee_status"];
-          verification_paid_at?: string | null;
-          verification_paid_cents?: number;
-          verification_payment_intent_id?: string | null;
-          verification_refunded_cents?: number;
           years_experience?: number | null;
         };
         Update: {
@@ -444,6 +436,8 @@ export type Database = {
           is_live?: never;
           location?: unknown;
           no_show_count?: number;
+          onboarding_fee_collected_cents?: number;
+          onboarding_fee_total_cents?: number;
           onboarding_submitted_at?: string | null;
           online?: boolean;
           photo_url?: string | null;
@@ -459,12 +453,6 @@ export type Database = {
           stripe_payouts_enabled?: boolean;
           stripe_subscription_id?: string | null;
           updated_at?: string;
-          verification_card_fingerprint?: string | null;
-          verification_fee_status?: Database["public"]["Enums"]["verification_fee_status"];
-          verification_paid_at?: string | null;
-          verification_paid_cents?: number;
-          verification_payment_intent_id?: string | null;
-          verification_refunded_cents?: number;
           years_experience?: number | null;
         };
         Relationships: [
@@ -523,6 +511,43 @@ export type Database = {
             columns: ["reported_by"];
             isOneToOne: false;
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      onboarding_fee_charges: {
+        Row: {
+          amount_cents: number;
+          booking_id: string;
+          created_at: string;
+          mechanic_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          amount_cents: number;
+          booking_id: string;
+          created_at?: string;
+          mechanic_id: string;
+        };
+        Update: {
+          amount_cents?: number;
+          booking_id?: string;
+          created_at?: string;
+          mechanic_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_fee_charges_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: true;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "onboarding_fee_charges_mechanic_id_fkey";
+            columns: ["mechanic_id"];
+            isOneToOne: false;
+            referencedRelation: "mechanics";
             referencedColumns: ["id"];
           },
         ];
@@ -749,59 +774,6 @@ export type Database = {
           },
         ];
       };
-      verification_refunds: {
-        Row: {
-          amount_cents: number;
-          booking_id: string;
-          card_fingerprint: string | null;
-          created_at: string;
-          customer_id: string | null;
-          mechanic_id: string;
-          stripe_refund_id: string | null;
-        };
-        ComputedFields: never;
-        Insert: {
-          amount_cents: number;
-          booking_id: string;
-          card_fingerprint?: string | null;
-          created_at?: string;
-          customer_id?: string | null;
-          mechanic_id: string;
-          stripe_refund_id?: string | null;
-        };
-        Update: {
-          amount_cents?: number;
-          booking_id?: string;
-          card_fingerprint?: string | null;
-          created_at?: string;
-          customer_id?: string | null;
-          mechanic_id?: string;
-          stripe_refund_id?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "verification_refunds_booking_id_fkey";
-            columns: ["booking_id"];
-            isOneToOne: true;
-            referencedRelation: "bookings";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "verification_refunds_customer_id_fkey";
-            columns: ["customer_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "verification_refunds_mechanic_id_fkey";
-            columns: ["mechanic_id"];
-            isOneToOne: false;
-            referencedRelation: "mechanics";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       webhook_events: {
         Row: {
           event_id: string;
@@ -830,12 +802,12 @@ export type Database = {
     };
     Functions: {
       choose_role: { Args: { r: Database["public"]["Enums"]["user_role"] }; Returns: undefined };
-      claim_verification_refund: {
+      claim_onboarding_fee: {
         Args: {
           p_booking_id: string;
-          p_mature_days: number;
-          p_min_job_cents: number;
+          p_final_cents: number;
           p_per_job_cents: number;
+          p_platform_fee_cents: number;
         };
         Returns: number;
       };
@@ -877,7 +849,7 @@ export type Database = {
       };
       mechanic_is_live: { Args: { mid: string }; Returns: boolean };
       refresh_mechanic_stats: { Args: { mid: string }; Returns: undefined };
-      release_verification_refund: { Args: { p_booking_id: string }; Returns: undefined };
+      release_onboarding_fee: { Args: { p_booking_id: string }; Returns: number };
       search_mechanics: {
         Args: { lat: number; lng: number; max_results?: number; service_slug?: string };
         Returns: {
@@ -933,7 +905,6 @@ export type Database = {
       skill_tier: "basic" | "certified" | "master";
       urgency: "flexible" | "soon" | "today" | "stranded";
       user_role: "customer" | "mechanic" | "admin";
-      verification_fee_status: "unpaid" | "paid" | "waived";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -1084,7 +1055,6 @@ export const Constants = {
       skill_tier: ["basic", "certified", "master"],
       urgency: ["flexible", "soon", "today", "stranded"],
       user_role: ["customer", "mechanic", "admin"],
-      verification_fee_status: ["unpaid", "paid", "waived"],
     },
   },
 } as const;

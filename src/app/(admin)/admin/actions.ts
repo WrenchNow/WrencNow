@@ -6,7 +6,6 @@ import { requireAdmin as requireAdminViewer } from "@/lib/auth";
 import { BookingError, cancelOpenBookingsForMechanic, transitionBooking } from "@/lib/bookings";
 import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { startCheckIfReady } from "@/lib/verification";
 
 export type FormState = { ok?: boolean; error?: string; message?: string };
 
@@ -99,17 +98,17 @@ export async function reviewInsurance(_: FormState, formData: FormData): Promise
   return { ok: true, message: decision === "verified" ? `Insurance verified through ${expires_on}.` : `Insurance rejected.${cancelled ? ` Cancelled ${cancelled} open booking(s).` : ""}` };
 }
 
-/** Let a mechanic skip the verification fee (e.g. founding mechanics); starts their check if they've applied. */
-export async function waiveVerificationFee(_: FormState, formData: FormData): Promise<FormState> {
+/** Stop collecting the rest of a mechanic's onboarding fee (e.g. founding mechanics). */
+export async function waiveOnboardingFee(_: FormState, formData: FormData): Promise<FormState> {
   const viewer = await requireAdmin();
   const id = z.uuid().parse(formData.get("id"));
   const admin = createAdminClient();
-  const { data } = await admin.from("mechanics").update({ verification_fee_status: "waived" }).eq("id", id).eq("verification_fee_status", "unpaid").select("id").maybeSingle();
-  if (!data) return { error: "This mechanic has already paid or been waived." };
-  await admin.from("audit_log").insert({ actor_id: viewer.id, action: "mechanic.verification_fee_waived", entity: "mechanic", entity_id: id });
-  await startCheckIfReady(id);
+  const { data: m } = await admin.from("mechanics").select("onboarding_fee_collected_cents, onboarding_fee_total_cents").eq("id", id).single();
+  if (!m || m.onboarding_fee_collected_cents >= m.onboarding_fee_total_cents) return { error: "Nothing left to waive." };
+  await admin.from("mechanics").update({ onboarding_fee_total_cents: m.onboarding_fee_collected_cents }).eq("id", id);
+  await admin.from("audit_log").insert({ actor_id: viewer.id, action: "mechanic.onboarding_fee_waived", entity: "mechanic", entity_id: id, data: { waived_cents: m.onboarding_fee_total_cents - m.onboarding_fee_collected_cents } });
   revalidatePath("/admin", "layout");
-  return { ok: true, message: "Fee waived." };
+  return { ok: true, message: "Remaining fee waived." };
 }
 
 export async function resolvePaymentReport(_: FormState, formData: FormData): Promise<FormState> {

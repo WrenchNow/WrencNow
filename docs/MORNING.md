@@ -36,16 +36,12 @@ Branch: `claude/wrenchnow-bootstrap` (not merged to `main`, nothing deployed).
   Google instead (that needs an API key)?
 
 ## Decided
-- **Verification fee:** mechanics pay $50 when they apply (Stripe Checkout). The background check is ordered only
-  after it's paid. $10 is refunded to their card after each of their first 5 completed jobs. You can waive it per
-  mechanic from Admin → Mechanics. Amounts come from `VERIFICATION_FEE_CENTS` / `VERIFICATION_REFUND_PER_JOB_CENTS`.
-  Not refunded if the check doesn't clear or they stop before 5 jobs; this is in the Mechanic Agreement, so have the
-  lawyer confirm it.
-  **Anti-gaming:** a job counts toward the refund only if it is at least $40 (`VERIFICATION_REFUND_MIN_JOB_CENTS`),
-  is for a customer who hasn't counted yet, wasn't paid with the mechanic's own card or a card already counted
-  (matched by Stripe card fingerprint), and is still not refunded or disputed 7 days later
-  (`VERIFICATION_REFUND_WAIT_DAYS`). A daily Netlify scheduled function pays the installments. **Set `CRON_SECRET`**
-  (any long random string) in Netlify env vars to enable it.
+- **Background check (onboarding) fee:** mechanics pay nothing up front, and WrenchNow orders the check when they
+  apply. WrenchNow then keeps $10 from the mechanic's share of each completed job, on top of the 5% platform fee,
+  until $50 is collected. Customers never see it. It's never more than the mechanic's share of a job, and it's
+  credited back if a job is fully refunded. You can waive the rest per mechanic in Admin → Mechanics. Amounts come
+  from `ONBOARDING_FEE_TOTAL_CENTS` and `ONBOARDING_FEE_PER_JOB_CENTS`. A mechanic who never completes a job owes
+  nothing, so WrenchNow absorbs that check cost.
 - **Platform fee:** 5% from day one (`PLATFORM_FEE_BPS=500`), with no free launch period.
 - **Arrival codes:** the customer gets a 4-digit code when a mechanic accepts. The mechanic must enter it to start
   the job, which proves they arrived. The customer's page shows the mechanic's photo and name to check against.

@@ -68,9 +68,8 @@ export default async function AdminMechanicsPage({ searchParams }: PageProps<"/a
                       Insurance: {m.insurance_status}
                       {m.insurance_expires_on ? ` · exp ${m.insurance_expires_on}` : ""}
                     </Badge>
-                    <Badge tone={m.verification_fee_status === "unpaid" ? "neutral" : "ok"}>
-                      Fee: {m.verification_fee_status}
-                      {m.verification_fee_status === "paid" ? ` · ${money(m.verification_refunded_cents)}/${money(m.verification_paid_cents)} returned` : ""}
+                    <Badge tone={m.onboarding_fee_collected_cents >= m.onboarding_fee_total_cents ? "ok" : "neutral"}>
+                      Check fee: {money(m.onboarding_fee_collected_cents, { whole: true })}/{money(m.onboarding_fee_total_cents, { whole: true })}
                     </Badge>
                     {m.is_live && <Badge tone="ok">● Live</Badge>}
                   </div>
@@ -97,7 +96,7 @@ export default async function AdminMechanicsPage({ searchParams }: PageProps<"/a
                 </div>
                 <div className="flex shrink-0 flex-col gap-3">
                   <ReviewMechanicForm id={m.id} status={m.status} tier={m.skill_tier} />
-                  {m.verification_fee_status === "unpaid" && <WaiveFeeForm id={m.id} />}
+                  {m.onboarding_fee_collected_cents < m.onboarding_fee_total_cents && <WaiveFeeForm id={m.id} />}
                 </div>
               </div>
             </li>

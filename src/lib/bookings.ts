@@ -11,11 +11,11 @@ import {
   type Actor,
   type BookingStatus,
 } from "@/lib/booking-status";
-import { customerNoShowFeeCents, platformFeeBps } from "@/lib/env";
+import { customerNoShowFeeCents, onboardingFeePerJobCents, platformFeeBps } from "@/lib/env";
 import { geocode } from "@/lib/geocode";
 import { estimateMaxCents, platformFeeCents } from "@/lib/fees";
 import { isOfferedSlot } from "@/lib/slots";
-import { cardFingerprint, getStripe } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/types/database";
 
@@ -43,7 +43,7 @@ export async function syncBookingPayment(bookingId: string): Promise<BookingRow[
   if (pi.status === "requires_capture") {
     await admin
       .from("bookings")
-      .update({ payment_status: "authorized", card_fingerprint: await cardFingerprint(pi.id) })
+      .update({ payment_status: "authorized" })
       .eq("id", b.id)
       .in("payment_status", ["unpaid", "failed"]);
     return "authorized";
@@ -347,19 +347,37 @@ async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor
       // If a previous attempt captured but failed to save, don't capture twice — record what Stripe actually took.
       const pi = await stripe.paymentIntents.retrieve(b.stripe_payment_intent_id);
       let captured = final;
+      let onboarding = 0;
       if (pi.status === "requires_capture") {
-        await stripe.paymentIntents.capture(
-          b.stripe_payment_intent_id,
-          { amount_to_capture: final, application_fee_amount: platformFeeCents(final, platformFeeBps()) },
-          { idempotencyKey: `capture-${b.id}-${final}` },
-        );
+        const platformFee = platformFeeCents(final, platformFeeBps());
+        // Onboarding fee installment comes out of the mechanic's share, on top of the platform fee.
+        const { data: claimed } = await admin.rpc("claim_onboarding_fee", {
+          p_booking_id: b.id,
+          p_per_job_cents: onboardingFeePerJobCents(),
+          p_final_cents: final,
+          p_platform_fee_cents: platformFee,
+        });
+        onboarding = claimed ?? 0;
+        try {
+          await stripe.paymentIntents.capture(
+            b.stripe_payment_intent_id,
+            { amount_to_capture: final, application_fee_amount: platformFee + onboarding },
+            { idempotencyKey: `capture-${b.id}-${final}-${onboarding}` },
+          );
+        } catch (e) {
+          if (onboarding) await admin.rpc("release_onboarding_fee", { p_booking_id: b.id });
+          throw e;
+        }
       } else if (pi.status === "succeeded") {
         captured = pi.amount_received;
+        const { data: row } = await admin.from("onboarding_fee_charges").select("amount_cents").eq("booking_id", b.id).maybeSingle();
+        onboarding = row?.amount_cents ?? 0;
       } else {
         throw new BookingError("The customer's payment can't be captured. Contact support.");
       }
       update.final_amount_cents = captured;
       update.platform_fee_cents = platformFeeCents(captured, platformFeeBps());
+      update.onboarding_fee_cents = onboarding;
       update.payment_status = "captured";
       break;
     }
@@ -369,11 +387,6 @@ async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor
   const { data: updated, error } = await admin.from("bookings").update(update).eq("id", b.id).eq("status", b.status).select("*").single();
   if (error || !updated) throw new BookingError("That change didn't go through. Refresh and try again.");
 
-  if (to === "completed") {
-    // Pay out any verification-fee installments from earlier jobs that have cleared the waiting period.
-    const { processVerificationRefunds } = await import("@/lib/verification");
-    await processVerificationRefunds(b.mechanic_id).catch((e) => console.error("processVerificationRefunds", e));
-  }
   if (to === "no_show") {
     await admin.from("no_shows").insert({ booking_id: b.id, mechanic_id: b.mechanic_id, reported_by: actor.id, reason: opts.reason?.slice(0, 1000) ?? null });
   }

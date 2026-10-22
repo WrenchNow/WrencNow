@@ -18,7 +18,7 @@ export type ReadinessStep = { key: string; label: string; done: boolean; detail:
 /** The checklist a mechanic works through before they can go live. */
 export function readiness(m: MechanicRow & { serviceIds: number[] }): ReadinessStep[] {
   const checkDetail: Record<MechanicRow["check_status"], string> = {
-    not_started: "Starts once you've submitted and paid the verification fee.",
+    not_started: "Starts when you submit your application.",
     invited: "Check your email for the Checkr invitation.",
     pending: "In progress with Checkr — usually a few business days.",
     clear: "Cleared.",
@@ -30,12 +30,6 @@ export function readiness(m: MechanicRow & { serviceIds: number[] }): ReadinessS
     { key: "profile", label: "Complete your profile", done: Boolean(m.display_name && m.bio && m.hourly_rate_cents && m.location), detail: "Name, bio, rate, and service area." },
     { key: "services", label: "Pick your services", done: m.serviceIds.length > 0, detail: "Choose the jobs you'll take." },
     { key: "submitted", label: "Submit application", done: Boolean(m.onboarding_submitted_at), detail: "Agree to the Mechanic Agreement." },
-    {
-      key: "fee",
-      label: "Verification fee",
-      done: m.verification_fee_status !== "unpaid",
-      detail: m.verification_fee_status === "unpaid" ? "Covers your background check — refunded over your first jobs." : m.verification_fee_status === "waived" ? "Waived." : "Paid.",
-    },
     { key: "check", label: "Background check", done: m.check_status === "clear", detail: checkDetail[m.check_status] },
     {
       key: "insurance",

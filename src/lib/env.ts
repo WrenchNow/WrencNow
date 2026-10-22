@@ -33,17 +33,7 @@ export function featuredPriceCents(): number {
   return Number.isInteger(n) && n > 0 ? n : 2900;
 }
 
-/** One-time verification fee mechanics pay when applying (covers the background check). */
-export function verificationFeeCents(): number {
-  const n = Number(process.env.VERIFICATION_FEE_CENTS || 5000);
-  return Number.isInteger(n) && n >= 0 ? n : 5000;
-}
 
-/** Amount of the verification fee returned after each completed job until it's all back. */
-export function verificationRefundPerJobCents(): number {
-  const n = Number(process.env.VERIFICATION_REFUND_PER_JOB_CENTS || 1000);
-  return Number.isInteger(n) && n > 0 ? n : 1000;
-}
 
 /** Fee a customer pays when the mechanic checked in and waited but the customer never showed. */
 export function customerNoShowFeeCents(): number {
@@ -51,14 +41,14 @@ export function customerNoShowFeeCents(): number {
   return Number.isInteger(n) && n > 0 ? n : 2500;
 }
 
-/** A job must be at least this much to count toward refunding the verification fee. */
-export function verificationRefundMinJobCents(): number {
-  const n = Number(process.env.VERIFICATION_REFUND_MIN_JOB_CENTS || 4000);
-  return Number.isInteger(n) && n >= 0 ? n : 4000;
+/** Total onboarding fee (covers the background check), collected from the mechanic's first jobs. */
+export function onboardingFeeTotalCents(): number {
+  const n = Number(process.env.ONBOARDING_FEE_TOTAL_CENTS || 5000);
+  return Number.isInteger(n) && n >= 0 ? n : 5000;
 }
 
-/** Days after a job before its refund installment is paid (lets refunds and disputes surface first). */
-export function verificationRefundWaitDays(): number {
-  const n = Number(process.env.VERIFICATION_REFUND_WAIT_DAYS || 7);
-  return Number.isInteger(n) && n >= 0 ? n : 7;
+/** How much of the onboarding fee is kept from each completed job until it's paid off. */
+export function onboardingFeePerJobCents(): number {
+  const n = Number(process.env.ONBOARDING_FEE_PER_JOB_CENTS || 1000);
+  return Number.isInteger(n) && n > 0 ? n : 1000;
 }

@@ -14,14 +14,3 @@ export function getStripe(): Stripe {
   client ??= new Stripe(key, { appInfo: { name: "WrenchNow" }, maxNetworkRetries: 2 });
   return client;
 }
-
-/** Card fingerprint for a PaymentIntent (same physical card → same fingerprint), or null. */
-export async function cardFingerprint(paymentIntentId: string): Promise<string | null> {
-  try {
-    const pi = await getStripe().paymentIntents.retrieve(paymentIntentId, { expand: ["payment_method"] });
-    const pm = pi.payment_method;
-    return pm && typeof pm !== "string" ? (pm.card?.fingerprint ?? null) : null;
-  } catch {
-    return null;
-  }
-}

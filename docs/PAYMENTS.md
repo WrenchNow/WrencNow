@@ -37,9 +37,9 @@ Live keys are refused unless `STRIPE_LIVE_MODE_CONFIRMED=true` is set. Set it on
 Webhooks are signature-verified, and every event id is stored in `webhook_events` so a retried delivery is processed
 only once.
 
-## Mechanic verification fee
-Mechanics pay a one-time fee (`VERIFICATION_FEE_CENTS`, $50) through Stripe Checkout when they apply. The Checkr
-invitation goes out only once the fee is paid (or an admin waives it). After each completed job,
-`claim_verification_refund()` reserves the next installment (`VERIFICATION_REFUND_PER_JOB_CENTS`, $10) under a row
-lock, one per booking, and we refund it to the original card. If Stripe rejects the refund, the reservation is
-released so a later retry can claim it again.
+## Mechanic onboarding fee (background check)
+Nothing is paid up front. At capture, `claim_onboarding_fee()` reserves this job's installment under a row lock
+(`ONBOARDING_FEE_PER_JOB_CENTS`, $10, never more than the mechanic's share or the remaining balance of
+`ONBOARDING_FEE_TOTAL_CENTS`, $50). It's added to `application_fee_amount`, so it comes out of the mechanic's
+transfer and the customer's charge is unchanged. If the capture fails, or the job is later fully refunded,
+`release_onboarding_fee()` gives the installment back.

@@ -5,13 +5,12 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { BookingError, checkInAtAddress, transitionBooking } from "@/lib/bookings";
-import { featuredPriceCents, siteUrl, stripeConfigured, verificationFeeCents, verificationRefundPerJobCents } from "@/lib/env";
-import { money } from "@/lib/format";
+import { featuredPriceCents, onboardingFeeTotalCents, siteUrl, stripeConfigured } from "@/lib/env";
 import { geocode } from "@/lib/geocode";
 import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { startCheckIfReady } from "@/lib/verification";
+import { startCheckIfReady } from "@/lib/onboarding";
 
 export type FormState = { ok?: boolean; error?: string; message?: string };
 
@@ -97,7 +96,7 @@ export async function saveServices(_: FormState, formData: FormData): Promise<Fo
   return { ok: true, message: "Services saved." };
 }
 
-/** Marks the application submitted; the background check starts once the verification fee is paid. */
+/** Marks the application submitted and orders the background check. */
 export async function submitApplication(_: FormState, formData: FormData): Promise<FormState> {
   const viewer = await requireRole(["mechanic"], "/mechanic/onboarding");
   if (formData.get("agree") !== "on") return { error: "Please agree to the Mechanic Agreement." };
@@ -110,7 +109,12 @@ export async function submitApplication(_: FormState, formData: FormData): Promi
 
   await admin
     .from("mechanics")
-    .update({ onboarding_submitted_at: m.onboarding_submitted_at ?? new Date().toISOString(), agreed_terms_at: new Date().toISOString() })
+    .update({
+      onboarding_submitted_at: m.onboarding_submitted_at ?? new Date().toISOString(),
+      agreed_terms_at: new Date().toISOString(),
+      // Lock in the onboarding fee amount at application time (unless already collecting or waived).
+      ...(m.onboarding_fee_collected_cents === 0 && m.onboarding_fee_total_cents > 0 ? { onboarding_fee_total_cents: onboardingFeeTotalCents() } : {}),
+    })
     .eq("id", viewer.id);
   await admin.from("audit_log").insert({ actor_id: viewer.id, action: "mechanic.application_submitted", entity: "mechanic", entity_id: viewer.id });
 
@@ -118,43 +122,11 @@ export async function submitApplication(_: FormState, formData: FormData): Promi
   revalidatePath("/mechanic", "layout");
   const messages: Record<typeof check, string> = {
     started: `Application submitted. Check ${viewer.email} for an email from Checkr to complete your background check.`,
-    waiting: "Application submitted. Pay the verification fee below to start your background check.",
+    waiting: "Application submitted.",
     "not-configured": "Application submitted. We'll email you the background check link shortly.",
     failed: "Application submitted. We couldn't start your background check automatically — we'll email you the link.",
   };
   return { ok: true, message: messages[check] };
-}
-
-/** Stripe Checkout for the one-time verification fee. */
-export async function startVerificationCheckout() {
-  const viewer = await requireRole(["mechanic"], "/mechanic/onboarding");
-  if (!stripeConfigured()) redirect("/mechanic/onboarding?fee=not-configured");
-  const admin = createAdminClient();
-  const { data: m } = await admin.from("mechanics").select("verification_fee_status").eq("id", viewer.id).single();
-  if (m?.verification_fee_status !== "unpaid") redirect("/mechanic/onboarding");
-  const meta = { kind: "verification_fee", mechanic_id: viewer.id };
-  const session = await getStripe().checkout.sessions.create({
-    mode: "payment",
-    customer_email: viewer.email ?? undefined,
-    line_items: [
-      {
-        quantity: 1,
-        price_data: {
-          currency: "usd",
-          unit_amount: verificationFeeCents(),
-          product_data: {
-            name: "WrenchNow verification fee",
-            description: `Covers your background check. ${money(verificationRefundPerJobCents(), { whole: true })} comes back for each qualifying paid job until it's all returned.`,
-          },
-        },
-      },
-    ],
-    metadata: meta,
-    payment_intent_data: { metadata: meta, description: "WrenchNow verification fee" },
-    success_url: `${siteUrl()}/mechanic/onboarding?fee=paid&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${siteUrl()}/mechanic/onboarding?fee=cancelled`,
-  });
-  redirect(session.url!);
 }
 
 export async function startStripeOnboarding() {

@@ -6,15 +6,14 @@ import { Card } from "@/components/ui/card";
 import { Notice } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/layout";
 import { requireRole } from "@/lib/auth";
-import { stripeConfigured, verificationFeeCents, verificationRefundMinJobCents, verificationRefundPerJobCents, verificationRefundWaitDays } from "@/lib/env";
-import { verificationJobsRemaining } from "@/lib/fees";
+import { onboardingFeePerJobCents, stripeConfigured } from "@/lib/env";
+import { onboardingJobsRemaining } from "@/lib/fees";
 import { money } from "@/lib/format";
 import { getMyMechanic, readiness } from "@/lib/mechanic";
 import { getServices } from "@/lib/public-data";
 import { TIER_LABEL, tierRank } from "@/lib/tiers";
 import { syncStripeAccount } from "@/lib/stripe-sync";
-import { syncVerificationCheckout } from "@/lib/verification";
-import { startStripeOnboarding, startVerificationCheckout } from "../actions";
+import { startStripeOnboarding } from "../actions";
 
 export const metadata: Metadata = { title: "Profile & setup" };
 
@@ -22,9 +21,6 @@ export default async function MechanicOnboardingPage({ searchParams }: PageProps
   const sp = await searchParams;
   const viewer = await requireRole(["mechanic"], "/mechanic/onboarding");
   if (sp.stripe === "return") await syncStripeAccount(viewer.id);
-  if (sp.fee === "paid" && typeof sp.session_id === "string" && stripeConfigured()) {
-    await syncVerificationCheckout(sp.session_id, viewer.id).catch((e) => console.error("syncVerificationCheckout", e));
-  }
   const [m, services] = await Promise.all([getMyMechanic(viewer.id), getServices()]);
   if (!m) return <Notice tone="danger">We couldn&apos;t find your mechanic profile. Contact support.</Notice>;
   const steps = readiness(m);
@@ -84,45 +80,16 @@ export default async function MechanicOnboardingPage({ searchParams }: PageProps
           <Card>
             <h2 className="text-2xl font-bold uppercase">3. Submit & background check</h2>
             <p className="mt-1 mb-4 text-sm text-muted">
-              Once you&apos;ve submitted and paid the verification fee, Checkr (our background check partner) emails you a secure link. They handle your SSN and
-              consent — WrenchNow never sees it.
+              When you submit, Checkr (our background check partner) emails you a secure link. They handle your SSN and consent — WrenchNow never sees it.
+              There&apos;s nothing to pay up front: the {money(m.onboarding_fee_total_cents, { whole: true })} check is covered by{" "}
+              {money(onboardingFeePerJobCents(), { whole: true })} from each of your first{" "}
+              {onboardingJobsRemaining(m.onboarding_fee_total_cents, 0, onboardingFeePerJobCents())} jobs.
             </p>
             <SubmitApplicationForm submitted={Boolean(m.onboarding_submitted_at)} />
           </Card>
 
           <Card>
-            <h2 className="text-2xl font-bold uppercase">4. Verification fee</h2>
-            <p className="mt-1 mb-4 text-sm text-muted">
-              A one-time {money(verificationFeeCents(), { whole: true })} covers your background check. You get it all back:{" "}
-              {money(verificationRefundPerJobCents(), { whole: true })} is refunded to your card for each of your first{" "}
-              {verificationJobsRemaining(verificationFeeCents(), 0, verificationRefundPerJobCents())} paid jobs of {money(verificationRefundMinJobCents(), { whole: true })} or more,
-              each with a different customer, {verificationRefundWaitDays()} days after the job.
-            </p>
-            {sp.fee === "cancelled" && (
-              <div className="mb-4">
-                <Notice tone="warn">Payment cancelled — nothing was charged.</Notice>
-              </div>
-            )}
-            {m.verification_fee_status === "paid" ? (
-              <Notice tone="ok" title={`Paid ${money(m.verification_paid_cents)}`}>
-                {m.verification_refunded_cents >= m.verification_paid_cents
-                  ? "Fully refunded — thanks for being a WrenchNow mechanic."
-                  : `${money(m.verification_refunded_cents)} returned so far · ${verificationJobsRemaining(m.verification_paid_cents, m.verification_refunded_cents, verificationRefundPerJobCents())} more completed job(s) to get the rest back.`}
-              </Notice>
-            ) : m.verification_fee_status === "waived" ? (
-              <Notice tone="ok" title="Waived">No verification fee for you.</Notice>
-            ) : (
-              <form action={startVerificationCheckout}>
-                <Button type="submit" disabled={!stripeConfigured()}>
-                  Pay {money(verificationFeeCents(), { whole: true })} verification fee
-                </Button>
-                {sp.fee === "not-configured" && <p className="mt-2 text-sm text-warn">Payments aren&apos;t connected yet. Check back soon.</p>}
-              </form>
-            )}
-          </Card>
-
-          <Card>
-            <h2 className="text-2xl font-bold uppercase">5. Proof of insurance</h2>
+            <h2 className="text-2xl font-bold uppercase">4. Proof of insurance</h2>
             <p className="mt-1 mb-4 text-sm text-muted">
               You need your own liability insurance to work on customers&apos; cars. We verify the certificate before you go live, and you&apos;ll need to upload a new one
               before it expires.
@@ -148,7 +115,7 @@ export default async function MechanicOnboardingPage({ searchParams }: PageProps
           </Card>
 
           <Card>
-            <h2 className="text-2xl font-bold uppercase">6. Get paid</h2>
+            <h2 className="text-2xl font-bold uppercase">5. Get paid</h2>
             <p className="mt-1 mb-4 text-sm text-muted">Payouts go through Stripe. Takes about 5 minutes — have your bank details ready.</p>
             {stripeDone ? (
               <Notice tone="ok" title="Payouts connected">You&apos;re all set to get paid.</Notice>

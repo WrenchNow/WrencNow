@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { platformFeeBps } from "@/lib/env";
-import { estimateMaxCents, estimateMinCents, mechanicNetCents, mechanicPayoutCents, platformFeeCents, verificationJobsRemaining } from "@/lib/fees";
+import { estimateMaxCents, estimateMinCents, mechanicNetCents, mechanicPayoutCents, platformFeeCents, onboardingJobsRemaining } from "@/lib/fees";
 import { monthKey } from "@/lib/format";
 
 describe("platformFeeCents", () => {
@@ -77,11 +77,11 @@ describe("monthKey", () => {
   });
 });
 
-describe("verification fee refunds", () => {
-  it("counts jobs left until the fee is fully returned", () => {
-    expect(verificationJobsRemaining(5000, 0, 1000)).toBe(5);
-    expect(verificationJobsRemaining(5000, 2000, 1000)).toBe(3);
-    expect(verificationJobsRemaining(5000, 5000, 1000)).toBe(0);
-    expect(verificationJobsRemaining(4500, 0, 1000)).toBe(5); // last installment is $5
+describe("onboarding fee", () => {
+  it("counts jobs left until the fee is covered", () => {
+    expect(onboardingJobsRemaining(5000, 0, 1000)).toBe(5);
+    expect(onboardingJobsRemaining(5000, 2000, 1000)).toBe(3);
+    expect(onboardingJobsRemaining(5000, 5000, 1000)).toBe(0);
+    expect(onboardingJobsRemaining(5000, 4500, 1000)).toBe(1); // a small job only covered $5 earlier
   });
 });

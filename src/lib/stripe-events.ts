@@ -1,8 +1,7 @@
 import "server-only";
 import type Stripe from "stripe";
 import { cancelOpenBookingsForMechanic } from "@/lib/bookings";
-import { cardFingerprint, getStripe } from "@/lib/stripe";
-import { markVerificationPaid } from "@/lib/verification";
+import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type Admin = ReturnType<typeof createAdminClient>;
@@ -18,12 +17,7 @@ async function onPaymentIntent(admin: Admin, event: Stripe.Event) {
 
   switch (event.type) {
     case "payment_intent.amount_capturable_updated":
-      // Card fingerprint lets us spot a mechanic paying for their own jobs.
-      await admin
-        .from("bookings")
-        .update({ payment_status: "authorized", card_fingerprint: await cardFingerprint(pi.id) })
-        .eq("id", bookingId)
-        .in("payment_status", ["unpaid", "failed"]);
+      await admin.from("bookings").update({ payment_status: "authorized" }).eq("id", bookingId).in("payment_status", ["unpaid", "failed"]);
       break;
     case "payment_intent.succeeded": {
       await admin.from("bookings").update({ payment_status: "captured" }).eq("id", bookingId).in("payment_status", ["unpaid", "authorized"]);
@@ -77,6 +71,8 @@ async function onCharge(admin: Admin, event: Stripe.Event) {
       .eq("id", b.id)
       .neq("payment_status", "disputed");
     await admin.from("bookings").update({ refunded_cents: refunded }).eq("id", b.id).eq("payment_status", "disputed");
+    // A fully refunded job doesn't count toward the mechanic's onboarding fee.
+    if (refunded >= charge.amount_captured) await admin.rpc("release_onboarding_fee", { p_booking_id: b.id });
     // One ledger row per refund (keyed by refund id), so partial refunds aren't double-counted.
     const refunds = await getStripe().refunds.list({ charge: charge.id, limit: 100 });
     const rows = refunds.data
@@ -139,11 +135,6 @@ async function onSubscription(admin: Admin, event: Stripe.Event) {
 async function onCheckoutCompleted(admin: Admin, event: Stripe.Event) {
   const session = event.data.object as Stripe.Checkout.Session;
   const mechanicId = session.metadata?.mechanic_id;
-  if (session.mode === "payment" && session.metadata?.kind === "verification_fee" && mechanicId && session.payment_status === "paid") {
-    const pi = typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id;
-    if (pi) await markVerificationPaid(mechanicId, pi, session.amount_total ?? 0);
-    return;
-  }
   if (session.mode !== "subscription" || !mechanicId) return;
   const customerId = typeof session.customer === "string" ? session.customer : session.customer?.id;
   const subId = typeof session.subscription === "string" ? session.subscription : session.subscription?.id;
