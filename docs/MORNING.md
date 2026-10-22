@@ -36,3 +36,18 @@ Branch: `claude/wrenchnow-bootstrap` (not merged to `main`, nothing deployed).
   dashboard. None of them could be verified.
 - **Geocoding:** addresses are looked up with the free US Census and OpenStreetMap services. Do you want Mapbox or
   Google instead (that needs an API key)?
+
+## Decided
+- **Arrival codes:** the customer gets a 4-digit code when a mechanic accepts. The mechanic must enter it to start
+  the job, which proves they arrived. The customer's page shows the mechanic's photo and name to check against.
+  After 5 wrong tries, the job locks until support steps in.
+- **Cancellations:** mechanics can decline a request for free, but can't cancel once they accept. Customers cancel
+  free until the mechanic is on the way. After that only an admin can cancel.
+- **Insurance:** mechanics upload a certificate of insurance. An admin verifies it and enters the expiry date. A
+  mechanic can't go live without it and drops out of search the day it expires. Renewals keep them live while you
+  review the new certificate.
+- **Profile photo:** required before a mechanic can submit an application.
+
+## Still open
+- **Customer no-show:** what happens if the mechanic arrives and the customer isn't there (so there's no code)?
+  Today an admin sorts it out. A "customer not present" button with a call-out fee is a possible next step.

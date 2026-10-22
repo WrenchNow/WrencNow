@@ -103,6 +103,7 @@ export async function submitApplication(_: FormState, formData: FormData): Promi
   const admin = createAdminClient();
   const { data: m } = await admin.from("mechanics").select("*").eq("id", viewer.id).single();
   if (!m?.display_name || !m.hourly_rate_cents || !m.location) return { error: "Finish your profile first." };
+  if (!m.photo_url) return { error: "Add a profile photo — customers use it to recognize you when you arrive." };
   const { count } = await admin.from("mechanic_services").select("*", { count: "exact", head: true }).eq("mechanic_id", viewer.id);
   if (!count) return { error: "Pick at least one service you offer." };
 
@@ -191,8 +192,9 @@ export async function mechanicTransition(_: FormState, formData: FormData): Prom
     finalAmountCents = Math.round(raw * 100);
   }
   const reason = String(formData.get("reason") ?? "").slice(0, 500) || undefined;
+  const arrivalCode = String(formData.get("arrival_code") ?? "").slice(0, 8) || undefined;
   try {
-    await transitionBooking(id, { id: viewer.id, role: "mechanic" }, to, { finalAmountCents, reason });
+    await transitionBooking(id, { id: viewer.id, role: "mechanic" }, to, { finalAmountCents, reason, arrivalCode });
   } catch (e) {
     if (e instanceof BookingError) return { error: e.message };
     console.error(e);
@@ -202,7 +204,7 @@ export async function mechanicTransition(_: FormState, formData: FormData): Prom
   const messages: Record<typeof to, string> = {
     accepted: "Job accepted. The customer has been notified.",
     en_route: "Marked on the way.",
-    in_progress: "Job started.",
+    in_progress: "Code verified — job started.",
     completed: "Job complete — payment captured.",
     cancelled: "Job declined. The customer's card hold was released.",
   };
@@ -256,4 +258,41 @@ export async function savePhotoUrl(url: string): Promise<FormState> {
   if (error) return { error: "Couldn't save your photo." };
   revalidatePath("/mechanic", "layout");
   return { ok: true, message: "Photo updated." };
+}
+
+const insuranceSchema = z.object({
+  provider: z.string().trim().min(2, "Enter your insurance company").max(120),
+  policy_number: z.string().trim().min(2, "Enter your policy number").max(80),
+  expires_on: z.iso.date("Enter the expiration date"),
+  doc_path: z.string().min(1, "Upload your certificate of insurance"),
+});
+
+/** Records an uploaded certificate of insurance for admin review. */
+export async function submitInsurance(input: z.input<typeof insuranceSchema>): Promise<FormState> {
+  const viewer = await requireRole(["mechanic"], "/mechanic/onboarding");
+  const parsed = insuranceSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0]!.message };
+  const d = parsed.data;
+  if (!d.doc_path.startsWith(`${viewer.id}/`)) return { error: "Upload failed. Please try again." };
+  if (d.expires_on <= new Date().toISOString().slice(0, 10)) return { error: "That policy has already expired." };
+
+  const admin = createAdminClient();
+  const { data: m } = await admin.from("mechanics").select("insurance_status, insurance_expires_on").eq("id", viewer.id).single();
+  const renewing = m?.insurance_status === "verified" && (m.insurance_expires_on ?? "") >= new Date().toISOString().slice(0, 10);
+  const { error } = await admin
+    .from("mechanics")
+    .update({
+      insurance_provider: d.provider,
+      insurance_policy_number: d.policy_number,
+      insurance_doc_path: d.doc_path,
+      insurance_pending_expires_on: d.expires_on,
+      insurance_submitted_at: new Date().toISOString(),
+      // Stay live on the current certificate while a renewal is reviewed.
+      ...(renewing ? {} : { insurance_status: "submitted" as const }),
+    })
+    .eq("id", viewer.id);
+  if (error) return { error: "Couldn't save your insurance details. Please try again." };
+  await admin.from("audit_log").insert({ actor_id: viewer.id, action: "mechanic.insurance_submitted", entity: "mechanic", entity_id: viewer.id });
+  revalidatePath("/mechanic", "layout");
+  return { ok: true, message: renewing ? "Renewal submitted. You stay live while we review it." : "Insurance submitted. We'll verify it shortly." };
 }

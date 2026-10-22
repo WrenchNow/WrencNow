@@ -1,5 +1,6 @@
 import "server-only";
-import { actorMayTransition, canTransition, NO_SHOW_GRACE_MINUTES, type Actor, type BookingStatus } from "@/lib/booking-status";
+import { randomInt } from "node:crypto";
+import { actorMayTransition, ARRIVAL_CODE_MAX_ATTEMPTS, canCancel, canTransition, NO_SHOW_GRACE_MINUTES, type Actor, type BookingStatus } from "@/lib/booking-status";
 import { platformFeeBps } from "@/lib/env";
 import { estimateMaxCents, platformFeeCents } from "@/lib/fees";
 import { isOfferedSlot } from "@/lib/slots";
@@ -91,11 +92,13 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
   const admin = createAdminClient();
   const now = new Date();
   const [{ data: mechanic }, { data: service }, { data: vehicle }] = await Promise.all([
-    admin.from("mechanics").select("id, is_live, hourly_rate_cents, stripe_account_id, display_name").eq("id", input.mechanicId).maybeSingle(),
+    admin.from("mechanics").select("id, is_live, insurance_expires_on, hourly_rate_cents, stripe_account_id, display_name").eq("id", input.mechanicId).maybeSingle(),
     admin.from("services").select("*").eq("slug", input.serviceSlug).eq("active", true).maybeSingle(),
     admin.from("vehicles").select("id, owner_id, year, make, model, trim").eq("id", input.vehicleId).maybeSingle(),
   ]);
-  if (!mechanic?.is_live || !mechanic.stripe_account_id || !mechanic.hourly_rate_cents) throw new BookingError("This mechanic isn't taking bookings right now.");
+  if (!mechanic?.is_live || !insuranceCurrent(mechanic.insurance_expires_on) || !mechanic.stripe_account_id || !mechanic.hourly_rate_cents) {
+    throw new BookingError("This mechanic isn't taking bookings right now.");
+  }
   if (!service) throw new BookingError("Pick a service.");
   if (!isOfferedSlot(input.start, now, service.est_minutes_max)) throw new BookingError("That time isn't available. Please pick another slot.");
   if (!vehicle || vehicle.owner_id !== input.customerId) throw new BookingError("Pick one of your vehicles.");
@@ -165,7 +168,32 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
   }
 }
 
-export type TransitionOptions = { finalAmountCents?: number; reason?: string };
+export type TransitionOptions = { finalAmountCents?: number; reason?: string; arrivalCode?: string };
+
+function insuranceCurrent(expiresOn: string | null): boolean {
+  return Boolean(expiresOn && expiresOn >= new Date().toISOString().slice(0, 10));
+}
+
+/** 4-digit code the customer reads to the mechanic on arrival. */
+function newArrivalCode(): string {
+  return String(randomInt(0, 10_000)).padStart(4, "0");
+}
+
+/** Check the code the mechanic typed in. Locks after too many wrong tries. */
+async function verifyArrivalCode(bookingId: string, attempt: string | undefined) {
+  const admin = createAdminClient();
+  const { data: c } = await admin.from("booking_codes").select("*").eq("booking_id", bookingId).maybeSingle();
+  if (!c) throw new BookingError("This job has no arrival code. Contact support.");
+  if (c.verified_at) return;
+  if (c.attempts >= ARRIVAL_CODE_MAX_ATTEMPTS) throw new BookingError("Too many wrong codes. Contact support to start this job.");
+  const code = (attempt ?? "").replace(/\D/g, "");
+  if (code !== c.code) {
+    await admin.from("booking_codes").update({ attempts: c.attempts + 1 }).eq("booking_id", bookingId);
+    const left = ARRIVAL_CODE_MAX_ATTEMPTS - c.attempts - 1;
+    throw new BookingError(left > 0 ? `That code doesn't match. Ask the customer for the 4-digit code in their app (${left} tries left).` : "Too many wrong codes. Contact support to start this job.");
+  }
+  await admin.from("booking_codes").update({ verified_at: new Date().toISOString() }).eq("booking_id", bookingId);
+}
 
 /**
  * The only path for changing a booking's status. Checks who's asking, then
@@ -188,6 +216,13 @@ export async function transitionBooking(
   if (role !== "admin" && !isCustomer && !isMechanic) throw new BookingError("Booking not found.");
   if (!actorMayTransition(role, to)) throw new BookingError("You can't make that change.");
   if (!canTransition(current.status, to)) throw new BookingError(`This booking is already ${current.status.replace("_", " ")}.`);
+  if (to === "cancelled" && !canCancel(role, current.status)) {
+    throw new BookingError(
+      role === "mechanic"
+        ? "You've accepted this job, so it can't be cancelled in the app. Contact support if there's an emergency."
+        : "Your mechanic is already on the way, so this booking can't be cancelled in the app. Contact support if something's wrong.",
+    );
+  }
 
   // Claim the booking so a concurrent change (e.g. cancel vs. accept) can't also move money.
   const now = new Date().toISOString();
@@ -210,7 +245,7 @@ export async function transitionBooking(
 
 async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor, to: BookingStatus, opts: TransitionOptions): Promise<BookingRow> {
   const admin = createAdminClient();
-  const update: Database["public"]["Tables"]["bookings"]["Update"] = { status: to };
+  const update: Database["public"]["Tables"]["bookings"]["Update"] = { status: to, admin_override: role === "admin" };
   const stripe = getStripe();
 
 
@@ -218,13 +253,15 @@ async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor
     case "accepted": {
       if (b.payment_status !== "authorized") throw new BookingError("The customer's payment hasn't gone through yet.");
       if (new Date(b.scheduled_end).getTime() < Date.now()) throw new BookingError("This request's time has already passed.");
+      await admin.from("booking_codes").upsert({ booking_id: b.id, code: newArrivalCode() }, { onConflict: "booking_id", ignoreDuplicates: true });
+      break;
+    }
+    case "in_progress": {
+      // Proves the mechanic is physically there: the code only exists in the customer's app.
+      if (role !== "admin") await verifyArrivalCode(b.id, opts.arrivalCode);
       break;
     }
     case "cancelled": {
-      // Customers can cancel free until the mechanic heads out.
-      if (role === "customer" && !["requested", "accepted"].includes(b.status)) {
-        throw new BookingError("Your mechanic is already on the way. Contact them or support to cancel.");
-      }
       if (b.stripe_payment_intent_id && ["authorized", "unpaid"].includes(b.payment_status)) {
         const reason = role === "customer" ? "requested_by_customer" : "abandoned";
         await stripe.paymentIntents.cancel(b.stripe_payment_intent_id, { cancellation_reason: reason }).catch((e) => {
@@ -292,8 +329,8 @@ async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor
  */
 export async function cancelOpenBookingsForMechanic(mechanicId: string, actorId: string | null, reason: string) {
   const admin = createAdminClient();
-  const { data: m } = await admin.from("mechanics").select("is_live").eq("id", mechanicId).maybeSingle();
-  if (!m || m.is_live) return 0;
+  const { data: m } = await admin.from("mechanics").select("is_live, insurance_expires_on").eq("id", mechanicId).maybeSingle();
+  if (!m || (m.is_live && insuranceCurrent(m.insurance_expires_on))) return 0;
   const { data: open } = await admin.from("bookings").select("id").eq("mechanic_id", mechanicId).in("status", ["requested", "accepted", "en_route"]);
   let n = 0;
   for (const b of open ?? []) {

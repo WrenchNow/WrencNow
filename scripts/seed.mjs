@@ -67,6 +67,11 @@ for (const m of mechanics) {
       onboarding_submitted_at: new Date().toISOString(),
       agreed_terms_at: new Date().toISOString(),
       online: !m.pending,
+      insurance_status: m.pending ? "submitted" : "verified",
+      insurance_provider: "TEST INSURER (fake)",
+      insurance_policy_number: "TEST-0000",
+      insurance_expires_on: new Date(Date.now() + 365 * 86_400_000).toISOString().slice(0, 10),
+      insurance_submitted_at: new Date().toISOString(),
     })
     .eq("id", id);
   if (error) throw error;

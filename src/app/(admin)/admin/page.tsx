@@ -13,7 +13,12 @@ export default async function AdminPage() {
   const admin = createAdminClient();
   const count = async (q: PromiseLike<{ count: number | null }>) => (await q).count ?? 0;
   const [awaitingReview, live, activeBookings, disputed, { data: log }] = await Promise.all([
-    count(admin.from("mechanics").select("*", { count: "exact", head: true }).eq("status", "pending").not("onboarding_submitted_at", "is", null)),
+    count(
+      admin
+        .from("mechanics")
+        .select("*", { count: "exact", head: true })
+        .or("and(status.eq.pending,onboarding_submitted_at.not.is.null),insurance_status.eq.submitted,insurance_pending_expires_on.not.is.null"),
+    ),
     count(admin.from("mechanics").select("*", { count: "exact", head: true }).eq("is_live", true)),
     count(admin.from("bookings").select("*", { count: "exact", head: true }).in("status", ["requested", "accepted", "en_route", "in_progress"]).eq("payment_status", "authorized")),
     count(admin.from("bookings").select("*", { count: "exact", head: true }).eq("payment_status", "disputed")),
@@ -21,7 +26,7 @@ export default async function AdminPage() {
   ]);
 
   const tiles = [
-    { label: "Applications to review", value: awaitingReview, href: "/admin/mechanics?filter=review" },
+    { label: "Applications & insurance to review", value: awaitingReview, href: "/admin/mechanics?filter=review" },
     { label: "Live mechanics", value: live, href: "/admin/mechanics?filter=live" },
     { label: "Active bookings", value: activeBookings, href: "/admin/bookings?filter=active" },
     { label: "Disputes", value: disputed, href: "/admin/bookings?filter=disputed" },

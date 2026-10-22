@@ -5,6 +5,7 @@ import { CustomerBookingActions, ReviewForm } from "@/components/account/forms";
 import { LiveRefresh } from "@/components/account/live-refresh";
 import { StatusTimeline } from "@/components/account/status-timeline";
 import { Stars } from "@/components/review-list";
+import { Avatar } from "@/components/search/mechanic-card";
 import { Card } from "@/components/ui/card";
 import { Notice } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/layout";
@@ -13,6 +14,7 @@ import { noShowReportable } from "@/lib/booking-status";
 import { syncBookingPayment } from "@/lib/bookings";
 import { stripeConfigured } from "@/lib/env";
 import { dateTime, money } from "@/lib/format";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Booking" };
@@ -41,8 +43,16 @@ export default async function BookingDetailPage({ params, searchParams }: PagePr
   const { data: b } = await supabase.from("bookings").select("*, services(name, icon), mechanics(display_name)").eq("id", id).maybeSingle();
   if (!b || (b.customer_id !== viewer.id && viewer.profile.role !== "admin")) notFound();
   const { data: review } = await supabase.from("reviews").select("rating, body").eq("booking_id", b.id).maybeSingle();
+  const showArrival = b.status === "accepted" || b.status === "en_route";
+  // RLS: only the customer can read the arrival code. Mechanic identity comes from the booking's own mechanic.
+  const [{ data: code }, mech] = showArrival
+    ? await Promise.all([
+        supabase.from("booking_codes").select("code").eq("booking_id", b.id).maybeSingle(),
+        createAdminClient().from("mechanics").select("display_name, photo_url, check_status, insurance_status").eq("id", b.mechanic_id).maybeSingle(),
+      ])
+    : [{ data: null }, { data: null }];
 
-  const canCancel = b.status === "requested" || b.status === "accepted";
+  const canCancel = b.status === "requested" || b.status === "accepted"; // matches canCancel("customer", …)
   const canNoShow = noShowReportable(b.status, b.scheduled_start);
 
   return (
@@ -69,6 +79,34 @@ export default async function BookingDetailPage({ params, searchParams }: PagePr
       <Card className="mb-6">
         <StatusTimeline status={b.status} />
       </Card>
+
+      {showArrival && code && (
+        <Card className="mb-6 border-ore/40">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-4">
+              <Avatar name={mech.data?.display_name ?? null} url={mech.data?.photo_url ?? null} size={64} />
+              <div>
+                <p className="text-xs tracking-wider text-muted uppercase">Your mechanic</p>
+                <p className="font-display text-2xl font-bold text-cream uppercase">{mech.data?.display_name ?? "Your mechanic"}</p>
+                <p className="text-sm text-ok">
+                  {mech.data?.check_status === "clear" && "✓ Background checked "}
+                  {mech.data?.insurance_status === "verified" && "✓ Insured"}
+                </p>
+              </div>
+            </div>
+            <div className="sm:text-right">
+              <p className="text-xs tracking-wider text-muted uppercase">Arrival code</p>
+              <p className="font-display text-5xl font-black tracking-[0.25em] text-ore" aria-label={`Arrival code ${code.code.split("").join(" ")}`}>
+                {code.code}
+              </p>
+            </div>
+          </div>
+          <p className="mt-4 text-sm text-ink">
+            When your mechanic arrives, check they match the photo and name above, then read them this code. They can&apos;t start the job without it.
+            Never share it before they&apos;re in front of you.
+          </p>
+        </Card>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
         <Card>

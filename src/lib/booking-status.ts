@@ -50,7 +50,7 @@ export function actorMayTransition(actor: Actor, to: BookingStatus): boolean {
     case "no_show":
       return actor === "customer";
     case "cancelled":
-      return true;
+      return true; // further limited by canCancel()
     default:
       return false;
   }
@@ -72,3 +72,17 @@ export const NO_SHOW_GRACE_MINUTES = 30;
 export function noShowReportable(status: BookingStatus, scheduledStart: string, now: number = Date.now()): boolean {
   return (status === "accepted" || status === "en_route") && now > new Date(scheduledStart).getTime() + NO_SHOW_GRACE_MINUTES * 60_000;
 }
+
+/**
+ * Who can cancel when:
+ * - mechanics can only decline a request — once they accept, they're committed (support can step in);
+ * - customers cancel free until the mechanic is on the way;
+ * - after that only an admin can cancel; the arrival code or a no-show report settles it.
+ */
+export function canCancel(actor: Actor, from: BookingStatus): boolean {
+  if (actor === "admin") return from === "requested" || from === "accepted" || from === "en_route";
+  if (actor === "mechanic") return from === "requested";
+  return from === "requested" || from === "accepted";
+}
+
+export const ARRIVAL_CODE_MAX_ATTEMPTS = 5;

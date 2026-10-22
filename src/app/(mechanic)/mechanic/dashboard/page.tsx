@@ -10,7 +10,7 @@ import { PageHeader } from "@/components/ui/layout";
 import { requireRole } from "@/lib/auth";
 import { featuredPriceCents, platformFeeBps } from "@/lib/env";
 import { dateTime, money } from "@/lib/format";
-import { getMyMechanic, readiness } from "@/lib/mechanic";
+import { getMyMechanic, insuranceDaysRemaining, readiness } from "@/lib/mechanic";
 import { createClient } from "@/lib/supabase/server";
 import { manageFeatured, setOnline, startFeatured } from "../actions";
 
@@ -32,6 +32,7 @@ export default async function MechanicDashboardPage({ searchParams }: PageProps<
     .limit(10);
 
   const featured = m.featured_until && new Date(m.featured_until) > new Date();
+  const insuranceDaysLeft = insuranceDaysRemaining(m.insurance_expires_on);
   const fee = platformFeeBps() / 100;
 
   return (
@@ -39,6 +40,16 @@ export default async function MechanicDashboardPage({ searchParams }: PageProps<
       <LiveRefresh mechanicId={viewer.id} />
       <PageHeader eyebrow="Dashboard" title={`Hey, ${(m.display_name ?? viewer.profile.full_name ?? "there").split(" ")[0]}`} />
 
+      {m.insurance_status === "verified" && insuranceDaysLeft !== null && insuranceDaysLeft <= 30 && !m.insurance_pending_expires_on && (
+        <div className="mb-6">
+          <Notice tone="warn" title={insuranceDaysLeft < 0 ? "Your insurance has expired" : `Your insurance expires in ${insuranceDaysLeft} day${insuranceDaysLeft === 1 ? "" : "s"}`}>
+            {insuranceDaysLeft < 0 ? "You're hidden from search until you upload a current certificate. " : "Upload your renewal so you don't drop out of search. "}
+            <Link href="/mechanic/onboarding" className="font-semibold text-ore hover:underline">
+              Upload certificate →
+            </Link>
+          </Notice>
+        </div>
+      )}
       {sp.featured === "success" && <div className="mb-6"><Notice tone="ok" title="You're Featured">Your badge and search boost are active. It can take a minute to show up.</Notice></div>}
       {sp.featured === "not-live" && <div className="mb-6"><Notice tone="warn">Finish your go-live checklist before upgrading to Featured.</Notice></div>}
 

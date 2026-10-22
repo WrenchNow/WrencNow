@@ -31,7 +31,27 @@ export function readiness(m: MechanicRow & { serviceIds: number[] }): ReadinessS
     { key: "services", label: "Pick your services", done: m.serviceIds.length > 0, detail: "Choose the jobs you'll take." },
     { key: "submitted", label: "Submit application", done: Boolean(m.onboarding_submitted_at), detail: "Agree to the Mechanic Agreement." },
     { key: "check", label: "Background check", done: m.check_status === "clear", detail: checkDetail[m.check_status] },
+    {
+      key: "insurance",
+      label: "Proof of insurance",
+      done: m.insurance_status === "verified" && (m.insurance_expires_on ?? "") >= new Date().toISOString().slice(0, 10),
+      detail:
+        m.insurance_status === "verified"
+          ? `Verified through ${m.insurance_expires_on}.`
+          : m.insurance_status === "submitted"
+            ? "Submitted — we're verifying it."
+            : m.insurance_status === "rejected"
+              ? "We couldn't verify it. Upload a current certificate."
+              : "Upload your liability insurance certificate.",
+    },
     { key: "stripe", label: "Connect payouts", done: m.stripe_charges_enabled && m.stripe_payouts_enabled, detail: "Set up your Stripe account so you can get paid." },
     { key: "approved", label: "WrenchNow approval", done: m.status === "approved", detail: m.status === "rejected" ? "Your application wasn't approved." : m.status === "suspended" ? "Your account is suspended." : "We review your experience and assign your skill tier." },
   ];
+}
+
+/** Whole days until the policy expires (negative once expired), or null if none on file. */
+export function insuranceDaysRemaining(expiresOn: string | null, now: Date = new Date()): number | null {
+  if (!expiresOn) return null;
+  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  return Math.round((Date.parse(`${expiresOn}T00:00:00Z`) - today) / 86_400_000);
 }

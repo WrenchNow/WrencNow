@@ -65,3 +65,35 @@ export async function adminCancelBooking(_: FormState, formData: FormData): Prom
   revalidatePath("/admin/bookings");
   return { ok: true, message: "Booking cancelled and card hold released." };
 }
+
+export async function reviewInsurance(_: FormState, formData: FormData): Promise<FormState> {
+  const viewer = await requireAdmin();
+  const parsed = z
+    .object({ id: z.uuid(), decision: z.enum(["verified", "rejected"]), expires_on: z.iso.date().optional().or(z.literal("")) })
+    .safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "Invalid input." };
+  const { id, decision, expires_on } = parsed.data;
+  if (decision === "verified" && (!expires_on || expires_on <= new Date().toISOString().slice(0, 10))) {
+    return { error: "Enter the policy's expiration date (in the future) from the certificate." };
+  }
+  const admin = createAdminClient();
+  const { data: m } = await admin.from("mechanics").select("insurance_status, insurance_expires_on").eq("id", id).single();
+  // Rejecting a renewal doesn't cancel coverage that's still verified and current.
+  const currentStillValid = m?.insurance_status === "verified" && (m.insurance_expires_on ?? "") >= new Date().toISOString().slice(0, 10);
+  const reviewedAt = new Date().toISOString();
+  const { error } = await admin
+    .from("mechanics")
+    .update(
+      decision === "verified"
+        ? { insurance_status: "verified", insurance_expires_on: expires_on, insurance_pending_expires_on: null, insurance_reviewed_at: reviewedAt }
+        : currentStillValid
+          ? { insurance_pending_expires_on: null, insurance_reviewed_at: reviewedAt }
+          : { insurance_status: "rejected", insurance_pending_expires_on: null, insurance_reviewed_at: reviewedAt },
+    )
+    .eq("id", id);
+  if (error) return { error: error.message };
+  await admin.from("audit_log").insert({ actor_id: viewer.id, action: `mechanic.insurance_${decision}`, entity: "mechanic", entity_id: id, data: { expires_on } });
+  const cancelled = decision === "rejected" ? await cancelOpenBookingsForMechanic(id, viewer.id, "Mechanic is no longer available") : 0;
+  revalidatePath("/admin", "layout");
+  return { ok: true, message: decision === "verified" ? `Insurance verified through ${expires_on}.` : `Insurance rejected.${cancelled ? ` Cancelled ${cancelled} open booking(s).` : ""}` };
+}

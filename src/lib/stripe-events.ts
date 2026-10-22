@@ -41,7 +41,7 @@ async function onPaymentIntent(admin: Admin, event: Stripe.Event) {
       // so a mechanic never shows up to unpaid work. The mechanic's job list updates live.
       const { data: ended } = await admin
         .from("bookings")
-        .update({ status: "cancelled", cancel_reason: "Payment hold released" })
+        .update({ status: "cancelled", cancel_reason: "Payment hold released", admin_override: true }) // system action
         .eq("id", bookingId)
         .in("status", ["requested", "accepted", "en_route"])
         .select("id");

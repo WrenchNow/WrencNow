@@ -71,6 +71,11 @@ async function insertBooking(q: (sql: string, params?: unknown[]) => Promise<pg.
   return r.rows[0].id as string;
 }
 
+/** Simulate the mechanic having entered the customer's arrival code. */
+async function verifiedCode(q: (sql: string, params?: unknown[]) => Promise<pg.QueryResult>, bookingId: string) {
+  await q("insert into public.booking_codes (booking_id, code, verified_at) values ($1, '1234', now())", [bookingId]);
+}
+
 const future = (days: number, hour = 16) => {
   const d = new Date(Date.now() + days * 86_400_000);
   d.setUTCHours(hour, 0, 0, 0);
@@ -206,6 +211,7 @@ run("booking rules (enforced by triggers for every writer)", () => {
       tx(async (q) => {
         const id = await insertBooking(q, ids["mechanic.basic"], "oil-change", future(2));
         await q("update public.bookings set payment_status = 'authorized' where id = $1", [id]);
+        await verifiedCode(q, id);
         for (const s of ["accepted", "en_route", "in_progress", "completed"]) await q("update public.bookings set status = $2 where id = $1", [id, s]);
       }),
     ).rejects.toThrow(/captured/);
@@ -215,6 +221,7 @@ run("booking rules (enforced by triggers for every writer)", () => {
     await tx(async (q) => {
       const id = await insertBooking(q, ids["mechanic.basic"], "oil-change", future(2));
       await q("update public.bookings set payment_status = 'authorized' where id = $1", [id]);
+      await verifiedCode(q, id);
       for (const s of ["accepted", "en_route", "in_progress"]) await q("update public.bookings set status = $2 where id = $1", [id, s]);
       await q("update public.bookings set payment_status = 'captured', final_amount_cents = 8000, status = 'completed' where id = $1", [id]);
       const m = await q("select completed_jobs from public.mechanics where id = $1", [ids["mechanic.basic"]]);
@@ -300,6 +307,7 @@ run("booking rules (enforced by triggers for every writer)", () => {
     await tx(async (q) => {
       const id = await insertBooking(q, ids["mechanic.basic"], "oil-change", future(2));
       await q("update public.bookings set payment_status = 'authorized' where id = $1", [id]);
+      await verifiedCode(q, id);
       for (const st of ["accepted", "en_route", "in_progress"]) await q("update public.bookings set status = $2 where id = $1", [id, st]);
       await q("update public.bookings set payment_status = 'captured', final_amount_cents = 8000, status = 'completed' where id = $1", [id]);
       await q("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: ids["customer"], role: "authenticated" })]);
@@ -333,6 +341,75 @@ run("QA hardening", () => {
       const r = await q("select count(*)::int as n from public.mechanic_services where mechanic_id = auth.uid()");
       expect(r.rows[0].n).toBeGreaterThan(0);
     }, asUser(ids["mechanic.pending"]));
+  });
+
+  it("en route jobs can't be cancelled except by an admin", async () => {
+    await expect(
+      tx(async (q) => {
+        const id = await insertBooking(q, ids["mechanic.basic"], "oil-change", future(2));
+        await q("update public.bookings set payment_status = 'authorized' where id = $1", [id]);
+        for (const st of ["accepted", "en_route"]) await q("update public.bookings set status = $2 where id = $1", [id, st]);
+        await q("update public.bookings set status = 'cancelled' where id = $1", [id]);
+      }),
+    ).rejects.toThrow(/invalid booking transition/);
+    await tx(async (q) => {
+      const id = await insertBooking(q, ids["mechanic.basic"], "oil-change", future(2));
+      await q("update public.bookings set payment_status = 'authorized' where id = $1", [id]);
+      for (const st of ["accepted", "en_route"]) await q("update public.bookings set status = $2 where id = $1", [id, st]);
+      await q("update public.bookings set status = 'cancelled', admin_override = true where id = $1", [id]);
+    });
+  });
+});
+
+run("arrival codes", () => {
+  it("a job can't start without a verified arrival code", async () => {
+    await expect(
+      tx(async (q) => {
+        const id = await insertBooking(q, ids["mechanic.basic"], "oil-change", future(2));
+        await q("update public.bookings set payment_status = 'authorized' where id = $1", [id]);
+        for (const st of ["accepted", "en_route"]) await q("update public.bookings set status = $2 where id = $1", [id, st]);
+        await q("insert into public.booking_codes (booking_id, code) values ($1, '4821')", [id]);
+        await q("update public.bookings set status = 'in_progress' where id = $1", [id]);
+      }),
+    ).rejects.toThrow(/arrival code not verified/);
+  });
+
+  it("only the customer can read the code — never the mechanic", async () => {
+    await tx(async (q) => {
+      const id = await insertBooking(q, ids["mechanic.basic"], "oil-change", future(2));
+      await q("insert into public.booking_codes (booking_id, code) values ($1, '4821')", [id]);
+      await q("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: ids["mechanic.basic"], role: "authenticated" })]);
+      await q("set local role authenticated");
+      expect((await q("select count(*)::int as n from public.booking_codes")).rows[0].n).toBe(0);
+      await q("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: ids["customer"], role: "authenticated" })]);
+      expect((await q("select code from public.booking_codes where booking_id = $1", [id])).rows[0].code).toBe("4821");
+      await expect(q("update public.booking_codes set verified_at = now() where booking_id = $1", [id])).rejects.toThrow(/permission denied/);
+    });
+  });
+});
+
+run("insurance", () => {
+  it("mechanics without verified insurance aren't live", async () => {
+    await tx(async (q) => {
+      await q("update public.mechanics set insurance_status = 'submitted' where id = $1", [ids["mechanic.basic"]]);
+      expect((await q("select is_live from public.mechanics where id = $1", [ids["mechanic.basic"]])).rows[0].is_live).toBe(false);
+    });
+  });
+
+  it("expired insurance hides a mechanic from search and blocks bookings", async () => {
+    await tx(async (q) => {
+      await q("update public.mechanics set insurance_expires_on = current_date - 1 where id = $1", [ids["mechanic.basic"]]);
+      const r = await q("select display_name from public.search_mechanics(39.7392, -104.9903)");
+      expect(r.rows.map((x) => x.display_name)).not.toContain("Test Mechanic Basic");
+      expect((await q("select count(*)::int as n from public.get_public_mechanic($1)", [ids["mechanic.basic"]])).rows[0].n).toBe(0);
+      await expect(insertBooking(q, ids["mechanic.basic"], "oil-change", future(2))).rejects.toThrow(/not live/);
+    });
+  });
+
+  it("mechanics can't mark their own insurance verified", async () => {
+    await expect(
+      tx((q) => q("update public.mechanics set insurance_status = 'verified', insurance_expires_on = '2099-01-01' where id = auth.uid()"), asUser(ids["mechanic.pending"])),
+    ).rejects.toThrow(/permission denied/);
   });
 });
 

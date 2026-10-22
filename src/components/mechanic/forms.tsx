@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useRef, useState } from "react";
-import { mechanicTransition, saveMechanicProfile, savePhotoUrl, saveServices, submitApplication, type FormState } from "@/app/(mechanic)/mechanic/actions";
+import { mechanicTransition, saveMechanicProfile, savePhotoUrl, saveServices, submitApplication, submitInsurance, type FormState } from "@/app/(mechanic)/mechanic/actions";
 import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/feedback";
 import { Checkbox, Field, Input, Textarea } from "@/components/ui/form";
@@ -205,6 +205,7 @@ export function JobActions({ id, status, estimateLabel, estimateMax }: { id: str
         <form action={action} className="flex flex-col gap-2">
           {hidden}
           <input type="hidden" name="to" value="cancelled" />
+          <p className="text-sm text-ink">Declining is free. Once you accept a job, you can&apos;t cancel it in the app.</p>
           <Field label="Reason (shared with the customer)" htmlFor={`reason-${id}`}>
             <Input id={`reason-${id}`} name="reason" maxLength={300} placeholder="Not available at that time" />
           </Field>
@@ -219,7 +220,7 @@ export function JobActions({ id, status, estimateLabel, estimateMax }: { id: str
         </form>
       )}
       {status === "accepted" && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-col gap-2">
           <form action={action}>
             {hidden}
             <input type="hidden" name="to" value="en_route" />
@@ -227,21 +228,24 @@ export function JobActions({ id, status, estimateLabel, estimateMax }: { id: str
               I&apos;m on my way
             </Button>
           </form>
-          <form action={action}>
-            {hidden}
-            <input type="hidden" name="to" value="cancelled" />
-            <Button type="submit" variant="subtle" disabled={pending}>
-              Cancel job
-            </Button>
-          </form>
+          <p className="text-xs text-muted">
+            You&apos;ve committed to this job. Emergency? Email{" "}
+            <a href="mailto:hello@getwrenchnow.com" className="text-ore hover:underline">
+              hello@getwrenchnow.com
+            </a>
+            .
+          </p>
         </div>
       )}
       {status === "en_route" && (
-        <form action={action}>
+        <form action={action} className="flex flex-col gap-2 sm:flex-row sm:items-end">
           {hidden}
           <input type="hidden" name="to" value="in_progress" />
+          <Field label="Customer's 4-digit arrival code" htmlFor={`code-${id}`} hint="Ask the customer for the code in their app. It proves you're there.">
+            <Input id={`code-${id}`} name="arrival_code" inputMode="numeric" pattern="[0-9]{4}" maxLength={4} autoComplete="one-time-code" required className="w-32 text-center text-lg tracking-[0.4em]" />
+          </Field>
           <Button type="submit" disabled={pending}>
-            Start job
+            {pending ? "Checking…" : "Verify & start job"}
           </Button>
         </form>
       )}
@@ -258,5 +262,62 @@ export function JobActions({ id, status, estimateLabel, estimateMax }: { id: str
         </form>
       )}
     </div>
+  );
+}
+
+export function InsuranceForm({ userId, defaults }: { userId: string; defaults: { provider: string; policy: string } }) {
+  const [state, setState] = useState<FormState>({});
+  const [busy, setBusy] = useState(false);
+
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const file = fd.get("certificate");
+    if (!(file instanceof File) || file.size === 0) return setState({ error: "Upload your certificate of insurance." });
+    if (file.size > 10 * 1024 * 1024) return setState({ error: "File must be under 10 MB." });
+    if (!["application/pdf", "image/jpeg", "image/png", "image/webp"].includes(file.type)) return setState({ error: "Use a PDF, JPG, PNG, or WebP file." });
+    setBusy(true);
+    setState({});
+    const ext = file.type === "application/pdf" ? "pdf" : file.type.split("/")[1];
+    const path = `${userId}/insurance-${Date.now()}.${ext}`;
+    const { error } = await createClient().storage.from("mechanic-docs").upload(path, file, { contentType: file.type });
+    if (error) {
+      setBusy(false);
+      return setState({ error: "Upload failed. Please try again." });
+    }
+    setState(
+      await submitInsurance({
+        provider: String(fd.get("provider") ?? ""),
+        policy_number: String(fd.get("policy_number") ?? ""),
+        expires_on: String(fd.get("expires_on") ?? ""),
+        doc_path: path,
+      }),
+    );
+    setBusy(false);
+  }
+
+  return (
+    <form onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2">
+      <div className="sm:col-span-2">
+        <StateNotice state={state} />
+      </div>
+      <Field label="Insurance company" htmlFor="provider">
+        <Input id="provider" name="provider" defaultValue={defaults.provider} required maxLength={120} />
+      </Field>
+      <Field label="Policy number" htmlFor="policy_number">
+        <Input id="policy_number" name="policy_number" defaultValue={defaults.policy} required maxLength={80} />
+      </Field>
+      <Field label="Policy expiration date" htmlFor="expires_on">
+        <Input id="expires_on" name="expires_on" type="date" required />
+      </Field>
+      <Field label="Certificate of insurance" htmlFor="certificate" hint="PDF or photo, under 10 MB. Only WrenchNow staff can see it.">
+        <Input id="certificate" name="certificate" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" required className="py-2" />
+      </Field>
+      <div className="sm:col-span-2">
+        <Button type="submit" disabled={busy}>
+          {busy ? "Uploading…" : "Submit insurance"}
+        </Button>
+      </div>
+    </form>
   );
 }

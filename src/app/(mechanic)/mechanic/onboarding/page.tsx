@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { MechanicProfileForm, PhotoUpload, ServicesForm, SubmitApplicationForm } from "@/components/mechanic/forms";
+import { InsuranceForm, MechanicProfileForm, PhotoUpload, ServicesForm, SubmitApplicationForm } from "@/components/mechanic/forms";
 import { Readiness } from "@/components/mechanic/readiness";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -84,7 +84,33 @@ export default async function MechanicOnboardingPage({ searchParams }: PageProps
           </Card>
 
           <Card>
-            <h2 className="text-2xl font-bold uppercase">4. Get paid</h2>
+            <h2 className="text-2xl font-bold uppercase">4. Proof of insurance</h2>
+            <p className="mt-1 mb-4 text-sm text-muted">
+              You need your own liability insurance to work on customers&apos; cars. We verify the certificate before you go live, and you&apos;ll need to upload a new one
+              before it expires.
+            </p>
+            {m.insurance_status === "verified" && (
+              <div className="mb-4">
+                <Notice tone="ok" title={`Verified through ${m.insurance_expires_on}`}>
+                  {m.insurance_pending_expires_on ? "Your renewal is being reviewed — you stay live in the meantime." : "Upload your renewal here before it expires."}
+                </Notice>
+              </div>
+            )}
+            {m.insurance_status === "submitted" && (
+              <div className="mb-4">
+                <Notice tone="info" title="Submitted">We&apos;re verifying your certificate.</Notice>
+              </div>
+            )}
+            {m.insurance_status === "rejected" && (
+              <div className="mb-4">
+                <Notice tone="danger" title="We couldn't verify your insurance">Upload a current certificate that shows your name and liability coverage.</Notice>
+              </div>
+            )}
+            <InsuranceForm userId={viewer.id} defaults={{ provider: m.insurance_provider ?? "", policy: m.insurance_policy_number ?? "" }} />
+          </Card>
+
+          <Card>
+            <h2 className="text-2xl font-bold uppercase">5. Get paid</h2>
             <p className="mt-1 mb-4 text-sm text-muted">Payouts go through Stripe. Takes about 5 minutes — have your bank details ready.</p>
             {stripeDone ? (
               <Notice tone="ok" title="Payouts connected">You&apos;re all set to get paid.</Notice>

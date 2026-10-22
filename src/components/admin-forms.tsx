@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { adminCancelBooking, refundBooking, reviewMechanic, type FormState } from "@/app/(admin)/admin/actions";
+import { adminCancelBooking, refundBooking, reviewInsurance, reviewMechanic, type FormState } from "@/app/(admin)/admin/actions";
 import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/feedback";
 import { Input, Select } from "@/components/ui/form";
@@ -73,6 +73,28 @@ export function AdminCancelForm({ id }: { id: string }) {
       <Button type="submit" size="sm" variant="subtle" disabled={pending}>
         Cancel booking
       </Button>
+    </form>
+  );
+}
+
+export function InsuranceReviewForm({ id, pendingExpiry }: { id: string; pendingExpiry: string | null }) {
+  const [s, action, pending] = useActionState(reviewInsurance, {});
+  return (
+    <form action={action} className="flex flex-col gap-2">
+      <Msg s={s} />
+      <input type="hidden" name="id" value={id} />
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="text-xs text-muted">
+          Expires on (check the certificate)
+          <Input name="expires_on" type="date" defaultValue={pendingExpiry ?? ""} className="mt-1 py-2" />
+        </label>
+        <Button type="submit" name="decision" value="verified" size="sm" disabled={pending}>
+          Verify
+        </Button>
+        <Button type="submit" name="decision" value="rejected" size="sm" variant="danger" disabled={pending}>
+          Reject
+        </Button>
+      </div>
     </form>
   );
 }

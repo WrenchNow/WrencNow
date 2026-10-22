@@ -42,10 +42,44 @@ export type Database = {
           },
         ];
       };
+      booking_codes: {
+        Row: {
+          attempts: number;
+          booking_id: string;
+          code: string;
+          created_at: string;
+          verified_at: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          attempts?: number;
+          booking_id: string;
+          code: string;
+          created_at?: string;
+          verified_at?: string | null;
+        };
+        Update: {
+          attempts?: number;
+          booking_id?: string;
+          code?: string;
+          created_at?: string;
+          verified_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "booking_codes_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: true;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       bookings: {
         Row: {
           accepted_at: string | null;
           address: string;
+          admin_override: boolean;
           cancel_reason: string | null;
           cancelled_at: string | null;
           cancelled_by: string | null;
@@ -80,6 +114,7 @@ export type Database = {
         Insert: {
           accepted_at?: string | null;
           address: string;
+          admin_override?: boolean;
           cancel_reason?: string | null;
           cancelled_at?: string | null;
           cancelled_by?: string | null;
@@ -113,6 +148,7 @@ export type Database = {
         Update: {
           accepted_at?: string | null;
           address?: string;
+          admin_override?: boolean;
           cancel_reason?: string | null;
           cancelled_at?: string | null;
           cancelled_by?: string | null;
@@ -279,6 +315,14 @@ export type Database = {
           has_transport: boolean;
           hourly_rate_cents: number | null;
           id: string;
+          insurance_doc_path: string | null;
+          insurance_expires_on: string | null;
+          insurance_pending_expires_on: string | null;
+          insurance_policy_number: string | null;
+          insurance_provider: string | null;
+          insurance_reviewed_at: string | null;
+          insurance_status: Database["public"]["Enums"]["insurance_status"];
+          insurance_submitted_at: string | null;
           is_live: boolean | null;
           location: unknown;
           no_show_count: number;
@@ -317,6 +361,14 @@ export type Database = {
           has_transport?: boolean;
           hourly_rate_cents?: number | null;
           id: string;
+          insurance_doc_path?: string | null;
+          insurance_expires_on?: string | null;
+          insurance_pending_expires_on?: string | null;
+          insurance_policy_number?: string | null;
+          insurance_provider?: string | null;
+          insurance_reviewed_at?: string | null;
+          insurance_status?: Database["public"]["Enums"]["insurance_status"];
+          insurance_submitted_at?: string | null;
           is_live?: never;
           location?: unknown;
           no_show_count?: number;
@@ -354,6 +406,14 @@ export type Database = {
           has_transport?: boolean;
           hourly_rate_cents?: number | null;
           id?: string;
+          insurance_doc_path?: string | null;
+          insurance_expires_on?: string | null;
+          insurance_pending_expires_on?: string | null;
+          insurance_policy_number?: string | null;
+          insurance_provider?: string | null;
+          insurance_reviewed_at?: string | null;
+          insurance_status?: Database["public"]["Enums"]["insurance_status"];
+          insurance_submitted_at?: string | null;
           is_live?: never;
           location?: unknown;
           no_show_count?: number;
@@ -701,6 +761,7 @@ export type Database = {
         | "consider"
         | "suspended"
         | "canceled";
+      insurance_status: "none" | "submitted" | "verified" | "rejected";
       ledger_type: "charge" | "platform_fee" | "refund" | "dispute" | "subscription";
       mechanic_status: "pending" | "approved" | "paused" | "rejected" | "suspended";
       payment_status:
@@ -848,6 +909,7 @@ export const Constants = {
         "suspended",
         "canceled",
       ],
+      insurance_status: ["none", "submitted", "verified", "rejected"],
       ledger_type: ["charge", "platform_fee", "refund", "dispute", "subscription"],
       mechanic_status: ["pending", "approved", "paused", "rejected", "suspended"],
       payment_status: [

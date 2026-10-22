@@ -22,8 +22,12 @@ export const CUSTOMER_FAQ: Faq[] = [
     a: "No. All payments go through WrenchNow so your booking is protected, reviews stay honest, and there's a record if anything goes wrong.",
   },
   {
+    q: "How do I know it's really my mechanic?",
+    a: "When your mechanic accepts, your booking page shows their photo, name, and a 4-digit arrival code. Check that the person matches, then read them the code. They can't start the job without it.",
+  },
+  {
     q: "What if my mechanic doesn't show up?",
-    a: "Report it from your booking page. The hold on your card is released, and the no-show is recorded on the mechanic's public profile.",
+    a: "If they haven't started the job with your arrival code 30 minutes after the booked time, report a no-show from your booking page. The hold on your card is released, and the no-show is recorded on the mechanic's public profile.",
   },
   {
     q: "What if the problem comes back?",
@@ -42,7 +46,7 @@ export const MECHANIC_FAQ: Faq[] = [
   },
   {
     q: "What do I need to get started?",
-    a: "A valid driver's license, your own tools and transportation, liability insurance, and a smartphone. You'll also need to pass a background check and connect a bank account through Stripe.",
+    a: "A valid driver's license, your own tools and transportation, a profile photo, liability insurance (we verify your certificate and you renew it before it expires), and a smartphone. You'll also need to pass a background check and connect a bank account through Stripe.",
   },
   {
     q: "I'm newer to the trade. Can I still join?",
@@ -54,6 +58,6 @@ export const MECHANIC_FAQ: Faq[] = [
   },
   {
     q: "Do I have to accept every job?",
-    a: "No. Go online when you want work, accept the jobs you want, and go offline when you're done.",
+    a: "No. Go online when you want work, accept the jobs you want, and go offline when you're done. Declining a request is free — but once you accept a job, you're committed. Customers count on it.",
   },
 ];
