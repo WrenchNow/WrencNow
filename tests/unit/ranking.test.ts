@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bayesianRating, noShowRate, rankScore, sortMechanics, type RankInput } from "@/lib/ranking";
+import { bayesianRating, noShowRate, rankScore, sortMechanics, sponsoredRow, type RankInput } from "@/lib/ranking";
 
 const base: RankInput = { rating_avg: null, review_count: 0, completed_jobs: 0, no_show_count: 0, featured: false, online: false, distance_miles: 5 };
 const m = (o: Partial<RankInput> & { id: string; hourly_rate_cents?: number }) => ({ ...base, hourly_rate_cents: 8_000, ...o });
@@ -8,15 +8,16 @@ describe("ranking", () => {
   it("smooths ratings so one 5★ review doesn't beat many great reviews", () => {
     expect(bayesianRating(5, 1)).toBeLessThan(bayesianRating(4.9, 60));
   });
-  it("weights reviews heavily over featured status", () => {
-    const strong = m({ id: "strong", rating_avg: 4.9, review_count: 80, completed_jobs: 80 });
-    const paid = m({ id: "paid", featured: true });
-    expect(rankScore(strong)).toBeGreaterThan(rankScore(paid));
-  });
-  it("featured breaks ties between otherwise equal mechanics", () => {
+  it("sponsorship never changes the organic score", () => {
     const a = m({ id: "a", rating_avg: 4.8, review_count: 20, completed_jobs: 20 });
     const b = m({ id: "b", rating_avg: 4.8, review_count: 20, completed_jobs: 20, featured: true });
-    expect(sortMechanics([a, b])[0]!.id).toBe("b");
+    expect(rankScore(a)).toBe(rankScore(b));
+  });
+  it("puts up to 3 sponsored matches in their own row and removes them from the organic list", () => {
+    const list = [1, 2, 3, 4].map((i) => m({ id: `s${i}`, featured: true, rating_avg: 4 + i / 10, review_count: 10 })).concat([m({ id: "o1" })]);
+    const { sponsored, organic } = sponsoredRow(list);
+    expect(sponsored.map((x) => x.id)).toEqual(["s4", "s3", "s2"]);
+    expect(organic.map((x) => x.id).sort()).toEqual(["o1", "s1"]);
   });
   it("penalizes no-shows", () => {
     const reliable = m({ id: "reliable", rating_avg: 4.7, review_count: 30, completed_jobs: 30 });

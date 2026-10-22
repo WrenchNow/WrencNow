@@ -532,3 +532,52 @@ run("off-platform payment reports", () => {
   });
 });
 
+run("reviews can't be stacked", () => {
+  type Q = (sql: string, params?: unknown[]) => Promise<pg.QueryResult>;
+  async function done(q: Q, day: number) {
+    const id = await insertBooking(q, ids["mechanic.basic"], "oil-change", future(day));
+    await q("update public.bookings set payment_status = 'authorized' where id = $1", [id]);
+    await verifiedCode(q, id);
+    for (const st of ["accepted", "en_route", "in_progress"]) await q("update public.bookings set status = $2 where id = $1", [id, st]);
+    await q("update public.bookings set payment_status = 'captured', final_amount_cents = 6000, status = 'completed' where id = $1", [id]);
+    return id;
+  }
+  const review = (q: Q, booking: string, rating: number) =>
+    q("insert into public.reviews (booking_id, customer_id, mechanic_id, reviewer_name, rating) values ($1, $2, $3, 'x', $4)", [booking, ids["customer"], ids["mechanic.basic"], rating]);
+
+  it("one review per customer per mechanic, however many jobs", async () => {
+    await expect(
+      tx(async (q) => {
+        await review(q, await done(q, 1), 5);
+        await review(q, await done(q, 2), 5);
+      }),
+    ).rejects.toThrow(/reviews_one_per_customer_mechanic/);
+  });
+
+  it("refunded or charged-back jobs don't count toward rating or job total", async () => {
+    await tx(async (q) => {
+      const id = await done(q, 1);
+      await review(q, id, 5);
+      let m = (await q("select review_count, completed_jobs from public.mechanics where id = $1", [ids["mechanic.basic"]])).rows[0];
+      expect(m).toEqual({ review_count: 1, completed_jobs: 1 });
+      await q("update public.bookings set payment_status = 'refunded' where id = $1", [id]);
+      m = (await q("select review_count, completed_jobs from public.mechanics where id = $1", [ids["mechanic.basic"]])).rows[0];
+      expect(m).toEqual({ review_count: 0, completed_jobs: 0 });
+    });
+  });
+});
+
+run("Colorado repair act fields", () => {
+  it("bookings record estimate approval and old-parts requests", async () => {
+    await tx(async (q) => {
+      const id = await insertBooking(q, ids["mechanic.basic"], "oil-change", future(1));
+      await q("update public.bookings set estimate_approved_at = now(), return_old_parts = true where id = $1", [id]);
+      const r = (await q("select estimate_approved_at is not null as approved, return_old_parts from public.bookings where id = $1", [id])).rows[0];
+      expect(r).toEqual({ approved: true, return_old_parts: true });
+    });
+  });
+  it("warranty must be one of the offered options", async () => {
+    await expect(tx((q) => q("update public.mechanics set warranty_days = 45 where id = auth.uid()"), asUser(ids["mechanic.basic"]))).rejects.toThrow(/check/);
+  });
+});
+

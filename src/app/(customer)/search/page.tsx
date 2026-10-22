@@ -9,7 +9,7 @@ import { Container, PageHeader, SetupRequired } from "@/components/ui/layout";
 import { supabaseConfigured } from "@/lib/env";
 import { geocode } from "@/lib/geocode";
 import { getServices } from "@/lib/public-data";
-import type { SortKey } from "@/lib/ranking";
+import { sponsoredRow, type SortKey } from "@/lib/ranking";
 import { searchMechanics } from "@/lib/search";
 
 export const metadata: Metadata = {
@@ -138,13 +138,24 @@ async function Results({ loc, service, sort }: { loc: string; service: string | 
     );
   }
 
+  const { sponsored, organic } = sponsoredRow(results);
   return (
     <>
+      {sponsored.length > 0 && (
+        <section aria-label="Sponsored" className="mb-8">
+          <p className="mb-2 text-xs font-semibold tracking-wider text-warn uppercase">Sponsored</p>
+          <ul className="grid gap-4 lg:grid-cols-2">
+            {sponsored.map((m) => (
+              <MechanicCard key={m.id} m={m} service={service ?? undefined} />
+            ))}
+          </ul>
+        </section>
+      )}
       <p className="mb-4 text-sm text-muted">
         {results.length} mechanic{results.length === 1 ? "" : "s"} cover {point.label}
       </p>
       <ul className="grid gap-4 lg:grid-cols-2">
-        {results.map((m) => (
+        {organic.map((m) => (
           <MechanicCard key={m.id} m={m} service={service ?? undefined} />
         ))}
       </ul>

@@ -1,5 +1,6 @@
 import legal from "@/content/legal.json";
 import { customerNoShowFeeCents, onboardingFeePerJobCents, onboardingFeeTotalCents, platformFeeBps } from "@/lib/env";
+import { processingLabel } from "@/lib/fee-copy";
 import { money } from "@/lib/format";
 import { Container } from "./ui/layout";
 
@@ -31,6 +32,7 @@ function Blocks({ blocks }: { blocks: Block[] }) {
           <p key={i} className={`my-3 ${b.p!.endsWith(":") ? "font-semibold text-cream" : ""}`}>
             {b
               .p!.replace("{{PLATFORM_FEE_PERCENT}}", fee)
+              .replace("{{PROCESSING_FEE}}", processingLabel())
               .replace("{{ONBOARDING_TOTAL}}", money(onboardingFeeTotalCents(), { whole: true }))
               .replace("{{ONBOARDING_PER_JOB}}", money(onboardingFeePerJobCents(), { whole: true }))
               .replace("{{CUSTOMER_NO_SHOW_FEE}}", money(customerNoShowFeeCents(), { whole: true }))

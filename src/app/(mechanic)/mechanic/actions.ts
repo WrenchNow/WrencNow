@@ -36,6 +36,7 @@ const profileSchema = z.object({
   hourly_rate: z.coerce.number().min(20, "Rates start at $20/hr").max(500, "Max $500/hr"),
   base_location: z.string().trim().min(3, "Enter your base ZIP or address").max(200),
   service_radius_miles: z.coerce.number().int().min(1).max(100),
+  warranty_days: z.coerce.number().pipe(z.union([z.literal(0), z.literal(30), z.literal(90), z.literal(180), z.literal(365)])),
   has_tools: z.literal("on", { error: "You need your own tools to work on WrenchNow" }),
   has_transport: z.literal("on", { error: "You need reliable transportation to reach customers" }),
 });
@@ -62,6 +63,7 @@ export async function saveMechanicProfile(_: FormState, formData: FormData): Pro
         specialties: d.specialties,
         hourly_rate_cents: Math.round(d.hourly_rate * 100),
         service_radius_miles: d.service_radius_miles,
+        warranty_days: d.warranty_days,
         location: `SRID=4326;POINT(${point.lng} ${point.lat})`,
         city: /^\d/.test(city ?? "") ? null : city,
         has_tools: true,
@@ -182,16 +184,24 @@ export async function mechanicTransition(_: FormState, formData: FormData): Prom
   const viewer = await requireRole(["mechanic"], "/mechanic/jobs");
   const id = z.uuid().parse(formData.get("id"));
   const to = z.enum(["accepted", "en_route", "in_progress", "completed", "cancelled", "customer_no_show"]).parse(formData.get("to"));
-  let finalAmountCents: number | undefined;
+  let laborCents: number | undefined;
+  let partsCents: number | undefined;
   if (to === "completed") {
-    const raw = Number(String(formData.get("final_amount") ?? "").replace(/[$,\s]/g, ""));
-    if (!Number.isFinite(raw) || raw <= 0) return { error: "Enter the final amount for the job." };
-    finalAmountCents = Math.round(raw * 100);
+    const dollars = (name: string) => {
+      const v = String(formData.get(name) ?? "").replace(/[$,\s]/g, "");
+      return v === "" ? 0 : Number(v);
+    };
+    const labor = dollars("labor");
+    const parts = dollars("parts");
+    if (!Number.isFinite(labor) || !Number.isFinite(parts) || labor < 0 || parts < 0) return { error: "Enter labor and parts as dollar amounts." };
+    if (labor + parts <= 0) return { error: "Enter what the job cost (labor and parts)." };
+    laborCents = Math.round(labor * 100);
+    partsCents = Math.round(parts * 100);
   }
   const reason = String(formData.get("reason") ?? "").slice(0, 500) || undefined;
   const arrivalCode = String(formData.get("arrival_code") ?? "").slice(0, 8) || undefined;
   try {
-    await transitionBooking(id, { id: viewer.id, role: "mechanic" }, to, { finalAmountCents, reason, arrivalCode });
+    await transitionBooking(id, { id: viewer.id, role: "mechanic" }, to, { laborCents, partsCents, reason, arrivalCode });
   } catch (e) {
     if (e instanceof BookingError) return { error: e.message };
     console.error(e);
@@ -226,7 +236,7 @@ export async function startFeatured() {
           currency: "usd",
           unit_amount: featuredPriceCents(),
           recurring: { interval: "month" },
-          product_data: { name: "WrenchNow Featured Mechanic" },
+          product_data: { name: "WrenchNow Sponsored Placement" },
         },
       },
     ],

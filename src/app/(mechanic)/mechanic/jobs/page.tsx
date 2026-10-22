@@ -6,8 +6,8 @@ import { EmptyState } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/layout";
 import { requireRole } from "@/lib/auth";
 import { customerNoShowAt } from "@/lib/booking-status";
-import { customerNoShowFeeCents, platformFeeBps } from "@/lib/env";
-import { mechanicPayoutCents } from "@/lib/fees";
+import { customerNoShowFeeCents, platformFeeBps, processingFeeBps, processingFeeFixedCents } from "@/lib/env";
+import { mechanicDeductionsCents } from "@/lib/fees";
 import { dateTime, money } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 
@@ -30,6 +30,11 @@ export default async function MechanicJobsPage() {
   const active = all.filter((j) => ["requested", "accepted", "en_route", "in_progress"].includes(j.status) && j.payment_status === "authorized");
   const past = all.filter((j) => !active.includes(j)).reverse();
   const bps = platformFeeBps();
+  // Mechanic's share before any onboarding installment: total minus platform fee and card processing.
+  const shareOf = (cents: number) => {
+    const d = mechanicDeductionsCents(cents, bps, processingFeeBps(), processingFeeFixedCents());
+    return cents - d.platform - d.processing;
+  };
 
   // Contact details are only fetched for jobs the mechanic has accepted.
   const acceptedCustomerIds = [...new Set(active.filter((j) => j.status !== "requested").map((j) => j.customer_id))];
@@ -78,9 +83,16 @@ export default async function MechanicJobsPage() {
                   <div>
                     <dt className="text-xs tracking-wider text-muted uppercase">Max estimate · your share</dt>
                     <dd className="text-cream">
-                      {money(j.estimated_max_cents)} · {money(mechanicPayoutCents(j.estimated_max_cents, bps))}
+                      {money(j.estimated_max_cents)} · {money(shareOf(j.estimated_max_cents))}
                     </dd>
                   </div>
+                  {j.return_old_parts && (
+                    <div className="sm:col-span-3">
+                      <dd className="rounded-[var(--radius-control)] border border-warn/30 bg-warn-dim px-3 py-2 text-warn">
+                        ↩ Customer wants their old parts back — leave the replaced parts with them.
+                      </dd>
+                    </div>
+                  )}
                   {j.problem_description && (
                     <div className="sm:col-span-3">
                       <dt className="text-xs tracking-wider text-muted uppercase">Customer says</dt>

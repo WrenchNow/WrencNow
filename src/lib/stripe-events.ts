@@ -111,7 +111,7 @@ async function onAccount(admin: Admin, event: Stripe.Event) {
   }
 }
 
-/** Featured subscription period end. Newer API versions moved it onto subscription items. */
+/** Sponsored placement subscription period end. Newer API versions moved it onto subscription items. */
 export function subscriptionPeriodEnd(sub: Stripe.Subscription): number | null {
   const items = sub.items?.data ?? [];
   const ends = items.map((i) => (i as unknown as { current_period_end?: number }).current_period_end).filter((n): n is number => typeof n === "number");

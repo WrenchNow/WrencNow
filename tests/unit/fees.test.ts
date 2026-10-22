@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { platformFeeBps } from "@/lib/env";
-import { estimateMaxCents, estimateMinCents, mechanicNetCents, mechanicPayoutCents, platformFeeCents, onboardingJobsRemaining } from "@/lib/fees";
+import { mechanicDeductionsCents, processingFeeCents, estimateMaxCents, estimateMinCents, mechanicNetCents, mechanicPayoutCents, platformFeeCents, onboardingJobsRemaining } from "@/lib/fees";
 import { monthKey } from "@/lib/format";
 
 describe("platformFeeCents", () => {
@@ -83,5 +83,19 @@ describe("onboarding fee", () => {
     expect(onboardingJobsRemaining(5000, 2000, 1000)).toBe(3);
     expect(onboardingJobsRemaining(5000, 5000, 1000)).toBe(0);
     expect(onboardingJobsRemaining(5000, 4500, 1000)).toBe(1); // a small job only covered $5 earlier
+  });
+});
+
+describe("card processing pass-through", () => {
+  it("is 3.2% + 55¢ by default, never more than the charge", () => {
+    expect(processingFeeCents(10_000, 320, 55)).toBe(375);
+    expect(processingFeeCents(100, 320, 55)).toBe(58);
+    expect(processingFeeCents(40, 320, 55)).toBe(40);
+    expect(processingFeeCents(0, 320, 55)).toBe(0);
+  });
+  it("platform + processing on a $100 job leaves the mechanic $91.25", () => {
+    const d = mechanicDeductionsCents(10_000, 500, 320, 55);
+    expect(d).toEqual({ platform: 500, processing: 375 });
+    expect(10_000 - d.platform - d.processing).toBe(9_125);
   });
 });

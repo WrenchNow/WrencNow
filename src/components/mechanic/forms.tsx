@@ -4,7 +4,8 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { checkIn, mechanicTransition, saveMechanicProfile, savePhotoUrl, saveServices, submitApplication, submitInsurance, type FormState } from "@/app/(mechanic)/mechanic/actions";
 import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/feedback";
-import { Checkbox, Field, Input, Textarea } from "@/components/ui/form";
+import { Checkbox, Field, Input, Select, Textarea } from "@/components/ui/form";
+import { WARRANTY_OPTIONS, warrantyLabel } from "@/lib/format";
 import { createClient } from "@/lib/supabase/client";
 
 function StateNotice({ state }: { state: FormState }) {
@@ -23,6 +24,7 @@ export type ProfileDefaults = {
   hourly_rate: number | null;
   base_location: string;
   service_radius_miles: number;
+  warranty_days: number;
   has_tools: boolean;
   has_transport: boolean;
 };
@@ -62,6 +64,15 @@ export function MechanicProfileForm({ d }: { d: ProfileDefaults }) {
       </Field>
       <Field label="How far will you travel? (miles)" htmlFor="service_radius_miles">
         <Input id="service_radius_miles" name="service_radius_miles" type="number" min={1} max={100} defaultValue={d.service_radius_miles} required />
+      </Field>
+      <Field label="Warranty on your work" htmlFor="warranty_days" hint="Shown on your profile and on customers' receipts.">
+        <Select id="warranty_days" name="warranty_days" defaultValue={String(d.warranty_days)}>
+          {WARRANTY_OPTIONS.map((w) => (
+            <option key={w} value={w}>
+              {warrantyLabel(w)}
+            </option>
+          ))}
+        </Select>
       </Field>
       <div className="flex flex-col gap-3 sm:col-span-2">
         <Checkbox id="has_tools" name="has_tools" defaultChecked={d.has_tools} label="I have my own professional tools for mobile repairs" />
@@ -269,18 +280,7 @@ export function JobActions({
           </Button>
         </form>
       )}
-      {status === "in_progress" && (
-        <form action={action} className="flex flex-col gap-2 sm:flex-row sm:items-end">
-          {hidden}
-          <input type="hidden" name="to" value="completed" />
-          <Field label={`Final amount (max ${estimateLabel})`} htmlFor={`final-${id}`}>
-            <Input id={`final-${id}`} name="final_amount" type="number" min={1} max={estimateMax / 100} step="0.01" required inputMode="decimal" />
-          </Field>
-          <Button type="submit" disabled={pending}>
-            {pending ? "Charging…" : "Complete & charge"}
-          </Button>
-        </form>
-      )}
+      {status === "in_progress" && <CompleteJobForm hidden={hidden} action={action} pending={pending} estimateLabel={estimateLabel} estimateMax={estimateMax} id={id} />}
     </div>
   );
 }
@@ -415,5 +415,48 @@ function CustomerNoShow({
     <Button variant="subtle" onClick={() => setConfirm(true)}>
       Customer isn&apos;t here
     </Button>
+  );
+}
+
+function CompleteJobForm({
+  id,
+  hidden,
+  action,
+  pending,
+  estimateLabel,
+  estimateMax,
+}: {
+  id: string;
+  hidden: React.ReactNode;
+  action: (fd: FormData) => void;
+  pending: boolean;
+  estimateLabel: string;
+  estimateMax: number;
+}) {
+  const [labor, setLabor] = useState("");
+  const [parts, setParts] = useState("");
+  const total = Math.round((Number(labor || 0) + Number(parts || 0)) * 100);
+  const over = total > estimateMax;
+  return (
+    <form action={action} className="flex flex-col gap-3">
+      {hidden}
+      <input type="hidden" name="to" value="completed" />
+      <p className="text-sm text-ink">Itemize the job for the customer&apos;s receipt. The total can&apos;t be more than the approved estimate ({estimateLabel}).</p>
+      <div className="grid grid-cols-2 gap-3 sm:max-w-md">
+        <Field label="Labor ($)" htmlFor={`labor-${id}`}>
+          <Input id={`labor-${id}`} name="labor" type="number" min={0} step="0.01" inputMode="decimal" value={labor} onChange={(e) => setLabor(e.target.value)} />
+        </Field>
+        <Field label="Parts ($)" htmlFor={`parts-${id}`}>
+          <Input id={`parts-${id}`} name="parts" type="number" min={0} step="0.01" inputMode="decimal" value={parts} onChange={(e) => setParts(e.target.value)} />
+        </Field>
+      </div>
+      <p className={`text-sm ${over ? "text-danger" : "text-cream"}`}>
+        Total: ${(total / 100).toFixed(2)}
+        {over && " — over the approved estimate"}
+      </p>
+      <Button type="submit" disabled={pending || total <= 0 || over} className="self-start">
+        {pending ? "Charging…" : "Complete & charge"}
+      </Button>
+    </form>
   );
 }

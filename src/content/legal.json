@@ -587,6 +587,9 @@
       "p": "WrenchNow charges a platform fee on each completed transaction. The current platform fee is {{PLATFORM_FEE_PERCENT}} of the total job value. This fee is subject to change with 30 days' notice."
      },
      {
+      "p": "Card processing: a card processing fee of {{PROCESSING_FEE}} of each payment is deducted from your share. It covers the card and payout costs that Stripe charges WrenchNow."
+     },
+     {
       "p": "Onboarding fee: WrenchNow pays for your background check when you apply, and you pay nothing up front. In return, you agree that WrenchNow will keep an onboarding fee of {{ONBOARDING_PER_JOB}} from your share of each completed job, in addition to the platform fee, until {{ONBOARDING_TOTAL}} in total has been collected. The onboarding fee is never more than your share of a job. If a job is fully refunded to the customer, the amount taken from it is credited back. If you never complete a paid job, you owe nothing. Each deduction is shown with the job in your earnings."
      },
      {

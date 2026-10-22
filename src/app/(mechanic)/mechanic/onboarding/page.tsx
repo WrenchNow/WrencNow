@@ -61,6 +61,7 @@ export default async function MechanicOnboardingPage({ searchParams }: PageProps
                 hourly_rate: m.hourly_rate_cents ? m.hourly_rate_cents / 100 : null,
                 base_location: m.city ?? "",
                 service_radius_miles: m.service_radius_miles,
+                warranty_days: m.warranty_days,
                 has_tools: m.has_tools,
                 has_transport: m.has_transport,
               }}

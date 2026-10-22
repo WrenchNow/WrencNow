@@ -92,18 +92,23 @@ export type Database = {
           customer_id: string;
           customer_no_show_fee_cents: number | null;
           en_route_at: string | null;
+          estimate_approved_at: string | null;
           estimated_max_cents: number;
           final_amount_cents: number | null;
           hourly_rate_cents: number;
           id: string;
+          labor_cents: number | null;
           location: unknown;
           mechanic_id: string;
           onboarding_fee_cents: number;
+          parts_cents: number | null;
           payment_status: Database["public"]["Enums"]["payment_status"];
           platform_fee_cents: number | null;
           problem_description: string | null;
+          processing_fee_cents: number;
           processing_until: string | null;
           refunded_cents: number;
+          return_old_parts: boolean;
           scheduled_end: string;
           scheduled_start: string;
           service_id: number;
@@ -132,18 +137,23 @@ export type Database = {
           customer_id: string;
           customer_no_show_fee_cents?: number | null;
           en_route_at?: string | null;
+          estimate_approved_at?: string | null;
           estimated_max_cents: number;
           final_amount_cents?: number | null;
           hourly_rate_cents: number;
           id?: string;
+          labor_cents?: number | null;
           location?: unknown;
           mechanic_id: string;
           onboarding_fee_cents?: number;
+          parts_cents?: number | null;
           payment_status?: Database["public"]["Enums"]["payment_status"];
           platform_fee_cents?: number | null;
           problem_description?: string | null;
+          processing_fee_cents?: number;
           processing_until?: string | null;
           refunded_cents?: number;
+          return_old_parts?: boolean;
           scheduled_end: string;
           scheduled_start: string;
           service_id: number;
@@ -171,18 +181,23 @@ export type Database = {
           customer_id?: string;
           customer_no_show_fee_cents?: number | null;
           en_route_at?: string | null;
+          estimate_approved_at?: string | null;
           estimated_max_cents?: number;
           final_amount_cents?: number | null;
           hourly_rate_cents?: number;
           id?: string;
+          labor_cents?: number | null;
           location?: unknown;
           mechanic_id?: string;
           onboarding_fee_cents?: number;
+          parts_cents?: number | null;
           payment_status?: Database["public"]["Enums"]["payment_status"];
           platform_fee_cents?: number | null;
           problem_description?: string | null;
+          processing_fee_cents?: number;
           processing_until?: string | null;
           refunded_cents?: number;
+          return_old_parts?: boolean;
           scheduled_end?: string;
           scheduled_start?: string;
           service_id?: number;
@@ -358,6 +373,7 @@ export type Database = {
           stripe_payouts_enabled: boolean;
           stripe_subscription_id: string | null;
           updated_at: string;
+          warranty_days: number;
           years_experience: number | null;
         };
         ComputedFields: never;
@@ -406,6 +422,7 @@ export type Database = {
           stripe_payouts_enabled?: boolean;
           stripe_subscription_id?: string | null;
           updated_at?: string;
+          warranty_days?: number;
           years_experience?: number | null;
         };
         Update: {
@@ -453,6 +470,7 @@ export type Database = {
           stripe_payouts_enabled?: boolean;
           stripe_subscription_id?: string | null;
           updated_at?: string;
+          warranty_days?: number;
           years_experience?: number | null;
         };
         Relationships: [
@@ -515,6 +533,40 @@ export type Database = {
           },
         ];
       };
+      notifications: {
+        Row: {
+          channel: string;
+          created_at: string;
+          error: string | null;
+          id: number;
+          key: string;
+          recipient: string;
+          status: string;
+          template: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          channel: string;
+          created_at?: string;
+          error?: string | null;
+          id?: never;
+          key: string;
+          recipient: string;
+          status?: string;
+          template: string;
+        };
+        Update: {
+          channel?: string;
+          created_at?: string;
+          error?: string | null;
+          id?: never;
+          key?: string;
+          recipient?: string;
+          status?: string;
+          template?: string;
+        };
+        Relationships: [];
+      };
       onboarding_fee_charges: {
         Row: {
           amount_cents: number;
@@ -546,6 +598,64 @@ export type Database = {
           {
             foreignKeyName: "onboarding_fee_charges_mechanic_id_fkey";
             columns: ["mechanic_id"];
+            isOneToOne: false;
+            referencedRelation: "mechanics";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      open_requests: {
+        Row: {
+          created_at: string;
+          customer_id: string | null;
+          details: string | null;
+          email: string;
+          id: string;
+          location_text: string;
+          matched_mechanic_id: string | null;
+          name: string;
+          phone: string | null;
+          service_slug: string | null;
+          status: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          customer_id?: string | null;
+          details?: string | null;
+          email: string;
+          id?: string;
+          location_text: string;
+          matched_mechanic_id?: string | null;
+          name: string;
+          phone?: string | null;
+          service_slug?: string | null;
+          status?: string;
+        };
+        Update: {
+          created_at?: string;
+          customer_id?: string | null;
+          details?: string | null;
+          email?: string;
+          id?: string;
+          location_text?: string;
+          matched_mechanic_id?: string | null;
+          name?: string;
+          phone?: string | null;
+          service_slug?: string | null;
+          status?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "open_requests_customer_id_fkey";
+            columns: ["customer_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "open_requests_matched_mechanic_id_fkey";
+            columns: ["matched_mechanic_id"];
             isOneToOne: false;
             referencedRelation: "mechanics";
             referencedColumns: ["id"];
@@ -646,6 +756,7 @@ export type Database = {
           mechanic_id: string;
           rating: number;
           reviewer_name: string;
+          updated_at: string;
         };
         ComputedFields: never;
         Insert: {
@@ -657,6 +768,7 @@ export type Database = {
           mechanic_id: string;
           rating: number;
           reviewer_name: string;
+          updated_at?: string;
         };
         Update: {
           body?: string | null;
@@ -667,6 +779,7 @@ export type Database = {
           mechanic_id?: string;
           rating?: number;
           reviewer_name?: string;
+          updated_at?: string;
         };
         Relationships: [
           {
@@ -848,6 +961,7 @@ export type Database = {
         }[];
       };
       mechanic_is_live: { Args: { mid: string }; Returns: boolean };
+      mechanic_warranty_days: { Args: { mid: string }; Returns: number };
       refresh_mechanic_stats: { Args: { mid: string }; Returns: undefined };
       release_onboarding_fee: { Args: { p_booking_id: string }; Returns: number };
       search_mechanics: {

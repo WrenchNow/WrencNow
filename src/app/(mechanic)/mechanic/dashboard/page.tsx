@@ -12,6 +12,7 @@ import { featuredPriceCents, platformFeeBps } from "@/lib/env";
 import { dateTime, money } from "@/lib/format";
 import { getMyMechanic, insuranceDaysRemaining, readiness } from "@/lib/mechanic";
 import { createClient } from "@/lib/supabase/server";
+import { processingLabel } from "@/lib/fee-copy";
 import { manageFeatured, setOnline, startFeatured } from "../actions";
 
 export const metadata: Metadata = { title: "Mechanic dashboard" };
@@ -50,8 +51,8 @@ export default async function MechanicDashboardPage({ searchParams }: PageProps<
           </Notice>
         </div>
       )}
-      {sp.featured === "success" && <div className="mb-6"><Notice tone="ok" title="You're Featured">Your badge and search boost are active. It can take a minute to show up.</Notice></div>}
-      {sp.featured === "not-live" && <div className="mb-6"><Notice tone="warn">Finish your go-live checklist before upgrading to Featured.</Notice></div>}
+      {sp.featured === "success" && <div className="mb-6"><Notice tone="ok" title="You're sponsored">You&apos;ll show in the Sponsored row for matching searches. It can take a minute to show up.</Notice></div>}
+      {sp.featured === "not-live" && <div className="mb-6"><Notice tone="warn">Finish your go-live checklist before adding sponsored placement.</Notice></div>}
 
       {!m.is_live ? (
         <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
@@ -125,17 +126,18 @@ export default async function MechanicDashboardPage({ searchParams }: PageProps<
                   <dd className={`font-display text-2xl font-bold ${m.no_show_count ? "text-danger" : "text-cream"}`}>{m.no_show_count}</dd>
                 </div>
                 <div>
-                  <dt className="text-muted">Platform fee</dt>
+                  <dt className="text-muted">Fees per job</dt>
                   <dd className="font-display text-2xl font-bold text-cream">{fee}%</dd>
+                  <dd className="text-xs text-muted">+ card processing {processingLabel()}</dd>
                 </div>
               </dl>
             </Card>
 
             <Card className={featured ? "border-warn/40" : ""}>
-              <h2 className="text-xl font-bold uppercase">★ Featured</h2>
+              <h2 className="text-xl font-bold uppercase">Sponsored placement</h2>
               {featured ? (
                 <>
-                  <p className="mt-2 text-sm text-ink">Active through {dateTime(m.featured_until!)}. You get a Featured badge and a boost in search.</p>
+                  <p className="mt-2 text-sm text-ink">Active through {dateTime(m.featured_until!)}. You show in the Sponsored row for matching searches.</p>
                   <form action={manageFeatured} className="mt-4">
                     <Button type="submit" variant="subtle">
                       Manage subscription
@@ -145,13 +147,13 @@ export default async function MechanicDashboardPage({ searchParams }: PageProps<
               ) : (
                 <>
                   <ul className="mt-3 space-y-1.5 text-sm text-ink">
-                    <li>✓ Gold Featured badge on your profile</li>
+                    <li>✓ Shown in the labeled Sponsored row above matching searches (up to 3)</li>
                     <li>✓ Boost in search results</li>
                     <li>✓ Cancel anytime</li>
                   </ul>
-                  <p className="mt-3 text-xs text-muted">Reviews still count most — Featured helps you get seen, not skip the line.</p>
+                  <p className="mt-3 text-xs text-muted">Regular results are still ranked by reviews and reliability — sponsorship gets you seen, it doesn&apos;t change your rank.</p>
                   <form action={startFeatured} className="mt-4">
-                    <Button type="submit">Go Featured — {money(featuredPriceCents(), { whole: true })}/mo</Button>
+                    <Button type="submit">Get sponsored — {money(featuredPriceCents(), { whole: true })}/mo</Button>
                   </form>
                 </>
               )}

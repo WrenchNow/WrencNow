@@ -32,13 +32,14 @@ export async function getPublicMechanic(id: string) {
   const { data } = await supabase.rpc("get_public_mechanic", { mechanic_id: id });
   const m = data?.[0];
   if (!m) return null;
-  const [{ data: offered }, { data: reviews }] = await Promise.all([
+  const [{ data: offered }, { data: reviews }, { data: warranty }] = await Promise.all([
     supabase.from("mechanic_services").select("services(*)").eq("mechanic_id", id),
     supabase.from("reviews").select("id, reviewer_name, rating, body, created_at").eq("mechanic_id", id).order("created_at", { ascending: false }).limit(20),
+    supabase.rpc("mechanic_warranty_days", { mid: id }),
   ]);
   const services = (offered ?? [])
     .map((o) => o.services)
     .filter((s): s is Service => Boolean(s && s.active))
     .sort((a, b) => a.sort - b.sort);
-  return { ...m, rating_avg: m.rating_avg === null ? null : Number(m.rating_avg), services, reviews: reviews ?? [] };
+  return { ...m, rating_avg: m.rating_avg === null ? null : Number(m.rating_avg), services, reviews: reviews ?? [], warranty_days: warranty ?? 0 };
 }

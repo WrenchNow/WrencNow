@@ -45,3 +45,17 @@ export function onboardingJobsRemaining(totalCents: number, collectedCents: numb
   const left = Math.max(totalCents - collectedCents, 0);
   return perJobCents > 0 ? Math.ceil(left / perJobCents) : 0;
 }
+
+/** Card processing pass-through on a charge: bps of the total plus a fixed amount, never more than the total. */
+export function processingFeeCents(totalCents: number, bps: number, fixedCents: number): number {
+  if (totalCents <= 0) return 0;
+  return Math.min(totalCents, Math.round((totalCents * bps) / 10000) + fixedCents);
+}
+
+/** Everything taken from the mechanic's share of a charge (before any onboarding installment). */
+export function mechanicDeductionsCents(totalCents: number, platformBps: number, processingBps: number, processingFixedCents: number): { platform: number; processing: number } {
+  const platform = platformFeeCents(totalCents, platformBps);
+  const processing = Math.min(processingFeeCents(totalCents, processingBps, processingFixedCents), totalCents - platform);
+  return { platform, processing };
+}
+

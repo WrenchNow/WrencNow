@@ -72,6 +72,8 @@ const bookingSchema = z.object({
   urgency: z.enum(["flexible", "soon", "today", "stranded"]),
   start: z.iso.datetime({ offset: true, message: "Pick a time" }),
   terms: z.literal(true, { error: "Please accept the service terms" }),
+  estimateApproved: z.literal(true, { error: "Please approve the estimate" }),
+  returnOldParts: z.boolean().default(false),
 });
 
 export type CreateBookingResult = { error?: string; bookingId?: string; clientSecret?: string };
@@ -97,6 +99,7 @@ export async function createBookingAction(input: z.input<typeof bookingSchema>):
       problem: d.problem,
       urgency: d.urgency,
       start: d.start,
+      returnOldParts: d.returnOldParts,
     });
   } catch (e) {
     if (e instanceof BookingError) return { error: e.message };
@@ -133,17 +136,25 @@ export async function submitReview(_: FormState, formData: FormData): Promise<Fo
   const supabase = await createClient();
   const { data: booking } = await supabase.from("bookings").select("id, mechanic_id, status").eq("id", parsed.data.bookingId).maybeSingle();
   if (!booking || booking.status !== "completed") return { error: "You can review a booking once it's completed." };
-  const { error } = await supabase.from("reviews").insert({
-    booking_id: booking.id,
-    customer_id: viewer.id,
-    mechanic_id: booking.mechanic_id,
-    reviewer_name: publicName(viewer.profile.full_name),
-    rating: parsed.data.rating,
-    body: parsed.data.body,
-  });
-  if (error) return { error: error.code === "23505" ? "You've already reviewed this booking." : "Couldn't save your review. Please try again." };
+  // One review per customer per mechanic: a repeat customer updates theirs (so friends can't stack 5-stars).
+  const { data: existing } = await supabase.from("reviews").select("id").eq("customer_id", viewer.id).eq("mechanic_id", booking.mechanic_id).maybeSingle();
+  const { error } = existing
+    ? await supabase
+        .from("reviews")
+        .update({ booking_id: booking.id, rating: parsed.data.rating, body: parsed.data.body, updated_at: new Date().toISOString() })
+        .eq("id", existing.id)
+    : await supabase.from("reviews").insert({
+        booking_id: booking.id,
+        customer_id: viewer.id,
+        mechanic_id: booking.mechanic_id,
+        reviewer_name: publicName(viewer.profile.full_name),
+        rating: parsed.data.rating,
+        body: parsed.data.body,
+      });
+  if (error) return { error: "Couldn't save your review. Please try again." };
   revalidatePath(`/account/bookings/${booking.id}`);
-  return { ok: true, message: "Thanks — your review is live." };
+  revalidatePath(`/mechanics/${booking.mechanic_id}`);
+  return { ok: true, message: existing ? "Thanks — your review is updated." : "Thanks — your review is live." };
 }
 
 const reportSchema = z.object({

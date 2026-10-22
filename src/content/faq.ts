@@ -42,7 +42,7 @@ export const CUSTOMER_FAQ: Faq[] = [
 export const MECHANIC_FAQ: Faq[] = [
   {
     q: "What does it cost to join?",
-    a: "Nothing up front. WrenchNow keeps a platform fee on each completed job, and your $50 background check is covered by $10 from each of your first 5 jobs — taken automatically, nothing to pay or track. The rest is paid out to your bank through Stripe.",
+    a: "Nothing up front. On each completed job WrenchNow keeps a 5% platform fee and card processing (3.2% + 55¢) comes out, and your $50 background check is covered by $10 from each of your first 5 jobs — taken automatically, nothing to pay or track. The rest is paid out to your bank through Stripe.",
   },
   {
     q: "What do I need to get started?",

@@ -11,9 +11,9 @@ import {
   type Actor,
   type BookingStatus,
 } from "@/lib/booking-status";
-import { customerNoShowFeeCents, onboardingFeePerJobCents, platformFeeBps } from "@/lib/env";
+import { customerNoShowFeeCents, onboardingFeePerJobCents, platformFeeBps, processingFeeBps, processingFeeFixedCents } from "@/lib/env";
 import { geocode } from "@/lib/geocode";
-import { estimateMaxCents, platformFeeCents } from "@/lib/fees";
+import { estimateMaxCents, mechanicDeductionsCents } from "@/lib/fees";
 import { isOfferedSlot } from "@/lib/slots";
 import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -96,6 +96,7 @@ export type CreateBookingInput = {
   problem: string | null;
   urgency: Database["public"]["Enums"]["urgency"];
   start: string;
+  returnOldParts: boolean;
 };
 
 /**
@@ -135,7 +136,8 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
   const start = new Date(input.start);
   const end = new Date(start.getTime() + service.est_minutes_max * 60_000);
   const estimate = estimateMaxCents(mechanic.hourly_rate_cents, service.est_minutes_max);
-  const fee = platformFeeCents(estimate, platformFeeBps());
+  const deductions = feesFor(estimate);
+  const fee = deductions.platform;
   const vehicleDesc = [vehicle.year, vehicle.make, vehicle.model, vehicle.trim].filter(Boolean).join(" ");
 
   const { data: booking, error } = await admin
@@ -155,6 +157,9 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
       hourly_rate_cents: mechanic.hourly_rate_cents,
       estimated_max_cents: estimate,
       platform_fee_cents: fee,
+      // Colorado Motor Vehicle Repair Act: record the customer's consent to the written estimate.
+      estimate_approved_at: new Date().toISOString(),
+      return_old_parts: input.returnOldParts,
     })
     .select("id")
     .single();
@@ -172,7 +177,7 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
         currency: "usd",
         capture_method: "manual",
         automatic_payment_methods: { enabled: true },
-        application_fee_amount: fee,
+        application_fee_amount: deductions.platform + deductions.processing, // recomputed on the final amount at capture
         transfer_data: { destination: mechanic.stripe_account_id },
         description: `WrenchNow: ${service.name} with ${mechanic.display_name ?? "mechanic"}`,
         metadata: { booking_id: booking.id, customer_id: input.customerId, mechanic_id: mechanic.id },
@@ -192,7 +197,12 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
   }
 }
 
-export type TransitionOptions = { finalAmountCents?: number; reason?: string; arrivalCode?: string };
+/** Platform fee + card processing pass-through on a charge, both taken from the mechanic's share. */
+function feesFor(totalCents: number) {
+  return mechanicDeductionsCents(totalCents, platformFeeBps(), processingFeeBps(), processingFeeFixedCents());
+}
+
+export type TransitionOptions = { finalAmountCents?: number; laborCents?: number; partsCents?: number; reason?: string; arrivalCode?: string };
 
 function insuranceCurrent(expiresOn: string | null): boolean {
   return Boolean(expiresOn && expiresOn >= new Date().toISOString().slice(0, 10));
@@ -323,7 +333,7 @@ async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor
       if (pi.status === "requires_capture") {
         await stripe.paymentIntents.capture(
           b.stripe_payment_intent_id,
-          { amount_to_capture: fee, application_fee_amount: platformFeeCents(fee, platformFeeBps()) },
+          { amount_to_capture: fee, application_fee_amount: feesFor(fee).platform + feesFor(fee).processing },
           { idempotencyKey: `customer-no-show-${b.id}` },
         );
       } else if (pi.status === "succeeded") {
@@ -333,11 +343,21 @@ async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor
       }
       update.customer_no_show_fee_cents = charged;
       update.final_amount_cents = charged;
-      update.platform_fee_cents = platformFeeCents(charged, platformFeeBps());
+      update.platform_fee_cents = feesFor(charged).platform;
+      update.processing_fee_cents = feesFor(charged).processing;
       update.payment_status = "captured";
       break;
     }
     case "completed": {
+      // Itemized receipt: labor + parts make up the final amount.
+      if (opts.laborCents !== undefined || opts.partsCents !== undefined) {
+        const labor = opts.laborCents ?? 0;
+        const parts = opts.partsCents ?? 0;
+        if (!Number.isInteger(labor) || !Number.isInteger(parts) || labor < 0 || parts < 0) throw new BookingError("Enter labor and parts as dollar amounts.");
+        opts.finalAmountCents = labor + parts;
+        update.labor_cents = labor;
+        update.parts_cents = parts;
+      }
       const final = opts.finalAmountCents;
       if (!final || !Number.isInteger(final) || final <= 0) throw new BookingError("Enter the final amount for the job.");
       if (final > b.estimated_max_cents) throw new BookingError("The final amount can't be more than the estimate the customer approved.");
@@ -349,8 +369,9 @@ async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor
       let captured = final;
       let onboarding = 0;
       if (pi.status === "requires_capture") {
-        const platformFee = platformFeeCents(final, platformFeeBps());
-        // Onboarding fee installment comes out of the mechanic's share, on top of the platform fee.
+        const { platform, processing } = feesFor(final);
+        const platformFee = platform + processing;
+        // Onboarding fee installment comes out of the mechanic's share, on top of the platform and processing fees.
         const { data: claimed } = await admin.rpc("claim_onboarding_fee", {
           p_booking_id: b.id,
           p_per_job_cents: onboardingFeePerJobCents(),
@@ -376,7 +397,8 @@ async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor
         throw new BookingError("The customer's payment can't be captured. Contact support.");
       }
       update.final_amount_cents = captured;
-      update.platform_fee_cents = platformFeeCents(captured, platformFeeBps());
+      update.platform_fee_cents = feesFor(captured).platform;
+      update.processing_fee_cents = feesFor(captured).processing;
       update.onboarding_fee_cents = onboarding;
       update.payment_status = "captured";
       break;

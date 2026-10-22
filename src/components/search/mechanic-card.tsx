@@ -44,7 +44,7 @@ export function MechanicCard({ m, service }: { m: MechanicCardData; service?: st
                 {m.display_name ?? "WrenchNow mechanic"}
               </Link>
             </h3>
-            {m.featured && <Badge tone="warn">★ Featured</Badge>}
+            {m.featured && <Badge tone="warn">Sponsored</Badge>}
           </div>
           <p className="mt-0.5 text-sm text-muted">
             {TIER_LABEL[m.skill_tier]} mechanic

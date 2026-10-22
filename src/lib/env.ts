@@ -27,7 +27,7 @@ export function platformFeeBps(): number {
   return bps;
 }
 
-/** Monthly price of the Featured mechanic subscription, in cents. */
+/** Monthly price of the Sponsored placement subscription, in cents. */
 export function featuredPriceCents(): number {
   const n = Number(process.env.FEATURED_PRICE_CENTS || 2900);
   return Number.isInteger(n) && n > 0 ? n : 2900;
@@ -52,3 +52,25 @@ export function onboardingFeePerJobCents(): number {
   const n = Number(process.env.ONBOARDING_FEE_PER_JOB_CENTS || 1000);
   return Number.isInteger(n) && n > 0 ? n : 1000;
 }
+
+/**
+ * Card processing pass-through taken from the mechanic's share so jobs don't cost the
+ * platform money: Stripe charges the platform ~2.9% + 30¢ per card payment and
+ * ~0.25% + 25¢ per payout. Defaults: 3.2% + 55¢.
+ */
+export function processingFeeBps(): number {
+  const n = Number(process.env.PROCESSING_FEE_BPS ?? 320);
+  return Number.isInteger(n) && n >= 0 && n <= 2000 ? n : 320;
+}
+
+export function processingFeeFixedCents(): number {
+  const n = Number(process.env.PROCESSING_FEE_CENTS ?? 55);
+  return Number.isInteger(n) && n >= 0 ? n : 55;
+}
+
+/** Optional: dealer labor rate for the "typical dealer" comparison. Hidden unless set (use a real quoted rate). */
+export function dealerLaborRateCents(): number | null {
+  const n = Number(process.env.DEALER_LABOR_RATE_CENTS);
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+

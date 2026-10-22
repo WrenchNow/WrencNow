@@ -58,6 +58,8 @@ export function BookingWizard({
   const [start, setStart] = useState("");
   const [dayIdx, setDayIdx] = useState(0);
   const [terms, setTerms] = useState(false);
+  const [estimateApproved, setEstimateApproved] = useState(false);
+  const [returnOldParts, setReturnOldParts] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [payment, setPayment] = useState<{ bookingId: string; clientSecret: string } | null>(null);
   const [pending, startTransition] = useTransition();
@@ -85,6 +87,7 @@ export function BookingWizard({
 
   function submit() {
     setError(null);
+    if (!estimateApproved) return setError("Please approve the estimate.");
     if (!terms) return setError("Please accept the service terms.");
     startTransition(async () => {
       const res = await createBookingAction({
@@ -97,6 +100,8 @@ export function BookingWizard({
         urgency,
         start,
         terms: true,
+        estimateApproved: true,
+        returnOldParts,
       });
       if (res.error || !res.clientSecret || !res.bookingId) {
         setError(res.error ?? "Something went wrong. Please try again.");
@@ -275,6 +280,23 @@ export function BookingWizard({
               <PaymentStep publishableKey={publishableKey} clientSecret={payment.clientSecret} bookingId={payment.bookingId} amountLabel={money(estMax)} />
             ) : (
               <>
+                <Checkbox
+                  id="estimate-approved"
+                  checked={estimateApproved}
+                  onChange={(e) => setEstimateApproved(e.target.checked)}
+                  label={
+                    <>
+                      <strong className="text-cream">I approve this estimate</strong> of {money(estMin, { whole: true })}–{money(estMax, { whole: true })} for {service.name}. I
+                      won&apos;t be charged more than {money(estMax)} without approving a new estimate.
+                    </>
+                  }
+                />
+                <Checkbox
+                  id="old-parts"
+                  checked={returnOldParts}
+                  onChange={(e) => setReturnOldParts(e.target.checked)}
+                  label="Give me my old parts back (the mechanic will leave the replaced parts with you)"
+                />
                 <Checkbox
                   id="terms"
                   checked={terms}
