@@ -273,13 +273,17 @@ details.filters[open] summary::after{transform:rotate(180deg)}
 .arrive.soft{display:flex;align-items:center;gap:10px;background:var(--surface-2);border-color:var(--line);padding:10px 12px}
 .arrive.soft .ic{font-size:22px}
 .arrive.soft .icon-btn{min-width:36px;height:36px;padding:0}
-/* scan types: four photo types, then "Paste order" on its own row */
-.seg.scan-types{display:grid;grid-template-columns:repeat(4,1fr)}
-.seg.scan-types button:last-child{grid-column:1/-1}
-/* with free on-phone scanning: 3 + 3 (Receipt, Barcode, Paste order / Fridge, Pantry, Freezer) */
-.seg.scan-types.six{grid-template-columns:repeat(3,1fr)}
-.seg.scan-types.six button:last-child{grid-column:auto}
-.seg.scan-types.six button{padding:9px 2px;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* scan types: free ones first (2 per row, or 3 when Barcode is off), then the Premium photo types, 3 per row */
+.seg.scan-types{display:grid;grid-template-columns:repeat(6,1fr)}
+.seg.scan-types button{grid-column:span 2;padding:9px 2px;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.seg.scan-types.f4 button:not(.paid){grid-column:span 3}
+.seg.scan-types button.paid:not(.on){color:color-mix(in srgb,var(--muted) 85%,transparent)}
+.premium .eyebrow{color:var(--accent);margin-bottom:2px}
+.premium h2{margin-bottom:6px}
+.perks{margin:0 0 12px;padding-left:20px;display:grid;gap:4px}
+.list-ctl{gap:8px;margin-top:8px;align-items:center}
+.list-ctl .stepper{flex:none}
+.ok-text{color:var(--ok);font-weight:600}
 .ocr-track{width:min(260px,80%);height:8px;border-radius:99px;background:var(--surface-2);overflow:hidden}
 .ocr-track span{display:block;height:100%;background:var(--brand);transition:width .3s}
 .linklike{border:0;background:none;padding:0;color:inherit;font:inherit;text-decoration:underline;cursor:pointer}
@@ -1124,12 +1128,16 @@ R('Pumpkin Bread','American','Dessert',75,10,270,4,40,
    =================================================================== */
 const CONFIG = {
   AMAZON_TAG: '',          // ← your Amazon Associates tag, e.g. 'yourname-20' (goes on every Amazon link)
-  BACKEND_URL: '',         // ← your Cloudflare Worker URL, e.g. 'https://pantry-pal.yourname.workers.dev'
+  BACKEND_URL: '',         // ← empty = same site: the app calls /api/... on the site it's served from (Netlify Functions).
+                           //   Opened as a local file there's no backend, so only the free on-phone features run.
   ONLINE_RECIPES: false,   // true = show licensed web recipes (Spoonacular via the Worker). Adds source-credit links.
   ADMIN_CODE: 'owner',     // open the app with ?admin=owner to show owner settings on your device
   MODEL: 'claude-sonnet-5-5',
-  ON_DEVICE_SCAN: true    // free Barcode + Receipt reading on the phone (no AI). Loads small libraries from jsDelivr on first use.
+  ON_DEVICE_SCAN: true,   // free Barcode, Receipt and Shopping-list reading on the phone (no AI). Loads small libraries from jsDelivr on first use.
+  STRIPE_LINK: ''          // ← Stripe Payment Link for Premium. Empty = the "Get Premium" button says "Coming soon".
 };
+// Premium: fridge/pantry/freezer photo scans. Prices approved by Wyatt 2026-10-22.
+const PREMIUM = { monthly: '$4.99', yearly: '$29.99', yearlyPerMonth: '$2.50', scans: 100 };
 
 /* ---------- tiny utils ---------- */
 const $ = (s, el = document) => el.querySelector(s);
@@ -1292,8 +1300,23 @@ function defaultState() {
     filters: { cuisines: [], meal: 'Any', maxTime: 0, party: 0, cookWith: '', goal: 'any' },
     ui: { tab: 'cook', cookView: 'feed', pantryFilter: 'all' },
     plan: null,
+    premium: null,        // { token, exp (ms), plan }: signed by the backend, opaque here. Never exported or imported.
     arrivalSnooze: null   // ISO date "Not yet" was tapped on the "Did your order arrive?" card; hidden for that day
   };
+}
+// Premium token as stored on this device. The token is opaque (the backend checks its signature); exp and plan
+// are only used to show the plan and to stop sending a token we know has run out.
+function sanitizePremium(p) {
+  if (!p || typeof p !== 'object' || typeof p.token !== 'string' || !/^[\w.~+/=-]{8,1200}$/.test(p.token)) return null;
+  const exp = toExpMs(p.exp); if (!exp) return null;
+  return { token: p.token, exp, plan: ['monthly', 'yearly', 'test', 'premium'].includes(p.plan) ? p.plan : 'premium' };
+}
+// Expiry as ms since 1970. Accepts seconds, ms or an ISO date. Anything else (or past 2100) is rejected.
+function toExpMs(v) {
+  let n = typeof v === 'string' && !/^\d+$/.test(v) ? Date.parse(v) : Number(v);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  if (n < 1e11) n *= 1000;
+  return n < 4102444800000 ? Math.round(n) : 0;
 }
 // Only a real date up to today counts, so a backup can't hide the card for years (or inject anything).
 const snoozeDate = v => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && v <= todayISO() ? v : null;
@@ -1325,6 +1348,7 @@ function hydrate(saved) {
   out.catalogVersion = STAPLE_ASINS_VERSION;
   ['inventory', 'shopping', 'cart', 'aiRecipes', 'community', 'cooked'].forEach(k => { if (!Array.isArray(out[k])) out[k] = []; });
   out.plan = sanitizePlan(saved.plan);
+  out.premium = sanitizePremium(saved.premium);
   out.arrivalSnooze = snoozeDate(saved.arrivalSnooze);
   return out;
 }
@@ -1370,14 +1394,16 @@ function sanitizeBackup(d) {
     cooked: arr(d.cooked).filter(c => typeof c.title === 'string').map(c => ({ title: c.title.slice(0, 90), date: date(c.date) || todayISO() })).slice(-200),
     catalog: arr(d.catalog).map(c => ({ id: id(c.id), name: str(c.name, 80), cat: CATEGORIES.includes(c.cat) ? c.cat : 'Other', per: num(c.per, 0, 100, 0), asin: str(c.asin, 10).toUpperCase().replace(/[^A-Z0-9]/g, ''), title: str(c.title), term: str(c.term || c.name, 80), asinSrc: c.asinSrc === 'shipped' ? 'shipped' : '' })).filter(c => c.name),
     filters: { cuisines: strs(f.cuisines, c => CUISINES.includes(c)), meal: MEALS.includes(f.meal) ? f.meal : 'Any', maxTime: TIMES.includes(Number(f.maxTime)) ? Number(f.maxTime) : 0, party: num(f.party, 0, 30, 0), cookWith: str(f.cookWith, 100), goal: GOALS.some(g => g.k === f.goal) ? f.goal : 'any' },
-    settings: bools,
+    settings: bools,   // premium (the token) is never imported: a backup can't make anyone Premium
     plan: sanitizePlan(d.plan),
     arrivalSnooze: snoozeDate(d.arrivalSnooze)
   };
 }
 
 /* transient (not persisted) */
-const scan = { type: 'receipt', images: [], busy: false, mode: '', items: null, error: '', source: '' };
+const scan = { type: 'list', images: [], busy: false, mode: '', items: null, error: '', source: '', list: null, listSource: '' };   // list = shopping-list review rows
+const LOOSE = ['fridge', 'pantry', 'freezer'];   // photo AI of loose food: Premium (or your own key)
+let codeDraft = null;    // { err, busy } while the "I have a code" sheet is open
 const ocrBig = new Map();   // receipt photo → a sharper copy for on-phone reading (memory only)
 const paste = { empty: false, text: '' };   // memory only: text = junk-stripped order text, kept just for the optional AI read
 
@@ -1651,13 +1677,43 @@ function fmtAmount(q, unit) {
 }
 
 /* ---------- AI ---------- */
-function backend() { return (S.settings.backendUrl || CONFIG.BACKEND_URL || '').trim().replace(/\/+$/, ''); }
+// A backend URL set in CONFIG or owner settings wins. Otherwise, when the app is served from a website, the backend is
+// the same site (/api/...), but only once /api/health has answered, so a plain static copy or a local file shows no AI.
+let sameOrigin = false;
+const explicitBackend = () => (S.settings.backendUrl || CONFIG.BACKEND_URL || '').trim().replace(/\/+$/, '');
+function backend() { return explicitBackend() || (sameOrigin ? location.origin : ''); }
+async function probeSameOrigin() {
+  if (explicitBackend() || !/^https?:$/.test(location.protocol)) return;
+  try {
+    const res = await fetch('/api/health', { headers: bheaders(false) });
+    const data = res.ok && /json/i.test(res.headers.get('content-type') || '') ? await res.json() : null;
+    if (!data || typeof data !== 'object' || data.ok === false) return;
+    sameOrigin = true; health = Object.assign({ ok: true }, data); health.freePerDay = Number(health.freePerDay) || 0;
+    if (!S.onboarded) renderOnboard(); render();
+  } catch (e) { /* no backend on this site: free on-phone features only */ }
+}
+/* ---------- plan (free / premium) ---------- */
+// The backend decides what a token is worth; this check only drives the screens.
+function premiumLive() { return !!(S.premium && S.premium.exp > Date.now()); }
+function tier() { return premiumLive() ? 'premium' : 'free'; }
+// Fridge/pantry/freezer photo AI: Premium through the backend, or anyone using their own Anthropic key.
+function premiumOK() { const m = aiMode(); return m === 'own' || (m === 'backend' && tier() === 'premium'); }
+const quota = { scan: null, list: null };   // memory only: { left, limit } as last reported by the backend
+function readQuota(purpose, res, data) {
+  if (!['scan', 'list'].includes(purpose)) return;
+  const q = data && data.quota && typeof data.quota === 'object' ? data.quota : {};
+  const rawLeft = q.left ?? res.headers.get('X-Quota-Left'); if (rawLeft == null || rawLeft === '') return;
+  const left = Number(rawLeft), limit = Number(q.limit ?? res.headers.get('X-Quota-Limit'));
+  if (Number.isFinite(left)) quota[purpose] = { left: clamp(Math.round(left), 0, 9999), limit: Number.isFinite(limit) && limit > 0 ? Math.round(limit) : (purpose === 'scan' ? PREMIUM.scans : 0) };
+}
 function hasClaudeBuiltin() { return !!(window.claude && typeof window.claude.complete === 'function'); }
 function aiMode() { return S.settings.userKey ? 'own' : backend() ? 'backend' : hasClaudeBuiltin() ? 'builtin' : 'none'; }
 function canSeeImages() { const m = aiMode(); return m === 'own' || m === 'backend'; }
 function bheaders(json = true) { const h = {}; if (json) h['Content-Type'] = 'application/json'; if (S.settings.appToken) h['X-App-Token'] = S.settings.appToken; return h; }
 function aiError(msg, code) { const e = new Error(msg); e.code = code; return e; }
-async function callClaude({ system, content, maxTokens = 2000 }) {
+// purpose tells the backend which allowance to use: scan (Premium photo scan), list (free handwriting read),
+// receipt, paste, recipes, steps. It is only sent to our backend, never to Anthropic.
+async function callClaude({ system, content, maxTokens = 2000, purpose = '' }) {
   const key = (S.settings.userKey || '').trim();
   if (key) {
     // Bring-your-own-key: the request goes straight from this device to Anthropic. The key never touches our server.
@@ -1673,10 +1729,22 @@ async function callClaude({ system, content, maxTokens = 2000 }) {
   }
   const b = backend();
   if (b) {
-    const res = await fetch(b + '/api/claude', { method: 'POST', headers: bheaders(), body: JSON.stringify({ system, max_tokens: maxTokens, messages: [{ role: 'user', content }] }) });
+    const h = bheaders(); if (premiumLive()) h['X-Premium'] = S.premium.token;
+    const body = { system, max_tokens: maxTokens, messages: [{ role: 'user', content }] }; if (purpose) body.purpose = purpose;
+    let res;
+    try { res = await fetch(b + '/api/claude', { method: 'POST', headers: h, body: JSON.stringify(body) }); }
+    catch (e) { throw aiError('Couldn’t reach Pantry Pal. Check your connection and try again.', 'network'); }
     const data = await res.json().catch(() => ({}));
-    if (res.status === 429 && data.code === 'free_limit') throw aiError(data.error || 'You’ve used today’s free AI requests. Add your own key in Settings for unlimited use, or try again tomorrow.', 'free_limit');
-    if (!res.ok) throw aiError(data?.error?.message || data?.error || ('AI request failed (' + res.status + ')'), 'api');
+    readQuota(purpose, res, data);
+    const msg = typeof data.error === 'string' ? data.error : '';
+    const code = String(data.code || '');
+    if (res.status === 402) throw aiError(purpose === 'scan' ? 'Fridge, pantry and freezer photo scans are part of Premium.' : (msg || 'This needs Premium.'), 'premium');
+    if (res.status === 403 && (purpose === 'scan' || /premium/i.test(code))) throw aiError(msg || 'Your Premium code has expired or isn’t valid anymore. Restore it in Settings → Plan.', 'premium');
+    if (res.status === 429 && (code === 'premium_limit' || (purpose === 'scan' && !code))) { if (quota.scan) quota.scan.left = 0; throw aiError(msg || `You’ve used all ${quota.scan?.limit || PREMIUM.scans} Premium scans this month. They reset on the 1st. Barcode, receipt and shopping-list scans still work for free.`, 'month_limit'); }
+    if (res.status === 429 && (code === 'list_limit' || (purpose === 'list' && !code))) { if (quota.list) quota.list.left = 0; throw aiError(msg || 'You’ve used this month’s free handwriting reads. The free reader on your phone still works, or type the items in.', 'month_limit'); }
+    if (res.status === 429 && code === 'busy') throw aiError(msg || 'Pantry Pal is busy right now. Try again in a minute.', 'api');
+    if (res.status === 429) throw aiError(msg || 'You’ve used today’s free AI requests. Add your own key in Settings for unlimited use, or try again tomorrow.', 'free_limit');
+    if (!res.ok) throw aiError(data?.error?.message || msg || ('AI request failed (' + res.status + ')'), 'api');
     return (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n');
   }
   if (hasClaudeBuiltin()) {
@@ -2024,6 +2092,7 @@ function ocrProgress(msg, pct) {
 }
 async function readReceiptOnDevice() {
   if (!scan.images.length || scan.busy) return;
+  const isList = scan.type === 'list';
   scan.busy = true; scan.mode = 'ocr'; scan.error = ''; scan.errorCode = ''; ocr.few = false; ocr.found = null; ocr.msg = 'Getting the free reader ready…'; ocr.pct = 0; render();
   let worker = null;
   try {
@@ -2042,6 +2111,12 @@ async function readReceiptOnDevice() {
       const { data } = await worker.recognize(ocrBig.get(scan.images[page]) || scan.images[page]);
       text += (data && data.text || '') + '\n';
     }
+    if (isList) {
+      const rows = parseListText(text); text = '';
+      if (rows.length >= 2) { scan.list = rows; scan.listSource = 'ocr'; }
+      else { ocr.few = true; ocr.found = rows; }
+      return;
+    }
     const items = parseOrderText(receiptToOrderText(text)); text = '';
     const sure = items.filter(x => !x.maybe).length;
     const rows = items.map(x => ({ on: !x.maybe, name: x.name, qty: x.qty, unit: x.unit, category: x.category, days: SHELF[x.category], note: x.maybe ? 'Not sure this is food, so it’s unchecked. Check it to add it.' : '' }));
@@ -2050,9 +2125,75 @@ async function readReceiptOnDevice() {
   } catch (e) {
     scan.error = e && e.message === 'download' ? 'Couldn’t download the free receipt reader. Check your connection and try again.' : 'Couldn’t read that photo. Try a flatter, brighter photo.';
     scan.errorCode = 'ocr';
-  } finally { if (worker && worker.terminate) worker.terminate().catch(() => { }); }
+  } finally {
+    if (worker && worker.terminate) worker.terminate().catch(() => { });
+    scan.busy = false; scan.mode = '';
+    // A list the phone could barely read goes to the AI once, automatically, when AI is set up.
+    if (isList && ocr.few && !scan.error && canSeeImages()) readListWithAI();
+    else if (S.ui.tab === 'scan') render(); else if (scan.items || scan.list) toast(isList ? 'List ready to review' : 'Receipt ready to review');
+  }
+}
+
+/* ---- shopping list photo → items (free tier) ----
+   A list has no prices, so each line (or comma-separated part) is one item with an optional amount:
+   "2 milk", "2x milk", "milk x2", "milk (2)", "1 dozen eggs", "2 lb ground beef". */
+const LIST_HEAD = /^(shopping|grocery|groceries|grocery list|shopping list|to buy|to get|list|need|needs|buy|get|costco|target|walmart|kroger|king soopers|safeway|trader joe'?s|whole foods|aldi|sprouts|store|market|week of|for|notes?|todo|to do)\b\s*:?\s*$/i;
+const LIST_WORDNUM = { a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, dozen: 1 };
+const LIST_WEIGHT = { lb: 'lb', lbs: 'lb', pound: 'lb', pounds: 'lb', oz: 'oz', ounce: 'oz', ounces: 'oz', kg: 'kg', g: 'g', gal: 'gal', gallon: 'gal', gallons: 'gal', qt: 'qt', quart: 'qt', l: 'l' };
+const LIST_PACK = /^(dozen|doz|packs?|pk|bags?|box(es)?|cans?|jars?|bottles?|bunch(es)?|heads?|loaf|loaves|cartons?|ct|count|pcs?|pieces?|cases?|tubs?|containers?|rolls?|sticks?)$/i;
+function parseListText(text) {
+  const out = [];
+  for (let line of String(text || '').split(/\r?\n/)) {
+    line = line.replace(/[|_~`¢©®]/g, ' ').replace(/\s+/g, ' ').trim()
+      .replace(/^(?:[-–—*•·>○●◦▪□■☐☑☒✓✔]+|\[\s*[x✓✔]?\s*\]|\(\s*\)|\d{1,2}[.)](?=\s))\s*/i, '');
+    if (!/\p{L}{2}/u.test(line) || LIST_HEAD.test(line)) continue;
+    if (ORDER_JUNK.slice(0, ORDER_PII.length).some(r => r.test(line))) continue;   // names, cards, phones, addresses
+    for (let part of line.split(/\s*[,;]\s*|\s+&\s+(?=\d)/)) {
+      let q = 1, need = '', m;
+      part = part.replace(/\$\s?\d+(?:[.,]\d{2})?/g, ' ').trim();
+      if ((m = part.match(/^(\d{1,3}(?:[.,]\d+)?|\d\/\d|an?|one|two|three|four|five|six|seven|eight|nine|ten)\s*[x×]?\s+(?=\p{L})/iu))) {
+        const n = LIST_WORDNUM[m[1].toLowerCase()] ?? toNum(m[1].replace(',', '.'));
+        let rest = part.slice(m[0].length); const w = rest.match(/^([a-z]+)\.?\s+(?=\p{L})/iu), u = w ? w[1].toLowerCase() : '';
+        if (LIST_WEIGHT[u]) { need = `${+n.toFixed(2)} ${LIST_WEIGHT[u]}`; rest = rest.slice(w[0].length); }
+        else { q = Math.round(n) || 1; if (w && LIST_PACK.test(u)) rest = rest.slice(w[0].length).replace(/^of\s+/i, ''); }
+        part = rest;
+      } else if ((m = part.match(/\s*(?:[x×]\s*(\d{1,2})|\((\d{1,2})\)|[-–:]\s*(\d{1,2})|(\d{1,2})\s*[x×])\s*$/i))) {
+        q = +(m[1] || m[2] || m[3] || m[4]) || 1; part = part.slice(0, m.index);
+      }
+      const name = part.replace(/\(.*?\)/g, ' ').replace(/[^\p{L}\s&'’-]/gu, ' ').replace(/\s+/g, ' ').trim().toLowerCase().slice(0, 60);
+      // OCR of handwriting makes noise: keep parts that look like words (a vowel, mostly letters).
+      const letters = (name.match(/\p{L}/gu) || []).length;
+      if (letters < 3 || !/[aeiouy]/i.test(name) || letters / Math.max(1, part.replace(/\s/g, '').length) < 0.6 || !/\p{L}{3}/u.test(name)) continue;
+      out.push({ on: true, name, qty: clamp(q, 1, 20), need });
+    }
+  }
+  const merged = [];
+  for (const x of out) { const m = merged.find(y => norm(y.name) === norm(x.name)); if (m) m.qty = clamp(m.qty + x.qty, 1, 20); else merged.push(x); }
+  return merged.slice(0, 60);
+}
+// One compact AI request for a list the phone couldn't read (handwriting). Free tier, counted by the backend.
+async function readListWithAI() {
+  if (!scan.images.length || scan.busy) return;
+  scan.busy = true; scan.mode = 'list-ai'; scan.error = ''; scan.errorCode = ''; render();
+  try {
+    const imgs = await Promise.all(scan.images.slice(0, 2).map(src => toJpeg(src, 'receipt')));
+    const content = [
+      ...imgs.map(src => ({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: src.split(',')[1] } })),
+      { type: 'text', text: `${imgs.length > 1 ? 'These images show one' : 'This image shows a'} shopping list, printed or handwritten. List every item on it, in order. Use plain lowercase grocery names and fix obvious misspellings. q = how many, only if written (e.g. "2 milk", "milk x2"); omit if 1.
+Return compact JSON only, no prose: {"items":[{"n":"milk","q":2}]}
+If nothing is readable, return {"items":[]}.` }
+    ];
+    const text = await callClaude({ system: 'You read shopping lists. Respond with JSON only.', content, maxTokens: 400, purpose: 'list' });
+    const data = extractJSON(text);
+    const rows = (Array.isArray(data) ? data : data.items || []).map(x => {
+      const name = String(x && (x.n ?? x.name) || '').replace(/[^\p{L}\s&'’-]/gu, ' ').replace(/\s+/g, ' ').trim().toLowerCase().slice(0, 60);
+      return name ? { on: true, name, qty: clamp(Math.round(Number(x.q ?? x.qty) || 1), 1, 20), need: '' } : null;
+    }).filter(Boolean).slice(0, 60);
+    if (!rows.length) throw new Error('Couldn’t find items on that list. Try a closer, brighter photo, or type them in Shop.');
+    scan.list = rows; scan.listSource = 'ai'; ocr.few = false; ocr.found = null;
+  } catch (e) { scan.error = e.message; scan.errorCode = e.code || ''; }
   scan.busy = false; scan.mode = '';
-  if (S.ui.tab === 'scan') render(); else if (scan.items) toast('Receipt ready to review');
+  if (S.ui.tab === 'scan') render(); else if (scan.list) toast('List ready to review');
 }
 
 /* ---------- Amazon ---------- */
@@ -2270,7 +2411,7 @@ function openSheet(renderFn, onClose) {
 }
 function drawSheet() { if (!sheet) return; const b = $('#sheet-body'); const st = b.scrollTop; b.innerHTML = sheet.render(); b.scrollTop = st; }
 function closeSheet() {
-  const s = sheet; sheet = null; detail = null; cartDraft = null; memberDraft = null; itemDraft = null; planDraft = null; arriveDraft = null;
+  const s = sheet; sheet = null; detail = null; cartDraft = null; memberDraft = null; itemDraft = null; planDraft = null; arriveDraft = null; codeDraft = null;
   $('#sheet').classList.remove('open'); $('#sheet').setAttribute('aria-hidden', 'true'); document.body.classList.remove('noscroll');
   if (s && s.onClose) s.onClose();
 }
@@ -2286,8 +2427,9 @@ function askConfirm(msg, yesLabel, onYes, danger = true) {
 
 /* ================= VIEWS ================= */
 function aiErrorHtml(msg, code) {
-  const cta = ['free_limit', 'none', 'key'].includes(code) ? `<button class="btn btn-sm btn-soft" data-act="goto" data-tab="settings" style="margin-top:8px">${code === 'key' ? 'Fix my key' : 'Add my own key'}</button>` : '';
-  return `<div class="note ${code === 'free_limit' ? 'warn' : 'danger'}" style="margin-bottom:14px">${esc(msg)}${cta ? '<br>' + cta : ''}</div>`;
+  const cta = ['free_limit', 'none', 'key'].includes(code) ? `<button class="btn btn-sm btn-soft" data-act="goto" data-tab="settings" style="margin-top:8px">${code === 'key' ? 'Fix my key' : 'Add my own key'}</button>`
+    : code === 'premium' ? `<button class="btn btn-sm btn-soft" data-act="premiumCode" style="margin-top:8px">Enter a Premium code</button>` : '';
+  return `<div class="note ${['free_limit', 'month_limit'].includes(code) ? 'warn' : 'danger'}" style="margin-bottom:14px">${esc(msg)}${cta ? '<br>' + cta : ''}</div>`;
 }
 function greeting() { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'; }
 function firstName() { return (S.household.members[0]?.name || '').split(' ')[0]; }
@@ -2549,14 +2691,16 @@ function itemSheet() {
 
 /* ---- scan ---- */
 function viewScan() {
-  const free = onDevice();
-  // Free (on-phone) types first, so the second row is the AI-only photo types.
-  const types = free ? [['receipt', '🧾', 'Receipt'], ['barcode', '▦', 'Barcode'], ['paste', '📋', 'Paste order'], ['fridge', '🧊', 'Fridge'], ['pantry', '🥫', 'Pantry'], ['freezer', '❄️', 'Freezer']]
-    : [['receipt', '🧾', 'Receipt'], ['fridge', '🧊', 'Fridge'], ['pantry', '🥫', 'Pantry'], ['freezer', '❄️', 'Freezer'], ['paste', '📋', 'Paste order']];
-  const head = `<header class="top"><div><p class="eyebrow">${free ? 'Scanner' : 'AI scanner'}</p><h1>Scan</h1></div></header>`;
-  if (scan.busy && scan.mode === 'ocr') return head + `<div class="loading"><div class="spinner"></div><b>Reading your receipt on this phone…</b>
+  const free = onDevice(), lock = !premiumOK();
+  // Free types first (Shopping list, Barcode, Receipt, Paste order), then the Premium photo types.
+  const freeTypes = [['list', '📝', 'Shopping list'], ...(free ? [['barcode', '▦', 'Barcode']] : []), ['receipt', '🧾', 'Receipt'], ['paste', '📋', 'Paste order']];
+  const paidTypes = [['fridge', '🧊', 'Fridge'], ['pantry', '🥫', 'Pantry'], ['freezer', '❄️', 'Freezer']];
+  const head = `<header class="top"><div><p class="eyebrow">Scanner</p><h1>Scan</h1></div></header>`;
+  if (scan.busy && scan.mode === 'ocr') return head + `<div class="loading"><div class="spinner"></div><b>Reading your ${scan.type === 'list' ? 'list' : 'receipt'} on this phone…</b>
     <p class="small" id="ocr-msg">${esc(ocr.msg)}</p><div class="ocr-track" aria-hidden="true"><span id="ocr-bar" style="width:${ocr.pct}%"></span></div><p class="tiny">Free. The photo isn’t uploaded.</p></div>`;
+  if (scan.busy && scan.mode === 'list-ai') return head + `<div class="loading"><div class="spinner"></div><b>Reading the handwriting…</b><p class="small">This usually takes 5–10 seconds.</p></div>`;
   if (scan.busy) return head + `<div class="loading"><div class="spinner"></div><b>Reading your ${scan.type === 'paste' ? 'order' : scan.type}…</b><p class="small">This usually takes 10–20 seconds.</p></div>`;
+  if (scan.list) return head + viewListReview();
   if (scan.items) {
     const on = scan.items.filter(i => i.on).length;
     return head + `<div class="row" style="justify-content:space-between;margin-bottom:12px"><h2>Review ${scan.items.length} item${scan.items.length === 1 ? '' : 's'}</h2><button class="btn btn-ghost btn-sm" data-act="scanToggleAll">${on === scan.items.length ? 'Uncheck all' : 'Check all'}</button></div>
@@ -2577,15 +2721,13 @@ function viewScan() {
         <button class="btn btn-primary btn-block" data-act="scanAdd">Add ${on} item${on === 1 ? '' : 's'} to pantry</button>
         <button class="btn btn-ghost btn-block" data-act="scanDiscard">Discard</button></div></div>`;
   }
-  const seg = `<div class="seg scan-types${free ? ' six' : ''}">${types.map(([k, ic, l]) => `<button class="${scan.type === k ? 'on' : ''}" data-act="scanType" data-v="${k}">${ic} ${l}</button>`).join('')}</div>`;
+  const btn = ([k, ic, l], paid) => `<button class="${scan.type === k ? 'on' : ''}${paid ? ' paid' : ''}" data-act="scanType" data-v="${k}"${paid && lock ? ` aria-label="${l} (Premium)"` : ''}>${paid && lock ? '🔒' : ic} ${l}</button>`;
+  const seg = `<div class="seg scan-types f${freeTypes.length}">${freeTypes.map(t => btn(t, false)).join('')}${paidTypes.map(t => btn(t, true)).join('')}</div>`;
   if (free && scan.type === 'barcode') return head + seg + viewBarcode();
-  const ocrReceipt = free && scan.type === 'receipt', loose = ['fridge', 'pantry', 'freezer'].includes(scan.type);
-  // Loose food in a fridge or cupboard can't be recognized reliably on the phone, so those stay on AI.
-  if (free && loose && !canSeeImages()) return head + seg + `<div class="note warn"><b>Fridge, pantry and freezer photos need AI</b> to recognize loose food. These are free and work on your phone:
-      <div class="stack" style="margin-top:10px"><button class="btn btn-soft btn-block" data-act="scanType" data-v="barcode">▦ Scan barcodes on packages</button>
-      <button class="btn btn-soft btn-block" data-act="scanType" data-v="receipt">🧾 Read a store receipt</button>
-      <button class="btn btn-soft btn-block" data-act="scanType" data-v="paste">📋 Paste an online order</button></div>
-      <p class="small" style="margin-top:10px">Or add items by hand in Pantry, or <button class="linklike" data-act="goto" data-tab="settings">add your own AI key</button>.</p></div>`;
+  const loose = LOOSE.includes(scan.type), isList = scan.type === 'list';
+  const ocrReceipt = free && (scan.type === 'receipt' || isList);
+  // Loose food in a fridge or cupboard can't be recognized on the phone, so those use AI: Premium, or your own key.
+  if (loose && lock) return head + seg + premiumCard();
   if (scan.type === 'paste') return head + seg + `<div class="field"><label for="paste-text">Copy your Amazon, Instacart or Walmart order email or order page and paste it here</label>
       <textarea id="paste-text" class="input paste-box" placeholder="Paste your order here" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea></div>
     <button class="btn btn-primary btn-block" data-act="readPaste">Read items</button>
@@ -2598,15 +2740,64 @@ function viewScan() {
       <button class="scan-btn" data-act="pickCam"><span class="ic">📷</span>Take photo</button>
       <button class="scan-btn" data-act="pickGal"><span class="ic">🖼️</span>Choose from gallery</button></div>
     ${scan.images.length ? `<div class="thumbs">${scan.images.map((src, i) => `<div class="thumb"><img src="${src}" alt="Photo ${i + 1}"><button data-act="rmImg" data-i="${i}" aria-label="Remove">✕</button></div>`).join('')}</div>
-      ${ocrReceipt ? `<button class="btn btn-primary btn-block" data-act="ocrRead">Read receipt (free, on your phone)</button>
-      <p class="tiny muted" style="margin-top:8px">🔒 Free, no AI. The photo is read on this phone and never uploaded. The first time downloads the free reader (about 5 MB).</p>`
-        : `<button class="btn btn-primary btn-block" data-act="analyze">Analyze ${scan.images.length} photo${scan.images.length === 1 ? '' : 's'}</button>`}` : `<p class="small muted" style="text-align:center">${scan.type === 'receipt' ? 'Flatten the receipt and get every line in frame. Long receipts? Add a few photos.' : 'Open the door wide, use good light, and take one photo per shelf if it’s crowded.'}</p>`}
-    ${ocrReceipt && ocr.few && !scan.error ? `<div class="note warn" style="margin-top:14px">${canSeeImages() ? '<b>Couldn’t read much from that photo.</b> The AI scan reads receipts better.' : 'Couldn’t read much. Try a flatter, brighter photo, or add items by hand.'}
-      ${canSeeImages() ? `<br><button class="btn btn-sm btn-soft" data-act="analyze" style="margin-top:8px">Try the AI scan</button>` : ''}
+      ${ocrReceipt ? `<button class="btn btn-primary btn-block" data-act="ocrRead">Read ${isList ? 'list' : 'receipt'} (free, on your phone)</button>
+      <p class="tiny muted" style="margin-top:8px">🔒 Free, no AI. The photo is read on this phone and never uploaded. The first time downloads the free reader (about 5 MB).</p>
+      ${isList && canSeeImages() ? `<button class="btn btn-ghost btn-block" data-act="listAI" style="margin-top:8px">✍️ Read handwriting with AI</button>${listLeftLine()}` : ''}`
+        : isList ? `<button class="btn btn-primary btn-block" data-act="listAI">Read list</button>${listLeftLine()}`
+        : `<button class="btn btn-primary btn-block" data-act="analyze">Analyze ${scan.images.length} photo${scan.images.length === 1 ? '' : 's'}</button>`}`
+      : `<p class="small muted" style="text-align:center">${isList ? 'Snap your shopping list, printed or handwritten. We’ll line each item up with Amazon.' : scan.type === 'receipt' ? 'Flatten the receipt and get every line in frame. Long receipts? Add a few photos.' : 'Open the door wide, use good light, and take one photo per shelf if it’s crowded.'}</p>`}
+    ${loose && aiMode() === 'backend' && quota.scan ? `<p class="small muted" style="text-align:center;margin-top:8px">${quota.scan.left} of ${quota.scan.limit} scans left this month</p>` : ''}
+    ${ocrReceipt && ocr.few && !scan.error ? `<div class="note warn" style="margin-top:14px">${canSeeImages() ? `<b>Couldn’t read much from that photo.</b> The AI ${isList ? 'reads handwriting' : 'scan reads receipts'} better.` : 'Couldn’t read much. Try a flatter, brighter photo, or add items by hand.'}
+      ${canSeeImages() ? `<br><button class="btn btn-sm btn-soft" data-act="${isList ? 'listAI' : 'analyze'}" style="margin-top:8px">${isList ? 'Read handwriting with AI' : 'Try the AI scan'}</button>` : ''}
       ${ocr.found && ocr.found.length ? `<br><button class="btn btn-sm btn-ghost" data-act="ocrReview" style="margin-top:8px">Review the ${ocr.found.length} item${ocr.found.length === 1 ? '' : 's'} it found</button>` : ''}</div>` : ''}
-    ${scan.error && scan.errorCode === 'ocr' ? `<div class="note danger" style="margin-top:14px">${esc(scan.error)}${canSeeImages() ? `<br><button class="btn btn-sm btn-soft" data-act="analyze" style="margin-top:8px">Try the AI scan</button>` : ''}</div>` : ''}
+    ${scan.error && scan.errorCode === 'ocr' ? `<div class="note danger" style="margin-top:14px">${esc(scan.error)}${canSeeImages() ? `<br><button class="btn btn-sm btn-soft" data-act="${isList ? 'listAI' : 'analyze'}" style="margin-top:8px">${isList ? 'Read handwriting with AI' : 'Try the AI scan'}</button>` : ''}</div>` : ''}
     ${scan.error && scan.errorCode !== 'ocr' ? `<div style="margin-top:14px">${aiErrorHtml(scan.error, scan.errorCode)}</div>` : ''}
-    ${!canSeeImages() && !ocrReceipt ? `<div class="note warn" style="margin-top:14px">Photo scanning needs AI. Add your own Anthropic key to turn it on — or add items by hand in Pantry. <button class="btn btn-sm btn-soft" data-act="goto" data-tab="settings" style="margin-top:8px">Add my key</button></div>` : ''}`;
+    ${!canSeeImages() && !ocrReceipt ? `<div class="note warn" style="margin-top:14px">${loose ? 'Premium scans need a connection to Pantry Pal. Open the app from the Pantry Pal website, or add your own Anthropic key.' : 'Photo scanning needs AI. Add your own Anthropic key to turn it on — or add items by hand in Pantry.'} <button class="btn btn-sm btn-soft" data-act="goto" data-tab="settings" style="margin-top:8px">Add my key</button></div>` : ''}`;
+}
+function listLeftLine() { return quota.list && aiMode() === 'backend' ? `<p class="tiny muted" style="text-align:center;margin-top:6px">${quota.list.left} free handwriting read${quota.list.left === 1 ? '' : 's'} left this month</p>` : ''; }
+// Free users tapping Fridge, Pantry or Freezer. Nothing is sent anywhere from here.
+function premiumCard() {
+  const get = CONFIG.STRIPE_LINK ? `<a class="btn btn-accent btn-block" href="${esc(CONFIG.STRIPE_LINK)}" target="_blank" rel="noopener">Get Premium</a>`
+    : `<button class="btn btn-accent btn-block" disabled>Get Premium · Coming soon</button>`;
+  const ended = S.premium && !premiumLive();
+  return `<section class="panel premium">
+      <p class="eyebrow">🔒 Premium</p><h2>Snap your fridge, pantry or freezer</h2>
+      <p class="small" style="margin-bottom:10px">Take a photo of a shelf and Pantry Pal lists the food it sees, with amounts and use-by dates, ready to add to your pantry.</p>
+      <ul class="perks small"><li>${PREMIUM.scans} photo scans a month</li><li><b>${PREMIUM.monthly}</b> a month, or <b>${PREMIUM.yearly}</b> a year (${PREMIUM.yearlyPerMonth}/mo, save 50%)</li></ul>
+      ${ended ? `<div class="note warn" style="margin-bottom:10px">Your Premium ended on ${esc(new Date(S.premium.exp).toLocaleDateString())}.</div>` : ''}
+      <div class="stack">${get}<button class="btn btn-ghost btn-block" data-act="premiumCode">I have a code</button></div></section>
+    <div class="note"><b>Free, and works now:</b>
+      <div class="stack" style="margin-top:10px"><button class="btn btn-soft btn-block" data-act="scanType" data-v="list">📝 Photo of a shopping list</button>
+      ${onDevice() ? `<button class="btn btn-soft btn-block" data-act="scanType" data-v="barcode">▦ Scan barcodes on packages</button>` : ''}
+      <button class="btn btn-soft btn-block" data-act="scanType" data-v="receipt">🧾 Read a store receipt</button>
+      <button class="btn btn-soft btn-block" data-act="scanType" data-v="paste">📋 Paste an online order</button></div>
+      <p class="small" style="margin-top:10px">Have your own Anthropic key? <button class="linklike" data-act="goto" data-tab="settings">Add it in Settings</button> to use every feature.</p></div>`;
+}
+// Shopping list photo → Amazon. Not the pantry: these are things to buy.
+function listRow(it) { const c = catalogFind(it.name); return { asin: cartAsin(c), term: c?.term || it.name }; }
+function viewListReview() {
+  const L = scan.list, on = L.filter(i => i.on).length;
+  return `<div class="row" style="justify-content:space-between;margin-bottom:8px"><h2>Shopping list → Amazon</h2>${L.length ? `<button class="btn btn-ghost btn-sm" data-act="listToggleAll">${on === L.length ? 'Uncheck all' : 'Check all'}</button>` : ''}</div>
+    <p class="small muted" style="margin-bottom:12px">${scan.listSource === 'ai' ? 'Read with AI. ' : ''}Check the names, then send them to Amazon. Amazon shows the matching products. Prices and product photos in the app come later.</p>
+    ${hasAllergies() ? allergyNote('margin:-6px 0 12px') : ''}
+    ${L.map((it, i) => { const r = listRow(it); return `<div class="review-item ${it.on ? '' : 'off'}">
+      <div class="review-top"><input type="checkbox" ${it.on ? 'checked' : ''} data-li="${i}" data-f="on" aria-label="Include"><input class="input" data-li="${i}" data-f="name" value="${esc(it.name)}" aria-label="Item name"></div>
+      <div class="row list-ctl"><div class="stepper"><button data-act="listQty" data-i="${i}" data-d="-1" aria-label="Fewer">−</button><span>${it.qty}</span><button data-act="listQty" data-i="${i}" data-d="1" aria-label="More">+</button></div>
+        <span class="grow"></span>
+        <a class="btn btn-ghost btn-sm" href="${esc(searchUrl(r.term))}" target="_blank" rel="noopener sponsored" data-act="listSearch" data-i="${i}" aria-label="Find ${esc(it.name)} on Amazon">Amazon ↗</a>
+        <button class="icon-btn" style="min-width:36px;height:36px" data-act="listRm" data-i="${i}" aria-label="Remove ${esc(it.name)}">✕</button></div>
+      ${r.asin || it.need ? `<p class="tiny" style="margin-top:6px">${r.asin ? '<span class="ok-text">✓ One-tap cart</span>' : ''}${r.asin && it.need ? ' · ' : ''}${it.need ? `<span class="muted">List says ${esc(it.need)}</span>` : ''}</p>` : ''}
+      ${conflictsFor([it.name]).map(c => `<p class="tiny" style="color:var(--danger);margin-top:6px">⚠ ${esc(c.label)} — ${esc(c.who.join(', '))}</p>`).join('')}
+    </div>`; }).join('')}
+    ${!L.length ? `<div class="empty"><p>No items left. Discard and take another photo, or type items in Shop.</p></div>` : ''}
+    <div class="sheet-foot" style="position:sticky;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));padding-bottom:8px"><div class="stack">
+      <button class="btn btn-accent btn-block" data-act="listCart" ${on ? '' : 'disabled'}>🛒 Send ${on} item${on === 1 ? '' : 's'} to Amazon</button>
+      <button class="btn btn-soft btn-block" data-act="listToShop" ${on ? '' : 'disabled'}>＋ Add to my shopping list</button></div></div>
+    <div class="stack" style="margin-top:10px">
+      ${scan.listSource !== 'ai' && scan.images.length && canSeeImages() ? `<button class="btn btn-ghost btn-block" data-act="listAI">✍️ Not right? Read handwriting with AI</button>` : ''}${listLeftLine()}
+      <button class="btn btn-ghost btn-block" data-act="listDiscard">Discard</button></div>
+    ${scan.error ? `<div style="margin-top:14px">${aiErrorHtml(scan.error, scan.errorCode)}</div>` : ''}
+    <p class="disclosure">As an Amazon Associate, Pantry Pal earns from qualifying purchases.</p>`;
 }
 
 /* ---- shop ---- */
@@ -2681,6 +2872,7 @@ function viewSettings() {
     </section>` : '';
   return `<header class="top"><div><p class="eyebrow">Preferences</p><h1>Settings</h1></div>${backBtn()}</header>
     ${owner}
+    ${tierPanel()}
     <section class="panel"><h2>AI</h2>
       <p class="small" style="margin-bottom:12px;color:${mode === 'none' ? 'var(--warn)' : 'var(--ok)'};font-weight:600">${aiLabel}</p>
       ${st.userKey ? `<div class="row" style="justify-content:space-between"><span class="small">Key ending in <b>…${esc(st.userKey.slice(-4))}</b></span><button class="btn btn-ghost btn-sm" data-act="removeKey">Remove</button></div>`
@@ -2699,6 +2891,20 @@ function viewSettings() {
       <button class="btn btn-danger btn-block" data-act="resetAll">Reset everything</button></div></section>
     <p class="disclosure" style="text-align:center">As an Amazon Associate, Pantry Pal earns from qualifying purchases.</p>
     <p class="tiny muted" style="text-align:center;margin-top:6px;user-select:none" data-act="adminTap">Pantry Pal · ${LIB.length} built-in recipes</p>`;
+}
+function tierPanel() {
+  const p = S.premium, live = premiumLive(), own = aiMode() === 'own';
+  const planName = p ? ({ monthly: 'Monthly', yearly: 'Yearly', test: 'Test' }[p.plan] || '') : '';
+  const until = p ? new Date(p.exp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+  const status = live ? `<p class="small" style="color:var(--ok);font-weight:600">✓ Premium${planName ? ' · ' + planName : ''} · until ${esc(until)}</p>
+      <p class="small muted" style="margin-top:4px">${quota.scan ? `${quota.scan.left} of ${quota.scan.limit} scans left this month` : `${PREMIUM.scans} fridge, pantry and freezer scans a month`}</p>`
+    : p ? `<p class="small" style="color:var(--warn);font-weight:600">Premium ended on ${esc(until)}. You’re on the free plan.</p>`
+      : `<p class="small" style="font-weight:600">Free plan</p><p class="small muted" style="margin-top:4px">Shopping list, barcode, receipt and order scans are free. Fridge, pantry and freezer photo scans are Premium: ${PREMIUM.monthly}/mo or ${PREMIUM.yearly}/yr (${PREMIUM.yearlyPerMonth}/mo, save 50%), ${PREMIUM.scans} scans a month.</p>`;
+  const get = live ? '' : CONFIG.STRIPE_LINK ? `<a class="btn btn-accent btn-block" href="${esc(CONFIG.STRIPE_LINK)}" target="_blank" rel="noopener">Get Premium</a>` : `<button class="btn btn-accent btn-block" disabled>Get Premium · Coming soon</button>`;
+  return `<section class="panel" id="plan-panel"><h2>Plan</h2>${status}
+    ${own ? `<div class="note ok" style="margin-top:10px">You’re using your own Anthropic key, so every feature is on. You pay Anthropic for what you use.</div>` : ''}
+    <div class="stack" style="margin-top:12px">${get}<button class="btn btn-soft btn-block" data-act="premiumCode">Restore Premium (enter a code)</button>
+      ${p ? `<button class="btn btn-ghost btn-block" data-act="premiumRemove">Remove from this device</button>` : ''}</div></section>`;
 }
 function viewCatalog() {
   const q = norm(catQ);
@@ -2813,7 +3019,7 @@ async function loadSteps(r) {
       system: 'You are a precise recipe writer. Respond with JSON only.',
       content: [{ type: 'text', text: `Write clear cooking steps for this recipe. Include temperatures, times and doneness cues. 4–9 steps. Do not include links or references to websites.
 Recipe: ${JSON.stringify({ title: r.title, servings: r.servings, ingredients: r.ingredients.map(i => [i.qty, i.unit, i.name].filter(Boolean).join(' ')) })}
-Return: {"steps":["..."]}` }], maxTokens: 1500
+Return: {"steps":["..."]}` }], maxTokens: 1500, purpose: 'steps'
     });
     const data = extractJSON(text); const steps = (data.steps || data).filter(s => typeof s === 'string' && s.trim());
     if (!steps.length) throw new Error('No steps came back. Try again.');
@@ -2828,9 +3034,55 @@ function openRecipe(id, servings) {
   if (!r.steps && r.source !== 'web' && aiMode() !== 'none') loadSteps(r);
 }
 
+/* ---- Premium code sheet ---- */
+function codeSheet() {
+  const d = codeDraft;
+  return `${sheetBar('Enter your Premium code')}
+    <p class="small muted" style="margin-bottom:12px">Paste the code from your Premium receipt email, or a test code from Pantry Pal.</p>
+    <form class="stack" data-form="premiumCode"><input class="input" name="code" aria-label="Premium code" placeholder="Your code" autocomplete="off" autocapitalize="off" spellcheck="false" ${d.busy ? 'disabled' : ''}>
+      <button class="btn btn-primary btn-block" type="submit" ${d.busy ? 'disabled' : ''}>${d.busy ? 'Checking…' : 'Use this code'}</button></form>
+    ${d.err ? `<div class="note danger" style="margin-top:12px">${esc(d.err)}</div>` : ''}
+    <p class="tiny muted" style="margin-top:12px">The code is saved on this device only. It’s never included in backups.</p>`;
+}
+// The payload part of a signed token ("<base64url JSON>.<signature>"), read only to show the plan. Not trusted.
+function tokenPayload(t) {
+  try { const b = String(t).split('.')[0].replace(/-/g, '+').replace(/_/g, '/'); const p = JSON.parse(atob(b + '==='.slice((b.length + 3) % 4))); return p && typeof p === 'object' ? p : null; } catch (e) { return null; }
+}
+// The backend checks the code (a Premium token or an owner test code) and returns a signed token.
+// If the backend has no /api/premium/redeem yet, a token-shaped code is stored as is and checked on the first scan.
+async function redeemPremium(code) {
+  const d = codeDraft; if (!d || d.busy) return;
+  code = String(code || '').trim();
+  if (!/^[\w.~+/=-]{4,1200}$/.test(code)) { d.err = 'That code doesn’t look right. Check it and try again.'; return drawSheet(); }
+  d.busy = true; d.err = ''; drawSheet();
+  let got = null, err = '';
+  const b = backend();
+  if (b) {
+    try {
+      const res = await fetch(b + '/api/premium/redeem', { method: 'POST', headers: bheaders(), body: JSON.stringify({ code }) });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) got = sanitizePremium({ token: data.token, exp: data.exp, plan: data.plan });
+      else if (![404, 405, 501].includes(res.status)) err = typeof data.error === 'string' && data.error ? data.error.slice(0, 200) : 'That code isn’t valid or has expired.';
+      if (res.ok && !got) err = 'Couldn’t read the answer from Pantry Pal. Try again.';
+      if (res.ok && data.quota) readQuota('scan', res, data);
+    } catch (e) { err = 'Couldn’t reach Pantry Pal. Check your connection and try again.'; }
+  }
+  if (!got && !err) {
+    const p = tokenPayload(code);
+    got = p ? sanitizePremium({ token: code, exp: p.exp, plan: p.plan }) : null;
+    if (!got) err = b ? 'That code isn’t valid or has expired.' : 'Codes are checked by Pantry Pal online. Open the app from the Pantry Pal website and try again.';
+  }
+  if (!codeDraft) return;   // sheet was closed
+  d.busy = false;
+  if (got && got.exp <= Date.now()) { got = null; err = 'That code has expired.'; }
+  if (!got) { d.err = err; return drawSheet(); }
+  S.premium = got; persist(); closeSheet(); render();
+  toast(`Premium is on until ${new Date(got.exp).toLocaleDateString()}`);
+}
+
 /* ---- Amazon cart builder sheet ---- */
-function openCartBuilder(title, items) {
-  cartDraft = { title, items };
+function openCartBuilder(title, items, needLabel = 'Recipe needs') {
+  cartDraft = { title, items, needLabel };
   openSheet(cartSheet);
   if (pickerAvailable()) items.filter(i => !i.asin).forEach(loadOptions);
 }
@@ -2840,7 +3092,7 @@ function cartSheet() {
   return `${sheetBar('Add to Amazon cart')}<p class="small muted" style="margin:-8px 0 12px">For ${esc(d.title)}</p>
     ${d.items.map((it, i) => `<div class="cart-row ${it.on ? '' : 'off'}">
       <div class="row"><input type="checkbox" ${it.on ? 'checked' : ''} data-cartck="${i}" style="width:22px;height:22px;accent-color:var(--brand);margin-top:2px" aria-label="Include ${esc(it.name)}">
-        <div class="grow"><div class="li-title" style="text-transform:capitalize">${esc(it.name)}</div><div class="tiny muted">Recipe needs ${esc(it.need || '—')}</div>
+        <div class="grow"><div class="li-title" style="text-transform:capitalize">${esc(it.name)}</div><div class="tiny muted">${esc(d.needLabel || 'Recipe needs')} ${esc(it.need || '—')}</div>
           <div class="small" style="margin-top:4px">${it.asin ? `<span style="color:var(--ok);font-weight:600">✓ ${esc(it.title || 'Mapped product')}</span>` : `<span class="muted">Opens Amazon search for “${esc(it.term)}”</span>`}</div></div>
         <div class="stepper" style="flex:none"><button data-act="cartQty" data-i="${i}" data-d="-1" aria-label="Less">−</button><span>${it.qty}</span><button data-act="cartQty" data-i="${i}" data-d="1" aria-label="More">+</button></div></div>
       ${it.loading ? `<div class="row small muted" style="margin-top:10px"><span class="spinner sm"></span> Finding top products…</div>` : ''}
@@ -2878,7 +3130,7 @@ function renderOnboard() {
     <span class="label">Diet</span><div class="chips">${DIETS.map(d => `<button class="chip ${ob.diets.includes(d) ? 'on' : ''}" data-act="obDiet" data-d="${d}">${d}</button>`).join('')}</div>
     <div class="row" style="justify-content:space-between"><span class="label">Usually cooking for</span><div class="stepper"><button data-act="obParty" data-d="-1" aria-label="Fewer">−</button><span>${ob.party}</span><button data-act="obParty" data-d="1" aria-label="More">+</button></div></div>`;
   if (s === 3) body = `<div class="ob-hero">✨</div><h1>${aiMode() === 'backend' ? 'You’re all set' : 'Turn on AI'}</h1>
-    ${aiMode() === 'backend' ? `<p class="lead" style="font-size:15px">Scanning and custom recipes are ready to go${health?.freePerDay ? ` — ${health.freePerDay} free AI requests a day` : ''}. Try scanning your fridge first.</p>`
+    ${aiMode() === 'backend' ? `<p class="lead" style="font-size:15px">Scanning and custom recipes are ready to go${health?.freePerDay ? ` — ${health.freePerDay} free AI requests a day` : ''}. Try a photo of your shopping list first.</p>`
       : hasClaudeBuiltin() ? `<div class="note ok">✓ You’re running inside Claude, so recipe ideas work now. Add your own key to scan photos.</div>`
       : `<p class="lead" style="font-size:15px">Over ${LIB.length} recipes work without AI. To scan receipts and photos and get custom recipes, paste your own Anthropic API key — or skip and add it later in Settings.</p>`}
     ${aiMode() !== 'backend' ? `<div class="field"><label for="ob-key">Anthropic API key (optional)</label><input id="ob-key" class="input" type="password" data-ob="key" value="${esc(ob.key || '')}" placeholder="sk-ant-…" autocapitalize="off" autocomplete="off" spellcheck="false"></div>
@@ -2944,7 +3196,7 @@ RULES: Prefer pantry items, especially ones marked [use soon]. Make at least ${s
 Return compact JSON only, no prose: {"recipes":[{"title":"","cuisine":"","meal":"","min":30,"kcal":0,"p":0,"c":0,"sum":"one appetizing sentence","ing":[[1,"cup","rice"],[2,"","egg"]]}]}
 min = total minutes; kcal, p (protein g), c (carbs g) per serving; ing = [qty, unit, name] with unit "" for whole items.`;
     // ~150 output tokens per recipe in this format; 2500 leaves room for 6 big ones. A cut-off reply keeps the finished recipes.
-    const text = await callClaude({ system: 'You are a creative, practical home chef. You strictly respect allergies and diets. Respond with JSON only.', content: [{ type: 'text', text: prompt }], maxTokens: 2500 });
+    const text = await callClaude({ system: 'You are a creative, practical home chef. You strictly respect allergies and diets. Respond with JSON only.', content: [{ type: 'text', text: prompt }], maxTokens: 2500, purpose: 'recipes' });
     const data = extractJSON(text);
     const list = (Array.isArray(data) ? data : data.recipes || []).map(x => normalizeAiRecipe(x, party)).filter(Boolean);
     if (!list.length) throw new Error('The AI didn’t return any recipes. Try again.');
@@ -2957,6 +3209,7 @@ min = total minutes; kcal, p (protein g), c (carbs g) per serving; ing = [qty, u
 
 async function analyzeScan() {
   if (!scan.images.length || scan.busy) return;
+  if (LOOSE.includes(scan.type) && !premiumOK()) return render();   // locked: the Premium card shows instead
   scan.busy = true; scan.error = ''; scan.errorCode = ''; render();
   try {
     const t = scan.type;
@@ -2973,7 +3226,7 @@ n = plain lowercase grocery name. q = quantity (omit if 1). u = one of lb, oz, g
 If there is no food, return {"items":[]}.` }
     ];
     // ~18 output tokens per item in the compact format, so 2000 fits ~100 items. A cut-off reply is salvaged below.
-    const text = await callClaude({ system: 'You are a meticulous grocery inventory assistant. Respond with JSON only.', content, maxTokens: 2000 });
+    const text = await callClaude({ system: 'You are a meticulous grocery inventory assistant. Respond with JSON only.', content, maxTokens: 2000, purpose: t === 'receipt' ? 'receipt' : 'scan' });
     const data = extractJSON(text);
     const items = scanItems(data);
     if (!items.length) throw new Error(data._partial ? 'The AI reply was cut off before any items came through. Try fewer photos at a time.' : t === 'receipt' ? 'No food items found on that receipt. Try a clearer, flatter photo.' : 'No food found in that photo. Try better light or a closer shot.');
@@ -2997,7 +3250,7 @@ async function readPasteWithAI() {
   const order = paste.text; if (!order || scan.busy) return;
   scan.busy = true; scan.error = ''; scan.errorCode = ''; render();
   try {
-    const text = await callClaude({ system: 'You are a meticulous grocery inventory assistant. Respond with JSON only.', maxTokens: 800, content: [{ type: 'text', text: `This text was copied from an online grocery order. List every food or drink item that was bought, using plain grocery names without brands or sizes (e.g. "Barilla Spaghetti, 16 oz (Pack of 4)" → spaghetti, q 4). Skip non-food items, prices, fees, totals and anything refunded or out of stock.
+    const text = await callClaude({ system: 'You are a meticulous grocery inventory assistant. Respond with JSON only.', maxTokens: 800, purpose: 'paste', content: [{ type: 'text', text: `This text was copied from an online grocery order. List every food or drink item that was bought, using plain grocery names without brands or sizes (e.g. "Barilla Spaghetti, 16 oz (Pack of 4)" → spaghetti, q 4). Skip non-food items, prices, fees, totals and anything refunded or out of stock.
 Return compact JSON only, no prose: {"items":[{"n":"milk","q":2,"u":"gal","c":"Dairy & Eggs","d":7}]}
 n = plain lowercase grocery name. q = quantity (omit if 1). u = one of lb, oz, g, gal, qt, l, ml, can, bottle, bag, box, jar, bunch (omit for a count). c = one of: ${CATEGORIES.join(', ')}. d = days until it expires.
 If there is no food, return {"items":[]}.
@@ -3010,11 +3263,12 @@ ${order}` }] });
   scan.busy = false; if (S.ui.tab === 'scan') render();
 }
 async function addFiles(files) {
-  const list = [...(files || [])].filter(f => f.type.startsWith('image/') || /\.(heic|heif)$/i.test(f.name)).slice(0, 6 - scan.images.length);
-  if (!list.length) { if ((files || []).length) toast('Up to 6 photos per scan'); return; }
+  const max = scan.type === 'list' ? 2 : 6;   // a list is one page, maybe front and back (the backend takes 2 for a list)
+  const list = [...(files || [])].filter(f => f.type.startsWith('image/') || /\.(heic|heif)$/i.test(f.name)).slice(0, Math.max(0, max - scan.images.length));
+  if (!list.length) { if ((files || []).length) toast(`Up to ${max} photos per ${scan.type === 'list' ? 'list' : 'scan'}`); return; }
   scan.error = '';
   for (const f of list) {
-    try { const img = await fileToJpeg(f); scan.images.push(img); if (onDevice() && scan.type === 'receipt') ocrBig.set(img, await fileToJpeg(f, 'ocr')); } catch (e) { scan.error = e.message; }
+    try { const img = await fileToJpeg(f); scan.images.push(img); if (onDevice() && (scan.type === 'receipt' || scan.type === 'list')) ocrBig.set(img, await fileToJpeg(f, 'ocr')); } catch (e) { scan.error = e.message; }
   }
   render();
 }
@@ -3119,14 +3373,35 @@ const ACT = {
   cartOpened: () => { arrival.left = true; recordPending(cartDraft.items.filter(i => i.on && i.asin)); toast('Opening Amazon… tap “Mark as bought” in Shop after checkout'); render(); setTimeout(drawSheet, 50); },
   searchOpened: el => { arrival.left = true; const it = cartDraft.items.find(i => i.key === el.dataset.key); if (it) recordPending([it]); render(); },
 
-  scanType: el => { scan.type = el.dataset.v; paste.empty = false; paste.text = ''; scan.error = ''; ocr.few = false; ocr.found = null; render(); },
+  scanType: el => { scan.type = el.dataset.v; paste.empty = false; paste.text = ''; scan.error = ''; scan.errorCode = ''; ocr.few = false; ocr.found = null; render(); },
+  premiumCode: () => { codeDraft = { err: '', busy: false }; openSheet(codeSheet); setTimeout(() => $('[data-form=premiumCode] input')?.focus(), 250); },
+  premiumRemove: () => askConfirm('Remove Premium from this device? You can restore it later with your code.', 'Remove', () => { S.premium = null; quota.scan = null; persist(); render(); toast('Premium removed from this device'); }),
+  listAI: () => { ocr.few = false; ocr.found = null; readListWithAI(); },
+  listToggleAll: () => { const all = scan.list.every(i => i.on); scan.list.forEach(i => i.on = !all); render(); },
+  listQty: el => { const it = scan.list?.[Number(el.dataset.i)]; if (!it) return; it.qty = clamp(it.qty + Number(el.dataset.d), 1, 20); render(); },
+  listRm: el => { scan.list?.splice(Number(el.dataset.i), 1); render(); },
+  listSearch: el => { const it = scan.list?.[Number(el.dataset.i)]; if (!it) return; arrival.left = true; recordPending([{ name: it.name, amount: it.qty, unit: '', category: guessCategory(it.name) }]); },
+  listCart: () => {
+    const on = (scan.list || []).filter(i => i.on && i.name.trim()); if (!on.length) return toast('Check at least one item');
+    openCartBuilder('your shopping list photo', on.map(x => Object.assign(draftItem({ name: x.name.trim(), qty: 1, unit: '' }, 1), { qty: x.qty, amount: x.qty, need: x.need || String(x.qty) })), 'On your list:');
+  },
+  listToShop: () => {
+    let n = 0;
+    for (const x of (scan.list || []).filter(i => i.on && i.name.trim())) {
+      if (S.shopping.some(s => !s.done && norm(s.name) === norm(x.name))) continue;
+      S.shopping.push({ id: uid(), name: x.name.trim(), need: x.need || (x.qty > 1 ? String(x.qty) : ''), amount: x.qty, unit: '', from: 'List photo', done: false }); n++;
+    }
+    scan.list = null; scan.listSource = ''; scan.images = []; ocrBig.clear(); persist(); goto('shop');
+    toast(n ? `Added ${n} item${n === 1 ? '' : 's'} to your shopping list` : 'Already on your list');
+  },
+  listDiscard: () => { scan.list = null; scan.listSource = ''; scan.error = ''; render(); },
   bcCamera: () => bcCamOpen(),
   bcCamClose: () => bcCamClose(),
   bcPhoto: () => $('#bc-photo').click(),
   bcRemove: el => { bc.list.splice(Number(el.dataset.i), 1); render(); },
   bcReview: () => bcReview(),
   ocrRead: () => readReceiptOnDevice(),
-  ocrReview: () => { if (!ocr.found || !ocr.found.length) return; scan.items = ocr.found; scan.partial = false; scan.source = 'ocr'; ocr.found = null; ocr.few = false; render(); },
+  ocrReview: () => { if (!ocr.found || !ocr.found.length) return; if (scan.type === 'list') { scan.list = ocr.found; scan.listSource = 'ocr'; ocr.found = null; ocr.few = false; return render(); } scan.items = ocr.found; scan.partial = false; scan.source = 'ocr'; ocr.found = null; ocr.few = false; render(); },
   readPaste: () => {
     const ta = $('#paste-text'), raw = ta ? ta.value : ''; if (ta) ta.value = '';   // the raw text is never kept
     if (!raw.trim()) return toast('Paste your order text first');
@@ -3205,7 +3480,7 @@ const ACT = {
   testBackend: async el => { el.disabled = true; el.textContent = 'Testing…'; await checkHealth(); },
   clearAi: () => askConfirm('Remove all AI-generated recipes? Library and community recipes stay.', 'Remove AI recipes', () => { S.aiRecipes = []; persist(); render(); }),
   exportData: () => {
-    const blob = new Blob([JSON.stringify(S, (k, v) => (k && k[0] === '_') || k === 'userKey' || k === 'appToken' ? undefined : v, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(S, (k, v) => (k && k[0] === '_') || k === 'userKey' || k === 'appToken' || k === 'premium' ? undefined : v, 2)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `pantry-pal-backup-${todayISO()}.json`; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   },
@@ -3264,6 +3539,7 @@ document.addEventListener('input', e => {
   if (ds.live === 'libq') { lib.q = el.value; $('#lib-results').innerHTML = libraryResults(); return; }
   if (ds.live === 'catq') { catQ = el.value; const q = norm(catQ); $('#cat-list').innerHTML = catalogList(S.catalog.filter(c => !q || norm(c.name).includes(q) || norm(c.cat).includes(q))); return; }
   if (ds.scan != null && ds.f !== 'on' && scan.items) { const it = scan.items[Number(ds.scan)]; if (it) it[ds.f] = el.value; return; }
+  if (ds.li != null && ds.f === 'name' && scan.list) { const it = scan.list[Number(ds.li)]; if (it) it.name = el.value.slice(0, 60); return; }
   if (ds.bc != null) { const x = bc.list[Number(ds.bc)]; if (x) x.name = el.value.slice(0, 60); return; }
   if (ds.draft && itemDraft) {
     itemDraft[ds.draft] = el.value;
@@ -3284,6 +3560,7 @@ document.addEventListener('change', e => {
   if (ds.setting) { S.settings[ds.setting] = el.value.trim(); persist(); if (ds.setting === 'backendUrl') { health = null; comm.items = null; online.items = null; if (backend()) checkHealth(true); } if (ds.setting === 'userKey' && el.value.trim()) toast('Key saved on this device'); render(); return; }
   if (ds.settingBool) { S.settings[ds.settingBool] = el.checked; persist(); render(); return; }
   if (ds.scan != null && scan.items) { const it = scan.items[Number(ds.scan)]; if (!it) return; if (ds.f === 'on') { it.on = el.checked; render(); } else it[ds.f] = el.value; return; }
+  if (ds.li != null && scan.list) { const it = scan.list[Number(ds.li)]; if (!it) return; if (ds.f === 'on') it.on = el.checked; else it.name = el.value.trim().slice(0, 60); render(); return; }
   if (ds.sl) { const x = S.shopping.find(s => s.id === ds.sl); if (x) { x.done = el.checked; persist(); render(); } return; }
   if (ds.arrck != null && arriveDraft) { const x = arriveDraft[Number(ds.arrck)]; if (x) x.on = el.checked; drawSheet(); return; }
   if (ds.cartck != null && cartDraft) { cartDraft.items[Number(ds.cartck)].on = el.checked; drawSheet(); return; }
@@ -3294,7 +3571,7 @@ document.addEventListener('change', e => {
   if (el.id === 'bc-photo') { const f = el.files[0]; el.value = ''; bcFromPhoto(f); return; }
   if (el.id === 'import') {
     const f = el.files[0]; el.value = ''; if (!f) return;
-    f.text().then(t => { const data = JSON.parse(t); if (!data || !Array.isArray(data.inventory)) throw new Error(); const { userKey, admin, backendUrl, appToken, tag } = S.settings; const keep = { userKey, admin, backendUrl, appToken, tag }; S = hydrate(sanitizeBackup(data)); Object.assign(S.settings, keep); persist(); render(); toast('Backup restored'); }).catch(() => toast('That file isn’t a Pantry Pal backup'));
+    f.text().then(t => { const data = JSON.parse(t); if (!data || !Array.isArray(data.inventory)) throw new Error(); const { userKey, admin, backendUrl, appToken, tag } = S.settings; const keep = { userKey, admin, backendUrl, appToken, tag }, premium = S.premium; S = hydrate(sanitizeBackup(data)); Object.assign(S.settings, keep); S.premium = premium; persist(); render(); toast('Backup restored'); }).catch(() => toast('That file isn’t a Pantry Pal backup'));
   }
 });
 // Coming back to the app (e.g. from an Amazon tab): refresh the "did your order arrive?" card.
@@ -3307,6 +3584,7 @@ document.addEventListener('toggle', e => { const el = e.target; if (el.dataset &
 document.addEventListener('submit', e => {
   const form = e.target.closest('[data-form]'); if (!form) return; e.preventDefault();
   const kind = form.dataset.form; const inp = form.querySelector('input'); const v = inp.value.trim(); if (!v) return;
+  if (kind === 'premiumCode') { redeemPremium(v); return; }
   if (kind === 'bcCode') { const code = v.replace(/\D/g, ''); if (!validBarcode(code)) return toast('That doesn’t look like a barcode number. Check the digits under the bars.'); inp.value = ''; bc.note = ''; bcAdd(code); return; }
   if (kind === 'slAdd') { const p = parseIng(v); const hasNum = /^[\d.\/]/.test(v); S.shopping.push({ id: uid(), name: hasNum && p ? p.name : v, need: hasNum && p ? fmtAmount(p.qty, p.unit) : '', amount: hasNum && p ? p.qty : 1, unit: hasNum && p ? p.unit : '', done: false }); persist(); render(); $('[data-form="slAdd"] input')?.focus(); return; }
   if (kind === 'mCustom' && memberDraft) { if (!memberDraft.custom.some(t => norm(t) === norm(v))) memberDraft.custom.push(v.slice(0, 40)); drawSheet(); return; }
@@ -3334,7 +3612,7 @@ async function boot() {
   if (!S.settings.admin && ['catalog'].includes(S.ui.tab)) S.ui.tab = 'more';
   setupPWA();
   renderOnboard(); render();
-  if (backend()) checkHealth(true);
+  if (backend()) checkHealth(true); else probeSameOrigin();
 }
 boot();
 
