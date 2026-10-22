@@ -1,6 +1,6 @@
 # Draft: Pantry Pal Pro, and what AI costs you
 
-**Status:** DRAFT for Wyatt's OK. Nothing that charges money gets set up without his approval.
+**Status:** PRICE APPROVED 2026-10-22: **$4.99/month or $29.99/year** (show yearly as "$2.50/mo, save 50%"), 100 AI actions a month, plus a 7-day Pro trial with no card (see `docs/research/pricing-and-brand.md`). The free-tier allowance is still being decided. Nothing that charges money gets set up without Wyatt's approval.
 **Written:** 2026-10-22
 
 ## What costs you money, and what doesn't

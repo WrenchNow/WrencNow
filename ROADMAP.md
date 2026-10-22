@@ -21,7 +21,7 @@ _Last updated: 2026-10-22 (afternoon)_
 | 7 | Apply for Amazon Associates **once the site is live and ~50–100 people a week use the app** (`docs/amazon-signup-guide.md`) | Wyatt | 10 min | #3 |
 | 9 | **Instacart as a second store** (approved). Wyatt checks whether developer signup is open; the build is ~1 evening behind a switch (`docs/research/instacart-integration.md`). | Wyatt, then product-dev | 1 evening | signup open? |
 | 10 | Tune the Paste-order reader on a real (redacted) Amazon and Instacart email | Wyatt sends sample, product-dev | 30 min | sample email |
-| 11 | Pantry Pal Pro (`docs/pro-plan-draft.md`; option B recommended: $3.99/mo or $29/yr, 100 scans/month) | product-dev | 1–2 weekends | Wyatt picks A/B/C |
+| 11 | Pantry Pal Pro: **$4.99/mo or $29.99/yr approved**, 100 AI actions a month, 7-day trial (`docs/pro-plan-draft.md`) | product-dev, integrations | 1–2 weekends | email sign-in (#13), Stripe account |
 | 11b | Test Haiku 5.5 on real fridge and receipt photos (could make AI ~20× cheaper) | Wyatt + product-dev | 20 min | Worker deployed |
 
 ## Then: the vision features

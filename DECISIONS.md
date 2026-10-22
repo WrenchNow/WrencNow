@@ -22,6 +22,10 @@ Newest first. One entry per decision: the date, what was decided and why.
   - The parser is tested only on synthetic emails. It needs one real, redacted order email from Wyatt to tune.
   - Automatic email forwarding is deferred until sign-in is built (it shares that work with Pro and the reminder).
 
+- **Pro price approved: $4.99/month or $29.99/year**, 100 AI actions a month (market research in `docs/research/pricing-and-brand.md`).
+- **Brand:** keep green/tomato/cream and Fraunces + Inter. Apply five contrast fixes so text passes WCAG AA. **The app icon switches to tomato** (the green-and-carrot icon looked like Instacart's). Both approved by Wyatt and in progress.
+- **Free AI allowance:** not yet decided. Wyatt asked for a way to analyze photos without paid AI; options were sent to him.
+
 ## 2026-10-21 (overnight)
 - **Imported the real Pantry Pal source** from Wyatt's zip. The app is edited in `src/` and built by `build.py`; `pantry-pal.html` is build output. The agents were updated to match.
 - **The vision was written into CLAUDE.md** (missing-only cart, party/allergy fit, auto-updating inventory, habits), with honest constraints: Amazon gives affiliates no order data, and product allergen data needs a real source.
