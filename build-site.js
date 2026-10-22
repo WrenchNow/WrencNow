@@ -16,7 +16,7 @@ const iso = m => `PT${m}M`;
 let PUBLISHED = new Date().toISOString().slice(0, 10);
 try { const d = require('child_process').execSync('git log --diff-filter=A --format=%ad --date=short -- src/data.js', { cwd: __dirname, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim().split('\n').pop(); if (/^\d{4}-\d\d-\d\d$/.test(d)) PUBLISHED = d; } catch (e) { }
 
-const CSS = `:root{--bg:#FAF6EF;--surface:#fff;--ink:#1E2721;--muted:#687068;--line:#E6DED0;--brand:#2E6A4E;--accent:#D9572F}
+const CSS = `:root{--bg:#FAF6EF;--surface:#fff;--ink:#1E2721;--muted:#636A63;--line:#E6DED0;--brand:#2E6A4E;--accent:#B3431F}
 @media (prefers-color-scheme:dark){:root{--bg:#111613;--surface:#19201B;--ink:#ECEFEA;--muted:#9BA49C;--line:#2D3731;--brand:#67BC8F;--accent:#F08A64}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 Inter,system-ui,sans-serif}
 a{color:var(--brand)}h1,h2,h3{font-family:Fraunces,Georgia,serif;line-height:1.15;margin:0 0 .4em}

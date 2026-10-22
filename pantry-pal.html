@@ -16,9 +16,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#FAF6EF;--surface:#FFFFFF;--surface-2:#F2ECE1;--ink:#1E2721;--muted:#687068;--line:#E6DED0;
+  --bg:#FAF6EF;--surface:#FFFFFF;--surface-2:#F2ECE1;--ink:#1E2721;--muted:#636A63;--line:#E6DED0;
   --brand:#2E6A4E;--brand-2:#3F8562;--brand-ink:#FFFFFF;--brand-soft:#E3EFE7;
-  --accent:#D9572F;--accent-soft:#FBE6DE;--warn:#9A6408;--warn-soft:#FBEFD3;
+  /* --accent: UI tomato for text and buttons (AA on cream/white). --tomato: brand tomato, only for the icon, illustrations and text >=24px. */
+  --accent:#B3431F;--accent-soft:#FBE6DE;--on-accent:#FFFFFF;--tomato:#D9572F;--warn:#8C5A06;--warn-soft:#FBEFD3;
   --danger:#B23624;--danger-soft:#F8E0DA;--ok:#2E7D4F;
   --shadow:0 1px 2px rgba(30,39,33,.06),0 6px 20px rgba(30,39,33,.07);
   --radius:18px;--radius-sm:12px;
@@ -28,7 +29,7 @@
 @media (prefers-color-scheme:dark){:root{
   --bg:#111613;--surface:#19201B;--surface-2:#222B25;--ink:#ECEFEA;--muted:#9BA49C;--line:#2D3731;
   --brand:#67BC8F;--brand-2:#80CBA2;--brand-ink:#0D1510;--brand-soft:#1E3327;
-  --accent:#F08A64;--accent-soft:#3B241B;--warn:#E8B655;--warn-soft:#3A2F15;
+  --accent:#F08A64;--accent-soft:#3B241B;--on-accent:#1E2721;--warn:#E8B655;--warn-soft:#3A2F15;
   --danger:#F28472;--danger-soft:#3E201B;--ok:#71CC97;
   --shadow:0 1px 2px rgba(0,0,0,.35),0 8px 24px rgba(0,0,0,.28);--art-s:32%;--art-l:24%;
 }}
@@ -58,7 +59,7 @@ p{margin:0}
 .btn:active{transform:scale(.98)}
 .btn[disabled]{opacity:.5;pointer-events:none}
 .btn-primary{background:var(--brand);color:var(--brand-ink)}
-.btn-accent{background:var(--accent);color:#fff}
+.btn-accent{background:var(--accent);color:var(--on-accent)}
 .btn-soft{background:var(--brand-soft);color:var(--brand)}
 .btn-ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
 .btn-danger{background:var(--danger-soft);color:var(--danger)}
@@ -78,7 +79,7 @@ p{margin:0}
 .chips.scroll::-webkit-scrollbar{display:none}
 .chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 13px;font-size:14px;font-weight:500;white-space:nowrap;min-height:36px}
 .chip.on{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
-.chip.danger.on{background:var(--danger);border-color:var(--danger);color:#fff}
+.chip.danger.on{background:var(--danger);border-color:var(--danger);color:var(--on-accent)}
 .chip .x{margin-left:6px;opacity:.7}
 
 /* inputs */
@@ -285,7 +286,7 @@ details.filters[open] summary::after{transform:rotate(180deg)}
     <button class="tab" data-act="goto" data-tab="cook"><span class="ti">🍳</span>Cook</button>
     <button class="tab" data-act="goto" data-tab="pantry"><span class="ti">🧺</span>Pantry</button>
     <button class="tab fab" data-act="goto" data-tab="scan" aria-label="Scan"><span class="ti">📸</span>Scan</button>
-    <button class="tab" data-act="goto" data-tab="shop" style="position:relative"><span class="ti">🛒</span>Shop<span id="shop-badge" hidden style="position:absolute;top:8px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--accent);color:#fff;font-size:11px;line-height:18px"></span></button>
+    <button class="tab" data-act="goto" data-tab="shop" style="position:relative"><span class="ti">🛒</span>Shop<span id="shop-badge" hidden style="position:absolute;top:8px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--accent);color:var(--on-accent);font-size:11px;line-height:18px"></span></button>
     <button class="tab" data-act="goto" data-tab="more"><span class="ti">☰</span>More</button>
   </div>
 </nav>
