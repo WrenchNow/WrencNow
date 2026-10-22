@@ -30,12 +30,13 @@ Known constraints (keep them honest in the UI and the plans):
 | `build.py` | `python3 build.py` inlines `src/` into `pantry-pal.html`. Commit both. |
 | `build-site.js` | `node build-site.js https://domain.com` builds the static recipe site into `site/` (one page per recipe, sitemap, Recipe structured data, app at `/app/`). |
 | `sw.js` | Optional offline service worker |
-| `pantry-pal-worker/src/index.js` | Cloudflare Worker: `/api/health`; `/api/claude` (free AI capped at 8 per person and 300 per day via KV `USAGE`); `/api/community` (KV `COMMUNITY`); `/api/amazon/search` (placeholder that needs the Creators API and an approved Associates account); `/api/recipes/search` (Spoonacular, off) |
-| `pantry-pal-worker/deploy.mjs` | One-command deploy with Wrangler 4 (`node deploy.mjs`). It has been tested only against a mock and **never run against the real Cloudflare**. |
+| `netlify/functions/*.mjs` + `netlify/lib/` | Netlify Functions backend (same site, `/api/...`): `/api/health`; `/api/claude` (free AI capped at 8 per person and 300 per day; `purpose: list` = free handwriting reads, 10/month on Haiku; `purpose: scan` = Premium, 100/month; counters in Netlify Blobs); `/api/premium/redeem`; `/api/admin/mint` (owner only, off by default); `/api/community`; `/api/amazon/search` (placeholder); `/api/recipes/search` (Spoonacular, off); nightly `cleanup-usage` |
+| `netlify.toml`, `package.json` | Netlify build (`python3 build.py` + `build-site.js`), functions and security headers. The GitHub repo connects in the Netlify UI and builds on every push to main. `.github/workflows/ci.yml` only runs checks; it never deploys. **Nothing has been deployed yet.** |
 
 ## Current state
-- In `CONFIG`, `AMAZON_TAG` and `BACKEND_URL` are empty and `ONLINE_RECIPES` is false.
-- AI runs either on the free allowance through the Worker or on the user's own Anthropic key, which goes straight from the browser. Model: `claude-sonnet-5-5`.
+- In `CONFIG`, `AMAZON_TAG` and `STRIPE_LINK` are empty and `ONLINE_RECIPES` is false. `BACKEND_URL` empty means the app uses the same site's `/api` if `/api/health` answers.
+- **Tiers:** Free = shopping-list photo (read on the phone; handwriting through the AI on a small monthly allowance) → Amazon, plus barcode, receipt, paste order, recipes and plans. Premium ($4.99/mo or $29.99/yr) = AI cabinet/fridge/pantry/freezer photo scans, 100 a month, unlocked by a signed token (`netlify/lib/premium.mjs`). Stripe checkout isn't built yet.
+- AI runs either through the Netlify backend (Wyatt's own Anthropic key in Netlify env vars, or Netlify's AI Gateway billed in Netlify credits) or on the user's own Anthropic key, which goes straight from the browser. Model: `claude-sonnet-5-5`.
 - `CONFIG.ON_DEVICE_SCAN` is true, so Barcode and Receipt scanning run free on the phone. On first use they load pinned libraries from jsDelivr (barcode-detector/zxing-wasm and tesseract.js). This is an exception to "everything inline", like Google Fonts. Barcode lookups send only the number to Open Food Facts, a free open database; it's a lookup, not a link. Photos for barcode reading and OCR never leave the phone. Receipts go to AI only if the user taps "Try the AI scan". If this switch is ever turned off, update the privacy and FAQ wording in `build-site.js`.
 - Tests: `node tests/run-all.mjs` (see `tests/README.md`).
 - Owner settings are hidden. Unlock them with `?admin=owner` or 7 taps on the version line in Settings.
@@ -46,7 +47,7 @@ Known constraints (keep them honest in the UI and the plans):
 1. Recipe content stays inside the app. The only outbound links are shopping links: Amazon, plus Instacart (approved by Wyatt 2026-10-22, built behind an on/off switch). Licensed web recipes, if ever enabled, must carry their required source credits.
 2. Never scrape recipe sites or Amazon. Never invent ASINs. Leave them blank for Wyatt to verify.
 3. Allergy flags are a helper, never a safety guarantee. The UI copy must say so.
-4. Keep the free AI allowance capped. Never put an API key in the app file.
+4. Keep the free AI allowance capped. Never put an API key in the app file. Wyatt's Netlify team (Free credit plan) is shared with getwrenchnow.com: never touch the WrenchNow project, and keep Pantry Pal's credit use low.
 5. Every page with Amazon links shows: **"As an Amazon Associate, Pantry Pal earns from qualifying purchases."**
 6. Keep the app one self-contained HTML file in vanilla JS (source in `src/`, built by `build.py`).
 7. Test changes at 390px wide and say what was tested.
@@ -63,12 +64,12 @@ Known constraints (keep them honest in the UI and the plans):
 
 | Agent | Owns |
 |---|---|
-| `product-dev` | `src/shell.html`, `src/app.css`, `src/app.js`, `build.py`, `sw.js` and `pantry-pal-worker/`. Makes the smallest change that works, keeps the app in one file and tests at 390px wide. |
+| `product-dev` | `src/shell.html`, `src/app.css`, `src/app.js`, `build.py`, `sw.js` and the app logic in `netlify/functions/` + `netlify/lib/`. Makes the smallest change that works, keeps the app in one file and tests at 390px wide. |
 | `recipes` | Recipe data in `src/data*.js` (`R(...)` format), gap-filling, nutrition checks and duplicate-title checks |
 | `website` | `build-site.js` and the generated site. Handles SEO, layout and new page types. |
 | `amazon` | Associates rules, the staples catalog, ASIN verification flags and the Creators API integration |
 | `marketing` | Video scripts, Pinterest pins and post copy in `/marketing` |
-| `integrations` | Backend connections: Cloudflare, Anthropic, Netlify, GitHub CI, Stripe, Instacart, Amazon/Kroger APIs. It automates setup and writes the short list of steps only Wyatt can do. |
+| `integrations` | Backend connections: Netlify (`netlify.toml`, `package.json`, Blobs, AI Gateway), Anthropic, GitHub CI (`.github/workflows/`), `scripts/`, `docs/setup/`, Stripe, Instacart, Amazon/Kroger APIs. It automates setup and writes the short list of steps only Wyatt can do. |
 
 ## How the main session works (the coordinator)
 
