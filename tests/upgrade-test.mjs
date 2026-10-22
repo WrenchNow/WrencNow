@@ -35,7 +35,8 @@ async function session(label) {
     page.on('console', m => { if (m.type() === 'error') errors.push(`[${label}/${which}] ` + m.text()); });
     page.on('pageerror', e => errors.push(`[${label}/${which}] pageerror ` + e.message));
     page.on('requestfailed', r => { if (!/fonts\.(googleapis|gstatic)\.com/.test(r.url())) errors.push('unexpected failed request ' + r.url()); });
-    await page.route('**/*', r => { const u = new URL(r.request().url()); if (u.host === 'pp.test') return r.fulfill({ contentType: 'text/html', body: fs.readFileSync(SP + '/' + PAGES[u.pathname.slice(1)]) }); return r.abort(); });
+    await page.route('**/*', r => { const u = new URL(r.request().url()); if (u.host === 'pp.test' && u.pathname.startsWith('/api/')) return r.fulfill({ contentType: 'application/json', body: '{"ok":false}' });   // the app probes its own site for a backend; this test host has none
+      if (u.host === 'pp.test') return r.fulfill({ contentType: 'text/html', body: fs.readFileSync(SP + '/' + PAGES[u.pathname.slice(1)]) }); return r.abort(); });
     await page.goto('http://pp.test/' + which + qs); await page.waitForTimeout(300);
     return page;
   };

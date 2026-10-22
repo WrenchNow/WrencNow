@@ -9,7 +9,7 @@ const within = (d, maxSide, maxPx = Infinity) => Math.max(...d) <= maxSide && d[
 page.on('pageerror', e => errors.push('pageerror: ' + e.message));
 page.on('console', m => { if (m.type() === 'error' && !/ERR_FAILED|ERR_INTERNET|net::/.test(m.text())) errors.push('console: ' + m.text()); });
 // Fresh-ish install: 1 member, default party size 4 (as onboarding would set).
-await page.addInitScript(() => { if (!localStorage.getItem('pantrypal:v2')) localStorage.setItem('pantrypal:v2', JSON.stringify({ v: 2, onboarded: true, settings: { backendUrl: 'https://mock.workers.dev' }, household: { members: [{ id: 'm1', name: 'Sam', allergies: [], custom: [], diets: [] }], partySize: 4 } })); });
+await page.addInitScript(() => { if (!localStorage.getItem('pantrypal:v2')) localStorage.setItem('pantrypal:v2', JSON.stringify({ v: 2, onboarded: true, settings: { backendUrl: 'https://mock.workers.dev' }, premium: { token: 'test-premium-token', exp: Date.now() + 864e5, plan: 'test' }, household: { members: [{ id: 'm1', name: 'Sam', allergies: [], custom: [], diets: [] }], partySize: 4 } })); });
 let reply = '';
 const bodies = [];
 await page.route('**/*', async r => {

@@ -146,9 +146,9 @@ const noPhotoBytes = reqs => reqs.every(r => !r.body && r.method === 'GET');
   await page.click('[data-act=ocrRead]'); await page.waitForTimeout(400);
   t = await view(page);
   check('download failure: clear message + AI fallback offered', t.includes('Couldn’t download the free receipt reader') && await page.locator('[data-act=analyze]').count() === 1);
-  // Fridge with AI still uses the camera
+  // Fridge is Premium: a free user with AI set up gets the locked card, and no scan request
   await page.click('[data-act=scanType][data-v=fridge]');
-  check('fridge with AI: camera buttons as before', await page.locator('[data-act=pickCam]').count() === 1);
+  check('fridge, free user with AI: Premium card, no camera', await page.locator('[data-act=pickCam]').count() === 0 && await page.locator('.premium').count() === 1);
   console.log('   errors:', JSON.stringify(errors)); check('no console errors (AI configured)', !errors.length);
   await ctx.close();
 }
@@ -175,7 +175,7 @@ const noPhotoBytes = reqs => reqs.every(r => !r.body && r.method === 'GET');
 {
   const { ctx, page, errors } = await setup({ url: 'http://pp.test/app' });
   const tabs = await page.$$eval('.seg.scan-types button', b => b.map(x => x.textContent.trim()));
-  check('switch off: 5 tabs, no Barcode', tabs.length === 5 && !tabs.some(x => /Barcode/.test(x)), JSON.stringify(tabs));
+  check('switch off: 6 tabs, no Barcode', tabs.length === 6 && !tabs.some(x => /Barcode/.test(x)), JSON.stringify(tabs));
   await addPhotos(page, await photo(page, 800, 1200));
   check('switch off: receipt uses the AI Analyze button', await page.locator('[data-act=analyze]').count() === 1 && await page.locator('[data-act=ocrRead]').count() === 0);
   console.log('   errors:', JSON.stringify(errors)); check('no console errors (switch off)', !errors.length);

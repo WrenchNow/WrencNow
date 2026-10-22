@@ -42,7 +42,7 @@ const pasteAndRead = async (page, reqs, text) => { await page.fill('#paste-text'
   const { ctx, page, errors, reqs, aiBodies } = await setup('');
   await openPaste(page);
   let t = await page.locator('#view').innerText();
-  check('6 scan types (with free Barcode), "Paste order" tab', await page.locator('.seg.scan-types button').count() === 6 && t.includes('📋 Paste order') && t.includes('▦ Barcode'));
+  check('7 scan types (Shopping list + free Barcode), "Paste order" tab', await page.locator('.seg.scan-types button').count() === 7 && t.includes('📋 Paste order') && t.includes('▦ Barcode') && t.includes('📝 Shopping list'));
   check('textarea + label + Read items + privacy note', await page.locator('#paste-text').count() === 1 && t.includes('Copy your Amazon, Instacart or Walmart order email or order page and paste it here') && t.includes('Read items') && t.includes('Your order text stays on this phone. We only keep the food items.'));
   check('no "photo scanning needs AI" warning on paste tab', !t.includes('Photo scanning needs AI'));
   check('no horizontal overflow (scan tabs)', await page.evaluate(() => document.documentElement.scrollWidth <= 390));
@@ -127,9 +127,9 @@ const pasteAndRead = async (page, reqs, text) => { await page.fill('#paste-text'
   const st = await page.evaluate(() => JSON.parse(localStorage.getItem('pantrypal:v2')));
   check('AI paste add: no extra AI call (no auto-generate)', aiBodies.length === 1);
   check('AI paste add clears matching pending eggs', st.inventory.some(i => i.name === 'brown eggs') && !st.cart.some(c => c.name === 'eggs') && st.cart.some(c => c.name === 'basil'), JSON.stringify(st.cart.map(c => c.name)));
-  // Photo scan types unchanged
+  // Photo scan types are Premium now: a free user with AI set up sees the locked card, not the camera
   await page.click('.tab[data-tab=scan]'); await page.click('[data-act=scanType][data-v=fridge]');
-  check('photo types still show camera buttons', await page.locator('[data-act=pickCam]').count() === 1);
+  check('photo types locked for free users (Premium card, no camera)', await page.locator('[data-act=pickCam]').count() === 0 && await page.locator('.premium [data-act=premiumCode]').count() === 1);
   console.log('errors part 2:', JSON.stringify(errors)); check('no console errors (AI mock)', !errors.length);
   await ctx.close();
 }

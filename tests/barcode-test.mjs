@@ -69,7 +69,7 @@ const PNG = async (page, draw) => Buffer.from(await page.evaluate(draw));
 {
   const { ctx, page, errors, reqs } = await setup({ native: true });
   const tabs = await page.$$eval('.seg.scan-types button', b => b.map(x => x.textContent.trim()));
-  check('6 scan types, free ones first', JSON.stringify(tabs) === JSON.stringify(['🧾 Receipt', '▦ Barcode', '📋 Paste order', '🧊 Fridge', '🥫 Pantry', '❄️ Freezer']), JSON.stringify(tabs));
+  check('7 scan types, free ones first, Premium ones locked', JSON.stringify(tabs) === JSON.stringify(['📝 Shopping list', '▦ Barcode', '🧾 Receipt', '📋 Paste order', '🔒 Fridge', '🔒 Pantry', '🔒 Freezer']), JSON.stringify(tabs));
   check('scan type labels not cut off at 390px', await page.$$eval('.seg.scan-types button', b => b.every(x => x.scrollWidth <= x.clientWidth + 1)));
   await page.click('[data-act=scanType][data-v=barcode]');
   let t = await view(page);
@@ -184,7 +184,7 @@ const PNG = async (page, draw) => Buffer.from(await page.evaluate(draw));
   const { ctx, page, errors } = await setup({ native: true, backend: '' });
   await page.click('[data-act=scanType][data-v=fridge]');
   const t = await view(page);
-  check('no AI: fridge shows free options instead of a camera that will fail', t.includes('need AI') && await page.locator('[data-act=pickCam]').count() === 0 && await page.locator('#view [data-act=scanType][data-v=barcode]').count() === 2);
+  check('no AI: fridge shows the Premium card with free options instead of a camera that will fail', t.includes('Premium') && t.includes('Free, and works now') && await page.locator('[data-act=pickCam]').count() === 0 && await page.locator('#view [data-act=scanType][data-v=barcode]').count() === 2);
   await page.screenshot({ path: OUT + '/fridge-no-ai.png' });
   await page.click('.note [data-act=scanType][data-v=barcode]');
   check('the shortcut opens barcode mode', await page.locator('[data-act=bcCamera]').count() === 1);
