@@ -66,6 +66,7 @@ Known constraints (keep them honest in the UI and the plans):
 | `website` | `build-site.js` and the generated site. Handles SEO, layout and new page types. |
 | `amazon` | Associates rules, the staples catalog, ASIN verification flags and the Creators API integration |
 | `marketing` | Video scripts, Pinterest pins and post copy in `/marketing` |
+| `integrations` | Backend connections: Cloudflare, Anthropic, Netlify, GitHub CI, Stripe, Instacart, Amazon/Kroger APIs. It automates setup and writes the short list of steps only Wyatt can do. |
 
 ## How the main session works (the coordinator)
 
