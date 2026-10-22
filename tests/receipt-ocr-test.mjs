@@ -212,7 +212,7 @@ else {
     for (const [k, v] of Object.entries(MAP)) if (u.host === 'cdn.jsdelivr.net' && u.pathname.startsWith(k)) { const f = v + u.pathname.slice(k.length); if (fs.existsSync(f)) return r.fulfill({ path: f, headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': f.endsWith('.js') ? 'application/javascript' : 'application/octet-stream' } }); }
     return r.abort(); });
   await page.addInitScript(() => localStorage.setItem('pantrypal:v2', JSON.stringify({ v: 2, onboarded: true })));
-  await page.goto(APP); await page.click('.tab[data-tab=scan]');
+  await page.goto(APP); await page.click('.tab[data-tab=scan]'); await page.click('[data-act=scanType][data-v=receipt]');   // Shopping list is the default tab now
   const png = await page.evaluate(async () => {
     const lines = ['KING SOOPERS', 'KRO WHL MLK GAL        3.49 B', 'BNLS CHKN BRST         8.47 B', 'PRVT SEL SPGTI         1.79 B', 'KRO SHRD CHDR CHS      2.99 B', 'BANANAS                1.24 B', 'BALANCE               17.98', 'VISA                  17.98'];
     const c = new OffscreenCanvas(1100, 120 + lines.length * 70), g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.fillStyle = '#111'; g.font = '40px monospace';

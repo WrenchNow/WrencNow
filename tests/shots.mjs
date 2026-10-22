@@ -68,7 +68,9 @@ if (!fs.existsSync(ROOT + '/site/index.html')) console.log('skip site checks: si
 else {
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
 const page = await ctx.newPage(); const errs = []; page.on('pageerror', e => errs.push(e.message));
-await page.route('**/*', r => { const u = r.request().url(); if (u.startsWith('https://pantrypal.example/')) { const f = u.replace('https://pantrypal.example/', ROOT + '/site/'); return r.fulfill({ path: f.endsWith('/') ? f + 'index.html' : f }); } return u.startsWith('file:') ? r.continue() : r.abort(); });
+// Pages link to icons with absolute URLs for the address the site was built with (see sitemap.xml), so serve that too.
+const BUILT = ((fs.readFileSync(ROOT + '/site/sitemap.xml', 'utf8').match(/<loc>(https?:\/\/[^/<]+)\//) || [])[1] || 'https://pantrypal.example') + '/';
+await page.route('**/*', r => { const u = r.request().url(); const base = [BUILT, 'https://pantrypal.example/'].find(b => u.startsWith(b)); if (base) { const f = u.replace(base, ROOT + '/site/'); return r.fulfill({ path: f.endsWith('/') ? f + 'index.html' : f }); } return u.startsWith('file:') ? r.continue() : r.abort(); });
 for (const scheme of ['light', 'dark']) {
   await page.emulateMedia({ colorScheme: scheme });
   await page.goto('https://pantrypal.example/'); await page.waitForTimeout(200);
