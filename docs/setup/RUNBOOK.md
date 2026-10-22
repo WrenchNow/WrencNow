@@ -1,428 +1,178 @@
-# Pantry Pal: go-live runbook
+# Pantry Pal: go-live runbook (Netlify only)
 
-Written 2026-10-22 by the integrations agent. **Nothing in this file has been run against a real service.** No accounts were created, nothing was deployed, and no secrets were seen.
+Rewritten 2026-10-22 by the integrations agent after the move from Cloudflare to Netlify. **Nothing here has been run against a real service.** No accounts were made, nothing was deployed and no secrets were seen.
 
-**How to read this:** the phone checklist right below is all you need to go live. The sections after it explain each service: what only you can do, what the scripts do and how to check it worked. Notes for Claude and the agents (risks and the code change) are at the end.
+The recipe site (`/`), the app (`/app/`) and the backend (`/api/*`, Netlify Functions) are **one Netlify project on one address**. Netlify builds it from GitHub on every push to `main` using `netlify.toml`. There's no Cloudflare and no deploy script any more.
 
-> **About button names:** Cloudflare, Netlify, Anthropic and GitHub docs were blocked from this environment, so I couldn't open them. Button names come from memory and from search summaries, and are marked *(label may differ)* where I'm unsure. Things I did check here: wrangler 4.148.0 and netlify-cli 27.11.2 flags (installed and read their `--help` and source), GitHub Action versions (tags and dates) and Anthropic model prices.
+> **About button names:** Netlify's docs and website were blocked from this environment. Labels come from memory and search summaries, and are marked *(label may differ)* where unsure. What I did check here: netlify-cli 27.11.2 ran a full offline build of this repo and served the functions locally, and Netlify's own agent guidance (npm `@netlify/agent-runner-cli@2.8.1`) for Functions, Blobs and AI Gateway.
 
 ---
 
-## 📱 Do these on your phone, in this order (about 35 minutes, $10 prepaid)
+## Do these on your phone, in this order (about 30 minutes)
 
-**No laptop or terminal needed.** Use your phone's browser (Safari or Chrome), not the GitHub app, because the GitHub app can't edit secrets. If a settings page looks cut off, switch to "Request Desktop Website".
-
-Each time you copy a key, paste it straight into the GitHub page named in that step. **Never paste a key into a chat with Claude.**
+Use your phone's browser (Safari or Chrome), not an app. If a settings page looks cut off, switch to "Request Desktop Website". **Never paste a key or password into a chat with Claude.**
 
 | # | Do this | Where | Min | Cost |
 |---|---|---|---|---|
 | 1 | Create an **empty private** repo named `pantry-pal`. Don't add a README. | github.com/new | 3 | $0 |
-| 2 | Give Claude access to it, then tell Claude "repo's ready". Claude moves the code and opens a pull request. | claude.ai/connect-github | 2 | $0 |
-| 3 | Anthropic: buy **$10 of credits with auto-reload OFF**, set a **monthly limit**, create an API key and save it in GitHub as the secret `ANTHROPIC_API_KEY` | platform.claude.com | 8 | $10 prepaid |
-| 4 | Cloudflare: sign up, open **Workers & Pages** once, copy your **Account ID**, and create an API token from the **"Edit Cloudflare Workers"** template. Save them in GitHub as the secrets `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`. | dash.cloudflare.com | 10 | $0 |
-| 5 | Netlify: create a personal access token and save it in GitHub as the secret `NETLIFY_AUTH_TOKEN`. Then add a GitHub **variable** `NETLIFY_SITE_NAME` = `pantry-pal-` plus your initials (e.g. `pantry-pal-ws`). | app.netlify.com/user/applications | 4 | $0 |
-| 6 | Merge Claude's pull request. That runs the deploy. | GitHub app or browser | 2 | $0 |
-| 7 | Open the run (Actions tab → newest "Build and deploy") and tap the **Live:** link on its Summary page. In the app, scan one grocery receipt. | GitHub → Actions | 5 | ~1¢ |
+| 2 | Give Claude access to it, then tell Claude "repo's ready". Claude moves the code over and opens a pull request. Merge it. | claude.ai/connect-github | 3 | $0 |
+| 3 | **Pick how AI is paid for** (see "Credits" below). Recommended: **your own Anthropic key** (3a). It takes 6 minutes and keeps AI off your Netlify credits, so it can't pause getwrenchnow.com. | platform.claude.com | 6 | $10 prepaid |
+| 4 | Netlify: **Add new project → Import an existing project → GitHub**, approve Netlify's GitHub access, pick `pantry-pal`. Settings below. **Deploy.** | app.netlify.com | 5 | $0 |
+| 5 | Add the environment variables below, then **Deploys → Trigger deploy → Deploy project**. | Netlify → your project | 8 | $0 |
+| 6 | Wait for the deploy to say **Published** (about 1–2 min). If you skipped your own key, this first production deploy is what switches on Netlify's AI Gateway. Redeploy once more if `/api/health` still says `"ai":false`. | Netlify → Deploys | 2 | 15 credits per deploy |
+| 7 | Test (below). | your new address | 3 | about 1¢ |
 
-**Total: about 34 minutes of your time. After that, every merge to `main` rebuilds and redeploys by itself.**
+**Total: about 30 minutes.** After that, every merge to `main` that changes the app, site or backend redeploys by itself. Pushes that only touch docs or marketing are skipped, which saves 15 credits each.
 
-Where the GitHub secrets go: `github.com/<you>/pantry-pal/settings/secrets/actions` → **New repository secret** → type the Name exactly as shown → paste into Secret → **Add secret**. Variables go on the **Variables** tab of the same page → **New repository variable**.
+### Step 3: choosing who pays for AI (pick one)
 
-You can do steps 3–5 in any order and on different days. Until a secret exists, the deploy just skips that part and stays green.
+- **3a. Your own Anthropic key (recommended).** Go to **platform.claude.com** → **Settings → Billing**, buy **$10** of credits and turn **auto-reload OFF**. Then **Settings → Limits**: set a monthly limit, e.g. $25. Then **API Keys → Create Key**, name it `pantry-pal-netlify` and copy it. You paste it in step 5 as `ANTHROPIC_API_KEY`. Netlify's AI Gateway then steps aside, so AI is billed by Anthropic (hard stop at your prepaid $10) and **uses no Netlify credits**. *(labels may differ)*
+- **3b. Netlify AI Gateway (no key).** Do nothing here. AI is billed in **Netlify credits**, shared with getwrenchnow.com. One AI request costs about 2–3 credits, so the Free plan's 300 credits cover only about 100 AI requests a month **in total**. Only choose this together with option B or A in "Credits" below.
 
----
+### Step 4: exact Netlify settings
 
-## Can this really be done without ever opening a terminal?
+1. **app.netlify.com** → make sure the team picker (top left) shows the team you chose in "Credits" below (**mechanic go**, or a new Pantry Pal team).
+2. **Add new project → Import an existing project → GitHub** *(label may differ: "Deploy with GitHub")*. Approve the GitHub pop-up, choosing **Only select repositories → pantry-pal**.
+3. Pick **pantry-pal**. Netlify reads `netlify.toml`, so these fill in by themselves. Check they match, and don't change them:
+   - Branch to deploy: **main**
+   - Base directory: *(empty)*
+   - Build command: `node tests/worker-test.mjs && python3 build.py && node build-site.js "$URL"`
+   - Publish directory: **site**
+   - Functions directory: **netlify/functions**
+4. **Project name:** `pantry-pal-` plus your initials (e.g. `pantry-pal-ws`). This becomes `https://pantry-pal-ws.netlify.app`. **Never** pick or rename the getwrenchnow.com project.
+5. Tap **Deploy pantry-pal**.
 
-**Yes, with the GitHub Actions route above.** The workflow logs in to Cloudflare with an API token you create in the dashboard, so `wrangler login` never runs. It also creates the KV storage, deploys the Worker, saves the AI key as a Worker secret, builds the app and site, and publishes them to Netlify.
+### Step 5: environment variables
 
-When you **would** need a laptop:
-- Running `node deploy.mjs` by hand. Its first `wrangler login` opens a browser that has to call back to `localhost` on the same computer, so it can't finish on a phone. The CI route avoids this.
-- Editing code yourself. Claude does this in a cloud session, so you don't need to.
+**Project configuration → Environment variables → Add a variable → Add a single variable** *(label may differ)*. For each one: type the **Key** exactly, paste the **Value**, tick **Contains secret values** for the secret ones, and keep **Scopes: All scopes** (it must include Functions). Then **Create variable**.
 
-Everything else in this file (Associates, Instacart, Stripe, a domain) is forms in a browser and works on a phone.
+| Key | Value | Needed? |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | your key from step 3a (secret) | Only for option 3a. Leave it out to use the AI Gateway |
+| `PREMIUM_SIGNING_SECRET` | a random password, **20+ characters** (secret). On iPhone: **Settings → Passwords → +**, tap the password box and choose the suggested **Strong Password**, copy it, then delete that entry. On Android: Google Password Manager → **Add** → **Suggest strong password**. Never reuse a real password. | Yes (Premium won't work without it) |
+| `PREMIUM_TEST_CODES` | one or more test codes, **12+ characters each**, comma-separated (e.g. `wyatt-premium-test-7719`) (secret) | Optional. Typing one in the app's **Enter a Premium code** box gives 30 days of Premium. Remove it once Stripe is live |
+| `MODEL` | `claude-sonnet-5-5` | Optional (that's already the default) |
+| `LIST_MODEL` | `claude-haiku-5-5` | Optional (default) |
+| `FREE_DAILY_PER_USER` | `8` | Optional (default 8 free AI requests per person per day) |
+| `FREE_DAILY_TOTAL` | `300` | Optional (default 300 a day for everyone). **Recommended: `100`** until there's income |
+| `FREE_LIST_PER_MONTH` | `10` | Optional (handwritten list reads per person per month) |
+| `FREE_LIST_DAILY_TOTAL` | `100` | Optional (list reads per day for everyone) |
+| `PREMIUM_PER_MONTH` | `100` | Optional (Premium photo scans per person per month) |
+| `ADMIN_TOKEN` | a 20+ character random password (secret) | Optional. Turns on `/api/admin/mint` for making tokens from a laptop. Off when unset |
+| `COMMUNITY` | `off` | Optional. Switches recipe sharing off |
 
----
+After adding or changing variables: **Deploys → Trigger deploy → Deploy project**. Variables only reach the functions on the next deploy.
 
-## The plan, fastest path to strangers using it
+### Step 7: test (3 min)
 
-1. **GitHub repo** (5 min): needed for everything else
-2. **Anthropic key + spend cap** (8 min): makes free AI scanning work
-3. **Cloudflare Worker + KV** (10 min): the backend that holds the key and enforces the free caps
-4. **Netlify** (4 min): the app at `/app/` and the 232-page recipe site at `/`
-5. **Live.** Share the link. *Optional now:* tell Claude your contact email so the About/Privacy placeholders get filled in (needed before Associates).
-6. **Domain** (optional, ~$10–15/year): looks more trustworthy and is needed for email routing later
-7. **Amazon Associates**: only after the site is live **and** about 50–100 people a week use it (the 180-day clock starts at signup)
-8. **Instacart**: check whether signup is open, whenever convenient
-9. **Stripe**: later, when Pro is built
-10. **Cloudflare Email Routing**: later, for forwarded order emails, after sign-in is built and you have a domain
+1. Open `https://<your-project>.netlify.app/api/health`. You should see `"ok":true` and `"ai":true`. `"gateway":false` means your own key is used (3a); `true` means Netlify AI Gateway. `"premium":true` means the signing secret is set.
+2. Open `https://<your-project>.netlify.app/app/`, scan a grocery receipt or a handwritten list, and check that items come back.
+3. If you set `PREMIUM_TEST_CODES`: **Settings → Plan → Enter a Premium code**, type your code, then try a fridge photo.
+4. Anthropic console (3a): **Usage** shows a few cents. Netlify (3b): **Team settings → Billing → Usage** *(label may differ)* shows credits.
 
----
-
-## 1. GitHub repo `pantry-pal` (private)
-
-**Only you can do this:**
-1. Go to **github.com/new**. Set Repository name to `pantry-pal` and pick **Private**. **Leave "Add a README", .gitignore and license unticked**, because Claude pushes the existing history and an empty repo avoids a merge. Tap **Create repository**. *(2 min, $0)*
-2. Go to **claude.ai/connect-github**. Make sure GitHub is connected and that the Claude GitHub App can see `pantry-pal`. If it's set to "Only select repositories", add `pantry-pal`. *(2 min)*
-3. Tell Claude "the pantry-pal repo is ready".
-
-**Automated (Claude does this):**
-- Pushes Pantry Pal's history to the new repo with `main` as the default branch. It includes `.github/workflows/deploy.yml`, `scripts/` and `docs/setup/`.
-- Doesn't copy the WrenchNow `index.html` unless you say so.
-- From then on, works on branches and opens pull requests. Only merges to `main` deploy.
-
-**Verify:** the repo shows `src/`, `pantry-pal-worker/` and `.github/workflows/deploy.yml`. Under **Actions** you'll see "Build and deploy". A first run with no secrets is **green** and its Summary lists what was skipped.
-
-**Cost:** $0. A private repo on GitHub Free includes 2,000 Actions minutes a month, and one deploy run takes about 2–4 minutes.
-
----
-
-## 2. Anthropic API key + spend limit
-
-**Only you can do this** at **platform.claude.com** (the old console.anthropic.com address redirects there) *(labels may differ)*:
-1. Sign in or sign up. *(2 min)*
-2. **Settings → Billing → Buy credits**: buy **$10**. **Turn auto-reload OFF.** With prepaid credits and no auto-reload, the most you can ever be charged is what you loaded. *(3 min, $10)*
-3. **Settings → Limits**: set a **monthly spend limit** (for example $25). This is the second safety net if you ever turn auto-reload on. *(1 min)*
-4. **API Keys → Create Key**: name it `pantry-pal-worker`. Copy it (it's shown only once). *(1 min)*
-5. In GitHub, add the repository secret **`ANTHROPIC_API_KEY`** and paste the key. *(1 min)*
-
-**Automated:** each deploy sends the key to Cloudflare as a hidden Worker secret. It never appears in the app, the site, the repo or the logs (GitHub masks it). To change keys, update the GitHub secret and tap **Run workflow**.
-
-**Verify:** `https://<your-worker>.workers.dev/api/health` shows `"ai":true`. In the Anthropic console, **Usage** shows a few cents after your first scan.
-
-**Cost (Oct 2026 list prices):** Sonnet 5.5 is $2 per million input tokens and $10 per million output. A typical scan costs about 1¢.
-- Realistic at launch: about 20 AI calls a day, so **about $6/month**.
-- Worst case at today's cap (300 free calls a day, every day): **about $90/month**.
-- Recommended: set the GitHub variable **`FREE_DAILY_TOTAL` = `100`** until there's income. Worst case drops to **about $30/month**.
-- Haiku 5.5 ($0.10/$0.50) is about 20× cheaper if it reads your receipts well (ROADMAP item 11b).
+If something is wrong, tell Claude the address. It runs `node scripts/check-setup.mjs --site https://<your-project>.netlify.app`, which checks everything above and tells you what to fix.
 
 ---
 
-## 3. Cloudflare Worker + KV storage
+## Credits: what can cost money and how to protect getwrenchnow.com
 
-**Only you can do this** at **dash.cloudflare.com** *(labels may differ)*:
-1. **Sign up** (free) and confirm the email. *(3 min)*
-2. Open **Workers & Pages** once. A new account is asked to choose a `*.workers.dev` subdomain; pick one (for example your name). Without it, the first deploy fails with a message saying so. *(1 min)*
-3. Copy your **Account ID**. It's on the Workers & Pages overview (right side, "Account ID") and is also the long hex string in the dashboard URL. Save it as the GitHub secret **`CLOUDFLARE_ACCOUNT_ID`**. *(2 min)*
-4. Create the API token *(4 min)*:
-   - Go to **My Profile → API Tokens → Create Token**, and on the template **"Edit Cloudflare Workers"** tap **Use template**. *(Newer dashboards may also offer this under Manage Account → **Account API Tokens**; either works.)*
-   - Under Account Resources: **Include → your account**. Under Zone Resources: **All zones from an account → your account** (you have no zones yet, which is fine).
-   - Optionally set a TTL of a year.
-   - Tap **Continue to summary → Create Token**, copy the token and save it as the GitHub secret **`CLOUDFLARE_API_TOKEN`**.
+**The risk:** your Netlify team "mechanic go" is on the **Free credit-based plan: 300 credits a month, shared by every project in the team, including getwrenchnow.com.** When the credits run out, **every project in the team is paused until the next month**. That means getwrenchnow.com goes offline too. The Free plan has no auto-recharge; you can only upgrade. *(Netlify billing FAQ, via search summaries; UNVERIFIED because the page was blocked.)*
 
-**Automated** (`deploy.yml` → `pantry-pal-worker/deploy.mjs` in non-interactive mode, **after product-dev applies Appendix A**):
-- Signs in with the token. No browser.
-- Finds or creates the KV storage `pantry-pal-USAGE` (free-AI counters) and `pantry-pal-COMMUNITY` (shared recipes). It looks them up by name on every run, so it never makes duplicates.
-- Writes `wrangler.toml` (it's gitignored, so CI generates it each time) and deploys the Worker with `--keep-vars`.
-- Sets **`ALLOWED_ORIGIN`** to your Netlify address and custom domain automatically, so only your site can use the free AI from a browser.
-- Saves `ANTHROPIC_API_KEY` as a Worker secret if the GitHub secret exists.
-- Puts the Worker address into `BACKEND_URL` for that deploy. Claude then commits it to `src/app.js` so it sticks.
+### What uses credits (Netlify's published rates, via search; UNVERIFIED)
 
-**Verify:** open `https://pantry-pal.<your-subdomain>.workers.dev/api/health` on your phone. You want `"ok":true`, `"ai":true`, `"freePerDay":8` and `"community":true`. The run's Summary also prints `### Worker: https://…`.
+| Usage | Credits | Pantry Pal notes |
+|---|---|---|
+| Production deploy | **15 per deploy** | The biggest fixed cost. Docs-only pushes are skipped (`ignore` in netlify.toml). Deploy previews, branch deploys and failed deploys are **not** charged. |
+| Bandwidth | **20 per GB** | The app is about 360 KB (less compressed) and is cached by the service worker. Fonts and scan libraries come from Google and jsDelivr, not Netlify. |
+| Web requests | **2 per 10,000** | Pages, files and `/api` calls |
+| Compute (functions) | **10 per GB-hour** | Billed by time × memory (1 GB default). An AI call waits about 5–15 s for the AI, so it costs about 0.01–0.04 credits. |
+| AI Gateway | **$1 = 180 credits** (coordinator-confirmed, UNVERIFIED by me) | Only if you **don't** set your own key. Free-plan rate limit: 90 credits a minute per team. |
+| Blobs (usage counters, community recipes) | no separate published rate found (UNVERIFIED) | A few small reads and writes per AI request |
 
-**Cost:** $0. The free plan allows 100,000 Worker requests a day, plus 100,000 KV reads and 1,000 KV writes a day. Each free AI call uses 2 writes, so the 300/day cap uses about 600. Workers Paid ($5/month) is only needed far beyond launch traffic.
+### Monthly estimate
 
-**Don't change Worker settings in the Cloudflare dashboard.** The next CI deploy overwrites dashboard edits (wrangler auto-confirms in CI; I checked this in its source). Set things through GitHub variables instead: `FREE_DAILY_PER_USER`, `FREE_DAILY_TOTAL` and `ALLOWED_ORIGIN`.
+Assumptions (rough): each monthly user opens the app about 10 times (about 2 MB and 70 requests); 30% use AI about 10 times (about 3 AI requests per user on average, about 1.5¢ each on Sonnet 5.5 at $2 / $10 per million tokens) plus a few list reads on Haiku (about 0.03¢). There are **8 production deploys a month** (batch merges to `main`). Free AI is capped at 300 requests a day, so AI can't go above about 9,000 requests a month. **WrenchNow's own usage comes on top.**
 
----
+| Monthly users | Netlify credits, **own key (3a)** | + Anthropic bill (3a) | Netlify credits, **AI Gateway (3b)** |
+|---|---|---|---|
+| 100 | **~135** (120 deploys + ~15 traffic) | ~$5 | **~945**: over Free in about 10 days |
+| 1,000 | **~260** | ~$45 | **~8,400** |
+| 10,000 | **~1,500** (traffic ~1,400) | ~$135 (capped by 300/day; ~$45 with `FREE_DAILY_TOTAL=100`) | **~25,800** (AI capped at ~9,000 requests) |
 
-## 4. Netlify: the app and the recipe site (one new project)
+How to read it: **with your own key, Pantry Pal fits in the Free plan up to roughly 1,000 monthly users, but it uses most of the 300 credits that WrenchNow also needs.** With the AI Gateway, the Free plan runs out in days at any real traffic.
 
-Your existing projects (getwrenchnow.com and the three others) are **never touched**. The workflow only works on a project whose name contains `pantry`, and it refuses any project whose name or domains mention `wrench`. I tested this guard against a mock Netlify.
+### Three ways to protect getwrenchnow.com
 
-**Only you can do this:**
-1. Go to **app.netlify.com/user/applications** → **Personal access tokens** → **New access token** *(label may differ)*. Describe it as `pantry-pal GitHub deploy` and pick the longest expiry offered. Tap **Generate token** and copy it. *(2 min)*
-2. Save it as the GitHub secret **`NETLIFY_AUTH_TOKEN`**. *(1 min)*
-3. Add the GitHub **variable** (not secret) **`NETLIFY_SITE_NAME`** = `pantry-pal-<your initials>`. It must contain `pantry` and use only lowercase letters, digits and dashes. *(1 min)*
+- **(a) A separate Netlify team for Pantry Pal.** Its credits are separate, so if Pantry Pal runs out, only Pantry Pal pauses. **Whether one person can own a second Free team is UNVERIFIED.** Netlify's pages say a Free team has one owner and no extra seats, but don't say how many Free teams you can own. Try it (2 min): avatar → **Create new team** *(label may differ)*. If Netlify asks for a paid plan, use (b) on that new team.
+- **(b) Pay.** Personal is **$9/month for 1,000 credits**. Credit packs on Personal are reported at 500 credits for $5 and roll over (UNVERIFIED). Upgrading "mechanic go" raises the shared pool, but WrenchNow still shares it. A **new Pantry Pal team on Personal** keeps them apart.
+- **(c) Your own Anthropic key (step 3a).** This takes AI, the biggest cost by far, off Netlify credits. The dollar risk then sits with Anthropic, where prepaid credits with auto-reload off are a hard stop.
 
-**Automated:**
-- `scripts/ci/netlify-site.mjs` finds the project with exactly that name, or **creates a new empty one** on the first run (it uses Netlify's API and changes nothing else). Its address will be `https://pantry-pal-xx.netlify.app`.
-- Builds the app (`python3 build.py`) and the recipe site (`node build-site.js <address>`), and deploys `site/` to production with netlify-cli. The site is at `/` and the app at `/app/`. Netlify doesn't build anything itself (`--no-build`).
-- Optional: once the project exists, you can save its **Project ID** as the secret `NETLIFY_SITE_ID`. It's not required.
-
-**Verify:** the run Summary shows `### Live: https://pantry-pal-xx.netlify.app`. The home page lists recipes and has the Amazon line in the footer. `/app/` opens the app, and Settings shows free AI available.
-
-**Cost:** $0 at launch, with **one thing to check (2 min):** go to Netlify → your team → **Billing**.
-- If it shows **credits** (the plan for accounts created after Sept 2025), the free plan is **300 credits/month shared by all your projects, WrenchNow included**. Each production deploy costs **15 credits** (per Netlify's pricing page, via search; UNVERIFIED), which is about 20 deploys a month in total. Running out could pause projects, including getwrenchnow.com.
-  - The workflow already skips deploys for doc-only changes.
-  - If you're on credits, tell Claude. It can batch deploys, or move Pantry Pal to Cloudflare Pages (free, unlimited deploys, same account as the Worker).
-- If it shows the older "Starter" plan (bandwidth and build minutes), you're fine.
+**Recommendation:** do **(c) now** (6 minutes, $10 prepaid), and **(a)** if Netlify allows a second Free team. If it doesn't, start Pantry Pal inside "mechanic go" with (c), check **Billing → Usage** weekly, and move to **(b) a Personal Pantry Pal team ($9/month)** once Pantry Pal passes about 150 credits in a month or about 500 monthly users. Also set `FREE_DAILY_TOTAL=100` until there's income.
 
 ---
 
-## 5. Domain (optional)
+## How the backend works (for Claude and the agents)
 
-**Only you can do this:** buy a domain such as `pantrypal.app` or `getpantrypal.com`. The cheapest place is usually **Cloudflare → Domain Registration → Register Domains**, which sells at cost, about **$10–15/year** for .com (price UNVERIFIED). Then add it to the Netlify project: **Domain management → Add a domain** and follow the DNS records it shows (if the domain is on Cloudflare, add those records in Cloudflare DNS). *(10–15 min, about $1/month)*
+| Route | Function file | What it does |
+|---|---|---|
+| `GET /api/health` | `netlify/functions/health.mjs` | `{ok, ai, gateway, premium, community, freePerDay, freeListPerMonth, premiumPerMonth, amazon, online, model, listModel}` |
+| `POST /api/claude` | `claude.mjs` | AI proxy. The model is chosen server-side, `max_tokens` is capped and the request is validated. `purpose`: `scan` (Premium only), `list` (Haiku, ≤400 tokens, ≤2 photos, monthly cap), anything else (`receipt`, `paste`, `recipes`, `steps`) uses the free daily allowance |
+| `POST /api/premium/redeem` | `premium-redeem.mjs` | `{code}` → `{token, exp, plan, quota}`. Accepts `PREMIUM_TEST_CODES` or a valid token |
+| `POST /api/admin/mint` | `admin-mint.mjs` | Owner only, off unless `ADMIN_TOKEN` is set. Makes a test token |
+| `GET/POST /api/community` | `community.mjs` | Shared recipes. 3 a day per person, 50 a day total |
+| `GET /api/amazon/search` | `amazon-search.mjs` | 501 placeholder until the Creators API |
+| `GET /api/recipes/search` | `recipes-search.mjs` | Spoonacular, off unless `SPOONACULAR_KEY` is set |
+| (scheduled) | `cleanup-usage.mjs` | Every day at 00:30 UTC (6:30 pm MDT / 5:30 pm MST) it deletes old counters. Blobs has no expiry |
 
-Then set the GitHub variable **`SITE_URL`** = `https://yourdomain.com` and run the workflow again.
+- **Free caps** live in Netlify Blobs (store `usage`, strong consistency), in keys like `day/2026-10-22/total`, `day/…/user/<hash>` and `month/2026-10/list/<hash>`. Every increment is a compare-and-swap, so 12 requests at once with 5 slots left let exactly 5 through. If storage fails, the request is refused (fails closed). People are identified by a keyed hash of their IP (IPv6 grouped by /64). **Raw IPs are never stored.** Caps reset at 00:00 UTC.
+- **First line of defense:** Netlify rate limits in each function's `config.rateLimit` (per IP and domain): claude 20/min, community 30/min, redeem 10/min, mint 5/min.
+- **Other websites can't use the API.** Requests whose `Origin` isn't the site itself get 403 with no CORS headers. `ALLOWED_ORIGIN` (comma-separated) can allow extra origins, which then get CORS that allows `X-Premium` and exposes `X-Quota-Left` / `X-Quota-Limit`.
+- **Premium token format** (`netlify/lib/premium.mjs`, keep stable; the app's `parsePremiumToken` matches it): `base64url(JSON {v:1, sub, plan, iat, exp}) + "." + base64url(HMAC-SHA256(PREMIUM_SIGNING_SECRET, first part))`. `exp` and `iat` are Unix seconds. `plan` is one of `premium | monthly | yearly | test`. It's sent as the `X-Premium: <token>` header. Changing the secret cancels every token.
+- **Stripe (later):** see the TODO in `netlify/lib/premium.mjs`. A Payment Link leads to a webhook `/api/stripe/webhook` (`STRIPE_WEBHOOK_SECRET`), which stores subscriber status in Blobs; `/api/premium/redeem` then mints tokens for active subscribers.
+- **Security headers** (`netlify.toml`): one CSP for every page that allows jsDelivr (scan libraries), Google Fonts, Open Food Facts, `api.anthropic.com` (own-key users only) and same-origin `/api`. It also sets nosniff, DENY framing, a camera-only Permissions-Policy and HSTS. `tests/headers-test.mjs` checks the real barcode WASM and Tesseract worker still run under it.
 
-**Automated:** the site rebuilds with the new address (sitemap, links and canonical tags), and the Worker's `ALLOWED_ORIGIN` picks up the custom domain from Netlify automatically.
-
-**Verify:** `https://yourdomain.com/app/` opens with the padlock, and `node scripts/check-setup.mjs --site https://yourdomain.com` (or the Health check step in the run) is green.
-
-You need a domain for Email Routing (section 9). It isn't needed for Associates, but it helps the application look real.
-
----
-
-## 6. Amazon Associates (only after launch)
-
-**Don't apply until** the site is live, the About/Privacy placeholders are filled in, and about 50–100 people a week use the app. Signing up starts a 180-day window to make 3 sales.
-
-**Only you can do this:** follow `docs/amazon-signup-guide.md` (about 20–30 minutes on your phone, free). It includes tax info (W-9; an EIN from IRS.gov is free) and bank details. Only you can do those.
-
-**Automated:** tell Claude your tag (e.g. `pantrypal-20`; it's not a secret). The amazon and product-dev agents put it in `CONFIG.AMAZON_TAG`, rebuild and merge. The workflow deploys it.
-
-**Verify:** the setup check shows "✓ Amazon tag is set". In the app, an Amazon cart link contains `tag=` or `AssociateTag=` with your tag. **Don't buy through it yourself.**
-
-**Later:** the Creators API keys (`AMAZON_CLIENT_ID`, `AMAZON_CLIENT_SECRET`) go into **GitHub secrets**, and the workflow forwards them to the Worker. That workflow change is small; ask integrations when you get approved.
-
----
-
-## 7. Instacart (second store)
-
-**Only you can do this (5 min, now if you like):** check whether developer signup is open. One Instacart page said "not accepting new applications". The links are in `docs/research/instacart-integration.md` (sources [6], [8] and [9]). If it's open: sign up and request a **development key**. Instacart says this takes about a week. Then save it as the GitHub secret `INSTACART_API_KEY`. Production approval and the Impact affiliate account come later and involve terms only you can accept.
-
-**Automated (after the build):** the Worker gets `INSTACART_API_KEY` from GitHub the same way as the Anthropic key. This needs one more line in the deploy (integrations + product-dev), and the button stays behind its on/off switch.
-
-**Verify:** a "Shop on Instacart" tap opens an Instacart shopping list with the missing items.
-
-**Cost:** no fee found for the public API (UNVERIFIED). You earn commission through Impact (rate UNVERIFIED).
-
----
-
-## 8. Stripe (later: Pantry Pal Pro)
-
-Not needed for launch. Start once you've picked option A, B or C in `docs/pro-plan-draft.md` and sign-in is built.
-
-**Only you can do this:** go to **dashboard.stripe.com/register**, sign up, verify your identity and add a bank account (only you can). *(20–30 min)* Create the Pro product and a **Payment Link** ($3.99/month or $29/year for option B). Later, create a webhook signing secret and save it as the GitHub secret `STRIPE_WEBHOOK_SECRET` (it gets forwarded to the Worker). Never paste live keys anywhere but GitHub or Cloudflare secrets.
-
-**Automated (when built):** a Worker webhook route marks paid users as Pro and raises their AI allowance.
-
-**Cost:** no monthly fee. 2.9% + 30¢ per charge (US cards, standard pricing).
-
----
-
-## 9. Cloudflare Email Routing (later: forwarded order emails)
-
-Needs **a domain whose DNS is on Cloudflare** (section 5) **and** email sign-in (ROADMAP #13). Until then, the app's **"Paste order"** and **"Did your order arrive?"** cover this.
-
-**Only you can do this (5 min):** Cloudflare → your domain → **Email → Email Routing → Get started**. Approve the DNS records it adds, then create an address like `orders@yourdomain.com`.
-
-**Automated (when built):** an Email Worker receives forwarded Amazon and Instacart emails and updates the right user's pantry. Raw email is never stored.
-
-**Cost:** $0.
-
----
-
-## Your minimum time and monthly cost
-
-**Minimum hands-on time to go live (free tier, no domain): about 35 minutes, all on your phone.** That's the seven steps at the top. It assumes product-dev applies Appendix A first (Claude does that, not you).
-
-**Monthly cost at low traffic:**
-
-| Item | $/month |
-|---|---|
-| GitHub (private repo + Actions) | $0 |
-| Cloudflare Worker + KV | $0 |
-| Netlify | $0 (watch credits, see section 4) |
-| Anthropic AI | about **$5–10** realistic. Worst case $30 with `FREE_DAILY_TOTAL=100`, $90 at the current 300. Prepaid credits with auto-reload off are a hard stop. |
-| Domain (optional) | about $1 |
-| **Total** | **about $5–10/month**, almost all of it AI |
-
----
-
-## Health check: `scripts/check-setup.mjs`
-
-It's read-only and changes nothing. It runs at the end of every deploy and writes a ✅/⚠️/❌ list on the run's **Summary** page, which you can read on your phone. Claude or a laptop can also run it:
+### Tests
 
 ```
-node scripts/check-setup.mjs                                     # files + the Worker in BACKEND_URL
-node scripts/check-setup.mjs --site https://pantry-pal-xx.netlify.app   # + the live site, the app and CORS
-node scripts/check-setup.mjs --offline                           # no internet
+npm ci                        # once; installs the two backend libraries (exact versions)
+node tests/run-all.mjs        # every suite (14), including:
+node tests/worker-test.mjs    # backend: 47 checks, mocked Blobs, real Anthropic SDK with a fake fetch
+node tests/headers-test.mjs   # netlify.toml headers + CSP in Chromium (build site/ first)
 ```
 
-It checks:
-- `AMAZON_TAG` and `BACKEND_URL` in `src/app.js`
-- that `pantry-pal.html` matches `src/`
-- the Amazon disclosure in the app and on every site page
-- that `site/app/` holds the current app
-- placeholder addresses and About/Privacy placeholders
-- that no API keys are in the app, site or Worker code
-- that `.gitignore` covers secrets files
-- `/api/health` on the Worker: AI key present, free cap on, storage connected
-- CORS for your site
-- the live home page and `/app/`, including which Worker the live app calls
-
-It exits with code 1 if anything is ❌. In CI that's only reported, so the deploy stays green.
+GitHub Actions (`.github/workflows/ci.yml`) runs the checks and all browser suites on every push and PR. **It never deploys and needs no secrets.** Netlify's own build also runs the backend tests first, so a broken function never goes live.
 
 ---
 
-## Appendix A: proposed change to `pantry-pal-worker/deploy.mjs` (for product-dev)
+## Later steps (unchanged in spirit; only you can do the account parts)
 
-`deploy.mjs` belongs to product-dev, so integrations didn't edit it. **Without this change the workflow skips the Worker deploy with a warning** (it checks for `DEPLOY_NONINTERACTIVE` in the file).
-
-Why it's needed. Tested with a fake wrangler (see "What was tested"); the current script in CI:
-- calls `wrangler login`, which waits for a browser forever
-- runs `secret put` with an empty stdin. The fake rejected the empty secret and the run failed. Real wrangler would read the empty stdin and might save an empty key.
-- waits for typed input if the Worker address isn't in the output
-- runs `wrangler deploy` without `--keep-vars`, which **deletes any Worker variable set in the dashboard** (from `wrangler deploy --help`, v4.148.0: "When not used … Wrangler will delete all vars before setting those found in the Wrangler configuration"). So setting `ALLOWED_ORIGIN` in the dashboard would be wiped by the next deploy.
-
-The change:
-- adds a non-interactive mode (`CI=true` or `DEPLOY_NONINTERACTIVE=1`)
-- takes the key from `ANTHROPIC_API_KEY` and sends it on stdin, never as an argument
-- writes `ALLOWED_ORIGIN` from the environment into `[vars]`
-- deploys with `--keep-vars`
-- accepts `WORKER_URL` as a fallback
-
-Interactive use on a laptop is unchanged, except that an `ANTHROPIC_API_KEY` already set in your shell is now uploaded too.
-
-```diff
---- a/pantry-pal-worker/deploy.mjs
-+++ b/pantry-pal-worker/deploy.mjs
-@@ -11,6 +11,11 @@
-  *   4. Asks you to paste your Anthropic API key (only the first time; it is stored as a hidden Cloudflare secret)
-  *   5. Checks /api/health and fills in BACKEND_URL in ../src/app.js, then rebuilds pantry-pal.html
-  *      (or patches pantry-pal.html directly if there is no src/ folder)
-+ *
-+ * Non-interactive mode (GitHub Actions, or DEPLOY_NONINTERACTIVE=1): never opens a browser and never waits
-+ * for typing. Sign-in comes from CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID, the AI key from
-+ * ANTHROPIC_API_KEY (pushed as a Worker secret when set, skipped with a warning when not), and
-+ * ALLOWED_ORIGIN (optional) becomes a Worker variable.
-  */
- import { spawn, spawnSync } from 'node:child_process';
- import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-@@ -22,12 +27,14 @@
- const NAME = process.env.WORKER_NAME || 'pantry-pal';
- const WRANGLER = (process.env.WRANGLER_CMD || 'npx --yes wrangler@4').split(' ');
- const NAMESPACES = ['USAGE', 'COMMUNITY'];
-+// CI=true is set by GitHub Actions and most CI services.
-+const NONINTERACTIVE = process.env.DEPLOY_NONINTERACTIVE === '1' || /^(1|true)$/i.test(process.env.CI || '');
- const g = s => `\x1b[32m${s}\x1b[0m`, y = s => `\x1b[33m${s}\x1b[0m`, r = s => `\x1b[31m${s}\x1b[0m`, b = s => `\x1b[1m${s}\x1b[0m`;
- const step = (n, s) => console.log(`\n${b(`[${n}/5]`)} ${s}`);
- const fail = msg => { console.error('\n' + r('✗ ' + msg)); process.exit(1); };
- 
--function run(args, { inherit = false } = {}) {
--  const res = spawnSync(WRANGLER[0], [...WRANGLER.slice(1), ...args], { cwd: HERE, encoding: 'utf8', shell: process.platform === 'win32', stdio: inherit ? 'inherit' : 'pipe' });
-+function run(args, { inherit = false, input } = {}) {
-+  const res = spawnSync(WRANGLER[0], [...WRANGLER.slice(1), ...args], { cwd: HERE, encoding: 'utf8', shell: process.platform === 'win32', input, stdio: input != null ? 'pipe' : inherit ? 'inherit' : 'pipe' });
-   if (res.error) fail(`Couldn’t run ${WRANGLER[0]} (${res.error.message}). Install Node 18+ from nodejs.org and try again.`);
-   return { code: res.status ?? 1, out: (res.stdout || '') + (res.stderr || ''), stdout: res.stdout || '' };
- }
-@@ -72,6 +79,7 @@
-   step(1, 'Checking your Cloudflare sign-in…');
-   let who = run(['whoami']);
-   if (who.code !== 0 || /not authenticated|not logged in/i.test(who.out)) {
-+    if (NONINTERACTIVE) fail('Not signed in to Cloudflare. Set CLOUDFLARE_API_TOKEN (template "Edit Cloudflare Workers") and CLOUDFLARE_ACCOUNT_ID.\n' + who.out.trim());
-     console.log('A browser window will open. Sign in to Cloudflare there and click Allow, then come back here.');
-     if (run(['login'], { inherit: true }).code !== 0) fail('Cloudflare sign-in didn’t finish. Run node deploy.mjs again.');
-     who = run(['whoami']);
-@@ -95,6 +103,10 @@
- 
-   step(3, 'Deploying the Worker…');
-   const perUser = intEnv('FREE_DAILY_PER_USER', 8), total = intEnv('FREE_DAILY_TOTAL', 300);
-+  // Comma-separated https origins allowed to call the Worker from a browser (e.g. the Netlify address).
-+  const origins = (process.env.ALLOWED_ORIGIN || '').split(',').map(s => s.trim().replace(/\/+$/, '')).filter(Boolean);
-+  const badOrigin = origins.find(o => !/^https:\/\/[a-z0-9.-]+(:\d+)?$/i.test(o));
-+  if (badOrigin) fail(`ALLOWED_ORIGIN has "${badOrigin}", which isn't an https://… address.`);
-   writeFileSync(join(HERE, 'wrangler.toml'), `# Generated by deploy.mjs on every run — edits here are overwritten. Not committed (see .gitignore).
- name = "${NAME}"
- main = "src/index.js"
-@@ -104,15 +116,18 @@
- [vars]
- FREE_DAILY_PER_USER = "${perUser}"
- FREE_DAILY_TOTAL = "${total}"
--
-+${origins.length ? `ALLOWED_ORIGIN = "${origins.join(',')}"\n` : ''}
- ${NAMESPACES.map(ns => `[[kv_namespaces]]\nbinding = "${ns}"\nid = "${ids[ns]}"`).join('\n\n')}
- `);
--  const dep = await runLive(['deploy']);
-+  // --keep-vars: don't wipe variables Wyatt set in the Cloudflare dashboard (e.g. MODEL) on every deploy.
-+  const dep = await runLive(['deploy', '--keep-vars']);
-   if (dep.code !== 0) {
-     if (/workers\.dev subdomain/i.test(dep.out)) fail('Your account needs a workers.dev address first. In the Cloudflare dashboard open Workers & Pages once (it asks you to pick a subdomain), then run node deploy.mjs again.');
-     fail('Deploy failed — see the messages above.');
-   }
-   let url = (dep.out.match(/https:\/\/[a-z0-9.-]+\.workers\.dev/i) || [])[0];
-+  if (!url && NONINTERACTIVE) url = process.env.WORKER_URL || '';
-+  if (!url && NONINTERACTIVE) fail('Couldn’t find the Worker address in the deploy output. Set WORKER_URL (https://….workers.dev) and run again.');
-   if (!url) {
-     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-     url = (await rl.question(y('\nPaste your Worker address (it ends in .workers.dev): '))).trim();
-@@ -124,7 +139,14 @@
- 
-   step(4, 'Checking your Anthropic API key…');
-   const secrets = parseJSONArray(run(['secret', 'list']).stdout) || [];
--  if (secrets.some(s => s.name === 'ANTHROPIC_API_KEY')) console.log(g('✓ Key already saved'));
-+  const envKey = (process.env.ANTHROPIC_API_KEY || '').trim();
-+  if (envKey) {
-+    // Sent on stdin, never as an argument, so it doesn't show up in process lists or logs.
-+    const put = run(['secret', 'put', 'ANTHROPIC_API_KEY'], { input: envKey + '\n' });
-+    if (put.code !== 0) fail('Saving the key failed:\n' + put.out.replaceAll(envKey, '***').trim());
-+    console.log(g('✓ Key saved from ANTHROPIC_API_KEY'));
-+  } else if (secrets.some(s => s.name === 'ANTHROPIC_API_KEY')) console.log(g('✓ Key already saved'));
-+  else if (NONINTERACTIVE) console.log(y('! No AI key yet. Add an ANTHROPIC_API_KEY secret (GitHub → Settings → Secrets → Actions) and run again. Free AI is off until then.'));
-   else {
-     console.log('Paste your Anthropic API key below and press Enter (from console.anthropic.com → API Keys).');
-     console.log('It goes straight to Cloudflare as a hidden secret. It is not saved in any file.');
-```
-
-After applying it, product-dev should also add one line to `pantry-pal-worker/README.md` saying that CI uses `DEPLOY_NONINTERACTIVE=1` with `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
-
-**KV creation with an API token and no browser:** this works in principle. `wrangler kv namespace list/create` authenticate from `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID`. In wrangler 4.148.0's source, the only interactive prompt after `kv namespace create` ("Would you like Wrangler to add it on your behalf?") appears only when a **JSON** config file exists, and in CI it defaults to "no". deploy.mjs runs it with no config present, and its id regex handles both the JSON and TOML snippet formats. I tested this against a fake wrangler only, **never real Cloudflare**. The "Edit Cloudflare Workers" token template including KV edit permission is from memory (UNVERIFIED).
+- **Domain (optional, about $10–15/year, price UNVERIFIED):** buy one, then Netlify → **Domain management → Add a domain** and follow the DNS records it shows. `$URL` switches to the new domain on the next deploy, so the sitemap, links and canonical tags follow. Nothing else changes, because the API is on the same address.
+- **Amazon Associates (after launch):** follow `docs/amazon-signup-guide.md`. Later, the Creators API keys go into Netlify environment variables `AMAZON_CLIENT_ID`, `AMAZON_CLIENT_SECRET` and `AMAZON_PARTNER_TAG` (secrets), and `amazon-search.mjs` gets finished.
+- **Instacart:** a developer key, if signup is open, goes into the Netlify variable `INSTACART_API_KEY` (secret).
+- **Stripe (Premium payments):** sign up, verify identity and add a bank account (only you can do this). Create the Payment Link; the webhook signing secret goes into the Netlify variable `STRIPE_WEBHOOK_SECRET`.
+- **Forwarded order emails:** this used to be planned on Cloudflare Email Routing. Netlify has no inbound email, so it needs a mail provider with inbound webhooks later (not chosen yet).
 
 ---
 
-## Appendix B: risks in the current setup (for the coordinator)
+## Risks (for the coordinator)
 
-1. **`wrangler.toml` is gitignored**, so CI must generate it. deploy.mjs does this on every run and finds the KV IDs by title (`pantry-pal-USAGE`, `pantry-pal-COMMUNITY`). Don't rename those namespaces in the dashboard, or a new empty one gets created (counters reset, community recipes look empty).
-2. **Dashboard edits get overwritten.**
-   - Without `--keep-vars`, every deploy deletes dashboard-set variables (`ALLOWED_ORIGIN`, `MODEL`). Fixed in Appendix A.
-   - Even with it, wrangler in CI auto-confirms overriding other dashboard config (verified in 4.148.0 source: `getDeployConfirmFunction` returns `true` when non-interactive).
-   - Rule: change Worker settings only through GitHub variables.
-3. **Account ID:** passed only as the `CLOUDFLARE_ACCOUNT_ID` secret and never written to `wrangler.toml` or the repo. It isn't really secret, but keeping it a secret keeps the setup uniform. It's required when a token can see more than one account.
-4. **CORS / `ALLOWED_ORIGIN`:**
-   - It's unset today (`*`), so any website can spend the free AI allowance from a browser.
-   - The workflow sets it to the Netlify address plus the custom domain and aliases (once Appendix A is applied). If Wyatt sets the `ALLOWED_ORIGIN` variable by hand, it **replaces** the automatic list, so it must include every domain.
-   - CORS doesn't stop scripts or curl. The real protection stays the per-person and daily caps. Consider an `APP_TOKEN` later; it's only light protection because it would ship inside the public app.
-   - With `ALLOWED_ORIGIN` set, opening `pantry-pal.html` as a local file (origin `null`) can't use free AI. Own-key AI still works.
-5. **`NETLIFY_AUTH_TOKEN` is account-wide.** It can deploy to getwrenchnow.com and the other three projects.
-   - Mitigation: `scripts/ci/netlify-site.mjs` refuses any project without `pantry` in its name or with `wrench` in its name or domains, and the deploy only ever uses the ID that passed the guard.
-   - Netlify per-project tokens: none found (UNVERIFIED). Give the token an expiry and revoke it if it ever leaks.
-6. **Netlify credits** (section 4) could pause WrenchNow if Pantry Pal deploys use up a shared credit pool. Check the plan type before merging often. Cloudflare Pages is the fallback.
-7. **`BACKEND_URL` is injected at deploy time.** The committed `src/app.js` stays empty until Claude commits the printed address. The health check flags it. Alternative: set the GitHub variable `BACKEND_URL`.
-8. **Only `main` deploys.** The new repo's default branch must be `main`, and agents keep working on branches and PRs as they do now.
-9. **The stale-build check fails red on purpose.** If an agent edits `src/` and forgets `python3 build.py`, the run fails before deploying anything.
-10. **Pinned versions need manual bumps.**
-    - Actions are pinned to commit SHAs: checkout v7.0.1 (2026-07-17) and setup-node v7.0.0 (2026-07-13).
-    - wrangler is 4.148.0 and netlify-cli 27.11.2 (both 2026-10-06).
-    - There's no Dependabot. Bump them every few months, keeping the 2-week-old rule.
-11. **`.gitignore`** now also covers `.dev.vars`, `.env` and `.env.*`. It already covered `wrangler.toml`.
-12. **WrenchNow `index.html`** shouldn't move to the new repo unless Wyatt decides so. Nothing in the build or deploy reads it.
-13. **Never tested live.**
-    - The workflow passed actionlint and yamllint, and its shell steps were simulated locally.
-    - It has never run on GitHub.
-    - The Netlify API calls (`GET /sites/{id}`, `GET /sites?name=`, `POST /sites`) match Netlify's public API as I remember it and were tested only against a mock.
-    - The first real run should be watched by Claude.
-
----
+1. **Shared credits can pause getwrenchnow.com.** See "Credits". The safest setup is own key + a separate team.
+2. **AI Gateway model availability is UNVERIFIED.** Netlify's guide says to use only models on its list, and that list wasn't visible here. If `claude-sonnet-5-5` or `claude-haiku-5-5` aren't on it, gateway calls fail (own-key users are fine). Fix: set `MODEL` / `LIST_MODEL` to a listed model.
+3. **60-second function limit.** Calls stop at 50 s with no retries (504 "took too long"). A 6-photo scan near the 4,096-token cap may come close. The app's real caps (3,000 for scans, 2,500 for recipes, 400 for lists) keep it lower.
+4. **6 MB request limit.** Netlify rejects bigger bodies before the function runs. The app's 6 resized photos are about 3 MB.
+5. **Blobs reads may not carry an ETag in production (UNVERIFIED).** The local emulator's don't. The code falls back to `list()` for the ETag, and that path is tested both with mocks and with netlify-cli's real local Blobs server.
+6. **Blobs is not a database.** Netlify's guidance prefers Netlify Database for counters. It works at this scale, with one tiny key per person per day. Revisit past about 10,000 users.
+7. **Rate-limit rules on the Free plan:** `config.rateLimit` was accepted by the build (it's in the function manifest), but whether Free plans enforce it is UNVERIFIED. The Blobs caps are the real protection either way.
+8. **`purpose` is trusted for tiering.** A modified client could send a fridge photo as `receipt` and use the free daily cap instead of Premium. That's bounded by the same free caps, so the cost risk doesn't change; only the Premium gate can be dodged.
+9. **Python in Netlify's build image** is expected (Ubuntu 24.04 image) but UNVERIFIED for this account. If the build says `python3: not found`, add `PYTHON_VERSION = "3.13"` to `netlify.toml`.
+10. **Pinned versions:** `@anthropic-ai/sdk` 0.132.1 (2026-10-08) and `@netlify/blobs` 11.1.3 (2026-10-01). Actions are pinned by SHA: checkout v7.0.1, setup-node v7.0.0, upload-artifact v7.0.2 (2026-10-07). Playwright 1.56.1 is used in CI. `@netlify/blobs` brings about 50 transitive packages (OpenTelemetry etc.), locked in `package-lock.json`.
+11. **Never tested live.** Everything ran locally with mocks or netlify-cli offline. Claude should watch the first real deploy.
 
 ## What was tested (mocks labelled)
 
-- **deploy.mjs + Appendix A, with a FAKE wrangler** (`node fake-wrangler.mjs`, in a throwaway copy of the repo):
-  - CI with no token: fails fast with a clear message and no browser.
-  - CI with token and no AI key: creates both KV namespaces, writes `wrangler.toml` with `ALLOWED_ORIGIN`, deploys with `--keep-vars`, warns about the missing key, fills in `BACKEND_URL` and rebuilds.
-  - Rerun with a key: reuses the namespaces and sends the key on stdin.
-  - The **current** deploy.mjs in CI: fails at the key step (empty stdin).
-- **scripts/check-setup.mjs:**
-  - Against the real repo (offline).
-  - Against a MOCK Worker and a MOCK static site on localhost, in three modes: good, misconfigured, and down.
-  - Against a fixture with a stale build, a planted fake key and a missing disclosure. All were caught.
-- **scripts/ci/netlify-site.mjs against a MOCK Netlify API**, 11 cases:
-  - no token; no site set; bad token
-  - the WrenchNow ID, an unrelated project ID, and a "pantry" project with a wrench domain (all refused)
-  - create by name, find by name on the second run, name taken, name without "pantry", and lookup by ID
-- **deploy.yml:**
-  - parsed with PyYAML
-  - **actionlint 1.7.12** (with shellcheck) clean
-  - yamllint clean
-  - the "which secrets are set" and "saved Worker address" steps run locally with no, some and all secrets
+- `tests/worker-test.mjs` (47 checks): the real function files, with MOCK `Netlify.env`, MOCK in-memory Blobs (same conditional-write rules) and the REAL `@anthropic-ai/sdk` talking to a FAKE `fetch`. It also runs without `node_modules` using a stand-in SDK.
+- `tests/headers-test.mjs`: the built site served from a fake https origin with netlify.toml's headers, in Chromium at 390px. The real barcode WASM and the real Tesseract worker and language data (local copies of the pinned npm packages) ran under the CSP with zero violations.
+- **netlify-cli 27.11.2 (scratch copy, offline):** `netlify build --offline` passed, with all 8 functions bundled, paths, schedule and rate limits in the manifest, and runtime nodejs22.x. `netlify functions:serve --offline` used the real local Blobs server and a MOCK Anthropic server on localhost. Checked: health, the free cap at the limit, list quota headers and `list_limit`, 402 without Premium, mint → redeem → scan with `X-Quota-Left`, the cross-site 403, community share/list, and the scheduled cleanup invoke. It found and verified the fix for the missing-ETag issue. `netlify dev` couldn't start here (it downloads Deno, which is blocked).
+- `scripts/check-setup.mjs` against MOCK live sites (good and misconfigured) on localhost.
+- `.github/workflows/ci.yml`: actionlint 1.7.12 clean, parsed with PyYAML.
+- `node tests/run-all.mjs`: 14 of 14 suites pass (with `TEST_LIBS`).
