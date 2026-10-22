@@ -413,59 +413,112 @@ run("insurance", () => {
   });
 });
 
-run("verification fee refunds", () => {
-  async function completedJob(q: (sql: string, params?: unknown[]) => Promise<pg.QueryResult>, day: number) {
-    const id = await insertBooking(q, ids["mechanic.basic"], "oil-change", future(day, 15));
-    await q("update public.bookings set payment_status = 'authorized' where id = $1", [id]);
+run("verification fee refunds (anti-gaming)", () => {
+  type Q = (sql: string, params?: unknown[]) => Promise<pg.QueryResult>;
+  const claim = (q: Q, id: string) => q("select public.claim_verification_refund($1, 1000, 4000, 7) as a", [id]).then((r) => r.rows[0].a as number);
+
+  async function newCustomer(q: Q) {
+    const r = await q(
+      `insert into auth.users (id, instance_id, aud, role, email, raw_user_meta_data, created_at, updated_at)
+       values (gen_random_uuid(), '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+               'c' || floor(random() * 1e9)::text || '@example.test', '{"role":"customer","full_name":"Test Extra"}', now(), now()) returning id`,
+    );
+    return r.rows[0].id as string;
+  }
+
+  /** A completed, captured job for a customer, backdated `ageDays`. */
+  async function job(q: Q, opts: { day: number; customer?: string; amount?: number; ageDays?: number; card?: string | null }) {
+    const r = await q(
+      `insert into public.bookings (customer_id, mechanic_id, service_id, vehicle_desc, address, scheduled_start, scheduled_end, hourly_rate_cents, estimated_max_cents)
+       values ($1, $2, $3, 'x', 'x', $4, $4::timestamptz + interval '1 hour', 9000, 20000) returning id`,
+      [opts.customer ?? ids["customer"], ids["mechanic.basic"], services["oil-change"], future(opts.day, 15)],
+    );
+    const id = r.rows[0].id as string;
+    await q("update public.bookings set payment_status = 'authorized', card_fingerprint = $2 where id = $1", [id, opts.card ?? null]);
     await verifiedCode(q, id);
     for (const st of ["accepted", "en_route", "in_progress"]) await q("update public.bookings set status = $2 where id = $1", [id, st]);
-    await q("update public.bookings set payment_status = 'captured', final_amount_cents = 5000, status = 'completed' where id = $1", [id]);
+    await q("update public.bookings set payment_status = 'captured', final_amount_cents = $2, status = 'completed' where id = $1", [id, opts.amount ?? 6000]);
+    await q("update public.bookings set completed_at = now() - make_interval(days => $2) where id = $1", [id, opts.ageDays ?? 8]);
     return id;
   }
 
-  it("refunds $10 per completed job until the $50 is back, never twice for one job", async () => {
+  async function paidFee(q: Q) {
+    await q(
+      "update public.mechanics set verification_fee_status = 'paid', verification_payment_intent_id = 'pi_test_fee', verification_paid_cents = 5000, verification_card_fingerprint = 'fp_mechanic' where id = $1",
+      [ids["mechanic.basic"]],
+    );
+  }
+
+  it("refunds $10 for each of 5 real jobs with different customers, then stops", async () => {
     await tx(async (q) => {
-      await q(
-        "update public.mechanics set verification_fee_status = 'paid', verification_payment_intent_id = 'pi_test_fee', verification_paid_cents = 5000 where id = $1",
-        [ids["mechanic.basic"]],
-      );
+      await paidFee(q);
       const amounts: number[] = [];
-      for (let day = 1; day <= 6; day++) {
-        const id = await completedJob(q, day);
-        amounts.push((await q("select public.claim_verification_refund($1, 1000) as a", [id])).rows[0].a);
-        if (day === 1) expect((await q("select public.claim_verification_refund($1, 1000) as a", [id])).rows[0].a).toBe(0); // same job again
-      }
+      for (let day = 1; day <= 6; day++) amounts.push(await claim(q, await job(q, { day, customer: await newCustomer(q), card: `fp_${day}` })));
       expect(amounts).toEqual([1000, 1000, 1000, 1000, 1000, 0]);
-      const m = await q("select verification_refunded_cents from public.mechanics where id = $1", [ids["mechanic.basic"]]);
-      expect(m.rows[0].verification_refunded_cents).toBe(5000);
+      expect((await q("select verification_refunded_cents from public.mechanics where id = $1", [ids["mechanic.basic"]])).rows[0].verification_refunded_cents).toBe(5000);
+    });
+  });
+
+  it("tiny jobs ($1) don't count", async () => {
+    await tx(async (q) => {
+      await paidFee(q);
+      expect(await claim(q, await job(q, { day: 1, amount: 100 }))).toBe(0);
+      expect(await claim(q, await job(q, { day: 2, amount: 3999 }))).toBe(0);
+    });
+  });
+
+  it("the same customer only counts once", async () => {
+    await tx(async (q) => {
+      await paidFee(q);
+      expect(await claim(q, await job(q, { day: 1 }))).toBe(1000);
+      expect(await claim(q, await job(q, { day: 2 }))).toBe(0);
+    });
+  });
+
+  it("jobs paid with the mechanic's own card, or a card already counted, don't count", async () => {
+    await tx(async (q) => {
+      await paidFee(q);
+      expect(await claim(q, await job(q, { day: 1, customer: await newCustomer(q), card: "fp_mechanic" }))).toBe(0);
+      expect(await claim(q, await job(q, { day: 2, customer: await newCustomer(q), card: "fp_friend" }))).toBe(1000);
+      expect(await claim(q, await job(q, { day: 3, customer: await newCustomer(q), card: "fp_friend" }))).toBe(0);
+    });
+  });
+
+  it("waits 7 days and skips refunded or disputed jobs", async () => {
+    await tx(async (q) => {
+      await paidFee(q);
+      const fresh = await job(q, { day: 1, ageDays: 2 });
+      expect(await claim(q, fresh)).toBe(0);
+      const disputed = await job(q, { day: 2, customer: await newCustomer(q) });
+      await q("update public.bookings set payment_status = 'disputed' where id = $1", [disputed]);
+      expect(await claim(q, disputed)).toBe(0);
+      await q("update public.bookings set completed_at = now() - interval '8 days' where id = $1", [fresh]);
+      expect(await claim(q, fresh)).toBe(1000);
+      expect(await claim(q, fresh)).toBe(0); // never twice for one job
     });
   });
 
   it("a failed Stripe refund releases the installment so it can be retried", async () => {
     await tx(async (q) => {
-      await q(
-        "update public.mechanics set verification_fee_status = 'paid', verification_payment_intent_id = 'pi_test_fee', verification_paid_cents = 5000 where id = $1",
-        [ids["mechanic.basic"]],
-      );
-      const id = await completedJob(q, 1);
-      expect((await q("select public.claim_verification_refund($1, 1000) as a", [id])).rows[0].a).toBe(1000);
+      await paidFee(q);
+      const id = await job(q, { day: 1 });
+      expect(await claim(q, id)).toBe(1000);
       await q("select public.release_verification_refund($1)", [id]);
       expect((await q("select verification_refunded_cents from public.mechanics where id = $1", [ids["mechanic.basic"]])).rows[0].verification_refunded_cents).toBe(0);
-      expect((await q("select public.claim_verification_refund($1, 1000) as a", [id])).rows[0].a).toBe(1000);
+      expect(await claim(q, id)).toBe(1000);
     });
   });
 
   it("waived or unpaid fees are never refunded", async () => {
     await tx(async (q) => {
-      const id = await completedJob(q, 1); // seed mechanic's fee is waived
-      expect((await q("select public.claim_verification_refund($1, 1000) as a", [id])).rows[0].a).toBe(0);
+      expect(await claim(q, await job(q, { day: 1 }))).toBe(0); // seed mechanic's fee is waived
     });
   });
 
   it("users can't call the refund functions or mark their fee paid", async () => {
-    await expect(
-      tx((q) => q("select public.claim_verification_refund(gen_random_uuid(), 1000)"), asUser(ids["mechanic.basic"])),
-    ).rejects.toThrow(/permission denied/);
+    await expect(tx((q) => q("select public.claim_verification_refund(gen_random_uuid(), 1000, 0, 0)"), asUser(ids["mechanic.basic"]))).rejects.toThrow(
+      /permission denied/,
+    );
     await expect(
       tx((q) => q("update public.mechanics set verification_fee_status = 'paid' where id = auth.uid()"), asUser(ids["mechanic.pending"])),
     ).rejects.toThrow(/permission denied/);

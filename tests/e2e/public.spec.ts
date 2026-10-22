@@ -70,4 +70,6 @@ test("webhooks reject unsigned requests", async ({ request }) => {
   expect(stripe.status()).toBe(400);
   const checkr = await request.post("/api/checks/webhook", { data: "{}" });
   expect(checkr.status()).toBe(401);
+  const cron = await request.post("/api/cron/verification-refunds", { headers: { authorization: "Bearer wrong" } });
+  expect(cron.status()).toBe(401);
 });

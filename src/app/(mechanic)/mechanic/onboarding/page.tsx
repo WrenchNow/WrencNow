@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Notice } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/layout";
 import { requireRole } from "@/lib/auth";
-import { stripeConfigured, verificationFeeCents, verificationRefundPerJobCents } from "@/lib/env";
+import { stripeConfigured, verificationFeeCents, verificationRefundMinJobCents, verificationRefundPerJobCents, verificationRefundWaitDays } from "@/lib/env";
 import { verificationJobsRemaining } from "@/lib/fees";
 import { money } from "@/lib/format";
 import { getMyMechanic, readiness } from "@/lib/mechanic";
@@ -94,8 +94,9 @@ export default async function MechanicOnboardingPage({ searchParams }: PageProps
             <h2 className="text-2xl font-bold uppercase">4. Verification fee</h2>
             <p className="mt-1 mb-4 text-sm text-muted">
               A one-time {money(verificationFeeCents(), { whole: true })} covers your background check. You get it all back:{" "}
-              {money(verificationRefundPerJobCents(), { whole: true })} is refunded to your card after each of your first{" "}
-              {verificationJobsRemaining(verificationFeeCents(), 0, verificationRefundPerJobCents())} completed jobs.
+              {money(verificationRefundPerJobCents(), { whole: true })} is refunded to your card for each of your first{" "}
+              {verificationJobsRemaining(verificationFeeCents(), 0, verificationRefundPerJobCents())} paid jobs of {money(verificationRefundMinJobCents(), { whole: true })} or more,
+              each with a different customer, {verificationRefundWaitDays()} days after the job.
             </p>
             {sp.fee === "cancelled" && (
               <div className="mb-4">

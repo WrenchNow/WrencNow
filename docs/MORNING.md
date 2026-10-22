@@ -41,6 +41,11 @@ Branch: `claude/wrenchnow-bootstrap` (not merged to `main`, nothing deployed).
   mechanic from Admin → Mechanics. Amounts come from `VERIFICATION_FEE_CENTS` / `VERIFICATION_REFUND_PER_JOB_CENTS`.
   Not refunded if the check doesn't clear or they stop before 5 jobs; this is in the Mechanic Agreement, so have the
   lawyer confirm it.
+  **Anti-gaming:** a job counts toward the refund only if it is at least $40 (`VERIFICATION_REFUND_MIN_JOB_CENTS`),
+  is for a customer who hasn't counted yet, wasn't paid with the mechanic's own card or a card already counted
+  (matched by Stripe card fingerprint), and is still not refunded or disputed 7 days later
+  (`VERIFICATION_REFUND_WAIT_DAYS`). A daily Netlify scheduled function pays the installments. **Set `CRON_SECRET`**
+  (any long random string) in Netlify env vars to enable it.
 - **Platform fee:** 5% from day one (`PLATFORM_FEE_BPS=500`), with no free launch period.
 - **Arrival codes:** the customer gets a 4-digit code when a mechanic accepts. The mechanic must enter it to start
   the job, which proves they arrived. The customer's page shows the mechanic's photo and name to check against.

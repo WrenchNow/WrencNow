@@ -50,3 +50,15 @@ export function customerNoShowFeeCents(): number {
   const n = Number(process.env.CUSTOMER_NO_SHOW_FEE_CENTS || 2500);
   return Number.isInteger(n) && n > 0 ? n : 2500;
 }
+
+/** A job must be at least this much to count toward refunding the verification fee. */
+export function verificationRefundMinJobCents(): number {
+  const n = Number(process.env.VERIFICATION_REFUND_MIN_JOB_CENTS || 4000);
+  return Number.isInteger(n) && n >= 0 ? n : 4000;
+}
+
+/** Days after a job before its refund installment is paid (lets refunds and disputes surface first). */
+export function verificationRefundWaitDays(): number {
+  const n = Number(process.env.VERIFICATION_REFUND_WAIT_DAYS || 7);
+  return Number.isInteger(n) && n >= 0 ? n : 7;
+}

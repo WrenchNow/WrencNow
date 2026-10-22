@@ -8,7 +8,8 @@ import { Card } from "@/components/ui/card";
 import { EmptyState, Notice } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/layout";
 import { requireRole } from "@/lib/auth";
-import { featuredPriceCents, platformFeeBps } from "@/lib/env";
+import { processVerificationRefunds } from "@/lib/verification";
+import { featuredPriceCents, platformFeeBps, stripeConfigured } from "@/lib/env";
 import { dateTime, money } from "@/lib/format";
 import { getMyMechanic, insuranceDaysRemaining, readiness } from "@/lib/mechanic";
 import { createClient } from "@/lib/supabase/server";
@@ -19,6 +20,8 @@ export const metadata: Metadata = { title: "Mechanic dashboard" };
 export default async function MechanicDashboardPage({ searchParams }: PageProps<"/mechanic/dashboard">) {
   const sp = await searchParams;
   const viewer = await requireRole(["mechanic"], "/mechanic/dashboard");
+  // Pay out any verification-fee installments that have cleared their waiting period.
+  if (stripeConfigured()) await processVerificationRefunds(viewer.id).catch((e) => console.error("processVerificationRefunds", e));
   const m = await getMyMechanic(viewer.id);
   if (!m) return <Notice tone="danger">We couldn&apos;t find your mechanic profile. Contact support.</Notice>;
   const supabase = await createClient();

@@ -1,7 +1,7 @@
 import "server-only";
 import type Stripe from "stripe";
 import { cancelOpenBookingsForMechanic } from "@/lib/bookings";
-import { getStripe } from "@/lib/stripe";
+import { cardFingerprint, getStripe } from "@/lib/stripe";
 import { markVerificationPaid } from "@/lib/verification";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -18,7 +18,12 @@ async function onPaymentIntent(admin: Admin, event: Stripe.Event) {
 
   switch (event.type) {
     case "payment_intent.amount_capturable_updated":
-      await admin.from("bookings").update({ payment_status: "authorized" }).eq("id", bookingId).in("payment_status", ["unpaid", "failed"]);
+      // Card fingerprint lets us spot a mechanic paying for their own jobs.
+      await admin
+        .from("bookings")
+        .update({ payment_status: "authorized", card_fingerprint: await cardFingerprint(pi.id) })
+        .eq("id", bookingId)
+        .in("payment_status", ["unpaid", "failed"]);
       break;
     case "payment_intent.succeeded": {
       await admin.from("bookings").update({ payment_status: "captured" }).eq("id", bookingId).in("payment_status", ["unpaid", "authorized"]);

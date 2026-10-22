@@ -26,7 +26,7 @@ const REQUIREMENTS = [
   "Your own tools and a way to get to customers",
   "Proof of liability insurance",
   "A smartphone for job notifications",
-  "Pass our background and identity check ($50 fee — refunded $10 a job over your first 5 jobs)",
+  "Pass our background and identity check ($50 fee — you earn it back, $10 for each of your first 5 paid jobs)",
   "A bank account to connect through Stripe for payouts",
 ];
 

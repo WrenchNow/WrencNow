@@ -86,6 +86,7 @@ export type Database = {
           cancel_reason: string | null;
           cancelled_at: string | null;
           cancelled_by: string | null;
+          card_fingerprint: string | null;
           completed_at: string | null;
           created_at: string;
           currency: string;
@@ -125,6 +126,7 @@ export type Database = {
           cancel_reason?: string | null;
           cancelled_at?: string | null;
           cancelled_by?: string | null;
+          card_fingerprint?: string | null;
           completed_at?: string | null;
           created_at?: string;
           currency?: string;
@@ -163,6 +165,7 @@ export type Database = {
           cancel_reason?: string | null;
           cancelled_at?: string | null;
           cancelled_by?: string | null;
+          card_fingerprint?: string | null;
           completed_at?: string | null;
           created_at?: string;
           currency?: string;
@@ -353,6 +356,7 @@ export type Database = {
           stripe_payouts_enabled: boolean;
           stripe_subscription_id: string | null;
           updated_at: string;
+          verification_card_fingerprint: string | null;
           verification_fee_status: Database["public"]["Enums"]["verification_fee_status"];
           verification_paid_at: string | null;
           verification_paid_cents: number;
@@ -404,6 +408,7 @@ export type Database = {
           stripe_payouts_enabled?: boolean;
           stripe_subscription_id?: string | null;
           updated_at?: string;
+          verification_card_fingerprint?: string | null;
           verification_fee_status?: Database["public"]["Enums"]["verification_fee_status"];
           verification_paid_at?: string | null;
           verification_paid_cents?: number;
@@ -454,6 +459,7 @@ export type Database = {
           stripe_payouts_enabled?: boolean;
           stripe_subscription_id?: string | null;
           updated_at?: string;
+          verification_card_fingerprint?: string | null;
           verification_fee_status?: Database["public"]["Enums"]["verification_fee_status"];
           verification_paid_at?: string | null;
           verification_paid_cents?: number;
@@ -747,7 +753,9 @@ export type Database = {
         Row: {
           amount_cents: number;
           booking_id: string;
+          card_fingerprint: string | null;
           created_at: string;
+          customer_id: string | null;
           mechanic_id: string;
           stripe_refund_id: string | null;
         };
@@ -755,14 +763,18 @@ export type Database = {
         Insert: {
           amount_cents: number;
           booking_id: string;
+          card_fingerprint?: string | null;
           created_at?: string;
+          customer_id?: string | null;
           mechanic_id: string;
           stripe_refund_id?: string | null;
         };
         Update: {
           amount_cents?: number;
           booking_id?: string;
+          card_fingerprint?: string | null;
           created_at?: string;
+          customer_id?: string | null;
           mechanic_id?: string;
           stripe_refund_id?: string | null;
         };
@@ -772,6 +784,13 @@ export type Database = {
             columns: ["booking_id"];
             isOneToOne: true;
             referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "verification_refunds_customer_id_fkey";
+            columns: ["customer_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
           {
@@ -812,7 +831,12 @@ export type Database = {
     Functions: {
       choose_role: { Args: { r: Database["public"]["Enums"]["user_role"] }; Returns: undefined };
       claim_verification_refund: {
-        Args: { p_booking_id: string; p_per_job_cents: number };
+        Args: {
+          p_booking_id: string;
+          p_mature_days: number;
+          p_min_job_cents: number;
+          p_per_job_cents: number;
+        };
         Returns: number;
       };
       distance_to_booking_m: {

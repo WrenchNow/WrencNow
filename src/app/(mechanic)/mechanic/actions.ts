@@ -144,7 +144,7 @@ export async function startVerificationCheckout() {
           unit_amount: verificationFeeCents(),
           product_data: {
             name: "WrenchNow verification fee",
-            description: `Covers your background check. ${money(verificationRefundPerJobCents(), { whole: true })} comes back after each of your first completed jobs until it's all returned.`,
+            description: `Covers your background check. ${money(verificationRefundPerJobCents(), { whole: true })} comes back for each qualifying paid job until it's all returned.`,
           },
         },
       },

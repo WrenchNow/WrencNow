@@ -4,8 +4,9 @@ import { Card } from "@/components/ui/card";
 import { EmptyState, Notice } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/layout";
 import { requireRole } from "@/lib/auth";
+import { processVerificationRefunds } from "@/lib/verification";
 import { mechanicNetCents, verificationJobsRemaining } from "@/lib/fees";
-import { verificationRefundPerJobCents } from "@/lib/env";
+import { stripeConfigured, verificationRefundMinJobCents, verificationRefundPerJobCents, verificationRefundWaitDays } from "@/lib/env";
 import { dateTime, monthKey, money } from "@/lib/format";
 import { getMyMechanic } from "@/lib/mechanic";
 import { createClient } from "@/lib/supabase/server";
@@ -15,6 +16,8 @@ export const metadata: Metadata = { title: "Earnings" };
 
 export default async function EarningsPage() {
   const viewer = await requireRole(["mechanic"], "/mechanic/earnings");
+  // Pay out any verification-fee installments that have cleared their waiting period.
+  if (stripeConfigured()) await processVerificationRefunds(viewer.id).catch((e) => console.error("processVerificationRefunds", e));
   const supabase = await createClient();
   const [m, { data: jobs }] = await Promise.all([
     getMyMechanic(viewer.id),
@@ -59,7 +62,8 @@ export default async function EarningsPage() {
           <Notice tone="info" title="Verification fee refund">
             {money(m.verification_refunded_cents)} of your {money(m.verification_paid_cents)} returned ·{" "}
             {verificationJobsRemaining(m.verification_paid_cents, m.verification_refunded_cents, verificationRefundPerJobCents())} more completed job(s) to get the rest
-            back. Refunds go to the card you paid with.
+            back. A job counts once it&apos;s {verificationRefundWaitDays()} days old if it was at least {money(verificationRefundMinJobCents(), { whole: true })} and
+            for a customer who hasn&apos;t counted yet. Refunds go to the card you paid with.
           </Notice>
         </div>
       )}

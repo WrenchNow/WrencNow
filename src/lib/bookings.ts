@@ -15,7 +15,7 @@ import { customerNoShowFeeCents, platformFeeBps } from "@/lib/env";
 import { geocode } from "@/lib/geocode";
 import { estimateMaxCents, platformFeeCents } from "@/lib/fees";
 import { isOfferedSlot } from "@/lib/slots";
-import { getStripe } from "@/lib/stripe";
+import { cardFingerprint, getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/types/database";
 
@@ -41,7 +41,11 @@ export async function syncBookingPayment(bookingId: string): Promise<BookingRow[
   if (!b?.stripe_payment_intent_id || !["unpaid", "failed"].includes(b.payment_status)) return b?.payment_status ?? null;
   const pi = await getStripe().paymentIntents.retrieve(b.stripe_payment_intent_id);
   if (pi.status === "requires_capture") {
-    await admin.from("bookings").update({ payment_status: "authorized" }).eq("id", b.id).in("payment_status", ["unpaid", "failed"]);
+    await admin
+      .from("bookings")
+      .update({ payment_status: "authorized", card_fingerprint: await cardFingerprint(pi.id) })
+      .eq("id", b.id)
+      .in("payment_status", ["unpaid", "failed"]);
     return "authorized";
   }
   if (pi.status === "canceled") {
@@ -366,9 +370,9 @@ async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor
   if (error || !updated) throw new BookingError("That change didn't go through. Refresh and try again.");
 
   if (to === "completed") {
-    // Return the next $10 (or configured amount) of the mechanic's verification fee.
-    const { refundVerificationInstallment } = await import("@/lib/verification");
-    await refundVerificationInstallment(b.id).catch((e) => console.error("refundVerificationInstallment", e));
+    // Pay out any verification-fee installments from earlier jobs that have cleared the waiting period.
+    const { processVerificationRefunds } = await import("@/lib/verification");
+    await processVerificationRefunds(b.mechanic_id).catch((e) => console.error("processVerificationRefunds", e));
   }
   if (to === "no_show") {
     await admin.from("no_shows").insert({ booking_id: b.id, mechanic_id: b.mechanic_id, reported_by: actor.id, reason: opts.reason?.slice(0, 1000) ?? null });
