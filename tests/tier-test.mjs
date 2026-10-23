@@ -43,14 +43,14 @@ async function setup({ seed = {}, backend = 'https://mock.workers.dev', url = AP
       return J({ content: [{ type: 'text', text: '{"items":[]}' }] });
     };
     if (u.host === 'mock.workers.dev') {
-      if (u.pathname === '/api/health') return J({ ok: true, ai: true, premium: true, amazon: false, freePerDay: 8 });
+      if (u.pathname === '/api/health') return J({ ok: true, ai: true, premium: true, amazon: false, freePerDay: 8, freeListPerMonth: 10 });
       if (u.pathname === '/api/claude') return claude();
       if (u.pathname === '/api/premium/redeem') { redeem.push(JSON.parse(req.postData())); const m = mock.redeem; return m ? J(m.body, m.code) : J({ error: 'Not found' }, 404); }
     }
     if (u.host === 'pp.test') {
       if (u.pathname.startsWith('/api/')) {
         if (!sameSiteApi) return r.fulfill({ status: 404, contentType: 'text/html', body: '<h1>Not found</h1>' });
-        if (u.pathname === '/api/health') return J({ ok: true, ai: true, premium: true, amazon: false, freePerDay: 8 });
+        if (u.pathname === '/api/health') return J({ ok: true, ai: true, premium: true, amazon: false, freePerDay: 8, freeListPerMonth: 10 });
         if (u.pathname === '/api/claude') return claude();
       }
       return r.fulfill({ contentType: 'text/html', body: HTML });
@@ -114,7 +114,7 @@ const noOverflow = async (page, label) => check(label + ': no horizontal overflo
   check('header line "Shopping List" skipped', !r.some(x => /shopping/.test(x.n)));
   check('on-phone read: no AI request', ai.length === 0);
   let t = await view(page);
-  check('review screen: title, honest copy, disclosure', t.includes('Shopping list → Amazon') && t.includes('Amazon shows the matching products. Prices and product photos in the app come later.') && t.includes('As an Amazon Associate, Pantry Pal earns from qualifying purchases.'));
+  check('review screen: title, honest copy, disclosure', t.includes('Shopping list → Amazon') && t.includes('Amazon shows the matching products.') && !t.includes('come later') && t.includes('As an Amazon Associate, Pantry Pal earns from qualifying purchases.'));
   check('review screen: allergy helper note + egg flag', t.includes('Allergy flags are a helper, not a safety guarantee') && /Eggs — Sam/.test(t));
   const hrefs = await page.$$eval('#view a[data-act=listSearch]', a => a.map(x => x.href));
   check('every item has a tagged Amazon search link', hrefs.length === r.length && hrefs.every(h => h.startsWith('https://www.amazon.com/s?') && h.includes('tag=pantrypal-20') && h.includes('i=grocery')), JSON.stringify(hrefs.slice(0, 2)));
@@ -145,12 +145,22 @@ const noOverflow = async (page, label) => check(label + ': no horizontal overflo
   const st = await page.evaluate(() => ({ tab: S.ui.tab, shop: S.shopping.map(x => [x.name, x.amount, x.from]), inv: S.inventory.length, list: scan.list }));
   check('"Add to my shopping list" fills Shop (checked items only), not the pantry', st.tab === 'shop' && st.shop.some(x => x[0] === 'bread' && x[1] === 2 && x[2] === 'List photo') && !st.shop.some(x => x[0] === 'bananas') && st.inv === 0 && st.list === null, JSON.stringify(st));
 
-  // handwriting: the phone reads almost nothing → exactly one AI request, purpose "list", no X-Premium
-  await page.click('.tab[data-tab=scan]'); await addPhoto(page);
+  // handwriting: the phone reads almost nothing → NO request until the user taps "Read with AI", then exactly one, purpose "list"
+  await page.click('.tab[data-tab=scan]'); await addPhoto(page); await page.waitForSelector('[data-act=ocrRead]');
+  t = await view(page);
+  check('list screen: honest privacy line (AI only on tap)', t.includes('Read on this phone. Only sent to our AI if you tap ‘Read with AI’.') && !t.includes('never uploaded'), t.slice(0, 400));
   await page.evaluate(t => window.__texts.push(t), SCRIBBLE);
   await page.click('[data-act=ocrRead]');
+  await page.waitForFunction(() => !scan.busy && !!document.querySelector('#ocr-few'), null, { timeout: 8000 }); await page.waitForTimeout(600);
+  t = await view(page);
+  check('handwriting: no automatic AI request after the phone reads little', ai.length === 0 && !(await page.evaluate(() => scan.list)), String(ai.length));
+  check('handwriting: asks first, with the cost and where the photo goes', t.includes('Couldn’t read much. Read the handwriting with AI? (uses 1 of your 10 free reads this month; the photo is sent to our AI service)') && await page.locator('#ocr-few [data-act=listAI]').innerText() === 'Read with AI', t.slice(0, 500));
+  await page.screenshot({ path: OUT + '/tier-list-ask.png', fullPage: true });
+  await page.waitForTimeout(800);
+  check('handwriting: still no request while waiting', ai.length === 0, String(ai.length));
+  await page.click('#ocr-few [data-act=listAI]');
   await page.waitForFunction(() => !!scan.list || !!scan.error, null, { timeout: 8000 }); await page.waitForTimeout(300);
-  check('handwriting fallback: exactly one AI request', ai.length === 1, String(ai.length));
+  check('handwriting: exactly one AI request after the tap', ai.length === 1, String(ai.length));
   const a = ai[0]?.body || {}, imgs = (a.messages?.[0]?.content || []).filter(c => c.type === 'image');
   check('handwriting request: purpose "list", max_tokens 400, compact format, no X-Premium', a.purpose === 'list' && a.max_tokens === 400 && /\{"items":\[\{"n":"milk","q":2\}\]\}/.test(a.messages[0].content.at(-1).text) && !ai[0].premium, JSON.stringify({ p: a.purpose, mt: a.max_tokens, prem: ai[0]?.premium }));
   const d = imgs.length ? await dims(page, imgs[0].source.data) : [0, 0];

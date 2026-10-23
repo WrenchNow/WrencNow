@@ -1688,7 +1688,7 @@ async function probeSameOrigin() {
     const res = await fetch('/api/health', { headers: bheaders(false) });
     const data = res.ok && /json/i.test(res.headers.get('content-type') || '') ? await res.json() : null;
     if (!data || typeof data !== 'object' || data.ok === false) return;
-    sameOrigin = true; health = Object.assign({ ok: true }, data); health.freePerDay = Number(health.freePerDay) || 0;
+    sameOrigin = true; health = Object.assign({ ok: true }, data); health.freePerDay = Number(health.freePerDay) || 0; health.freeListPerMonth = Number(health.freeListPerMonth) || 0;
     if (!S.onboarded) renderOnboard(); render();
   } catch (e) { /* no backend on this site: free on-phone features only */ }
 }
@@ -2128,9 +2128,8 @@ async function readReceiptOnDevice() {
   } finally {
     if (worker && worker.terminate) worker.terminate().catch(() => { });
     scan.busy = false; scan.mode = '';
-    // A list the phone could barely read goes to the AI once, automatically, when AI is set up.
-    if (isList && ocr.few && !scan.error && canSeeImages()) readListWithAI();
-    else if (S.ui.tab === 'scan') render(); else if (scan.items || scan.list) toast(isList ? 'List ready to review' : 'Receipt ready to review');
+    // A list the phone could barely read is never sent on its own: the screen asks first (listAiAsk).
+    if (S.ui.tab === 'scan') render(); else if (scan.items || scan.list) toast(isList ? 'List ready to review' : 'Receipt ready to review');
   }
 }
 
@@ -2741,20 +2740,27 @@ function viewScan() {
       <button class="scan-btn" data-act="pickGal"><span class="ic">🖼️</span>Choose from gallery</button></div>
     ${scan.images.length ? `<div class="thumbs">${scan.images.map((src, i) => `<div class="thumb"><img src="${src}" alt="Photo ${i + 1}"><button data-act="rmImg" data-i="${i}" aria-label="Remove">✕</button></div>`).join('')}</div>
       ${ocrReceipt ? `<button class="btn btn-primary btn-block" data-act="ocrRead">Read ${isList ? 'list' : 'receipt'} (free, on your phone)</button>
-      <p class="tiny muted" style="margin-top:8px">🔒 Free, no AI. The photo is read on this phone and never uploaded. The first time downloads the free reader (about 5 MB).</p>
-      ${isList && canSeeImages() ? `<button class="btn btn-ghost btn-block" data-act="listAI" style="margin-top:8px">✍️ Read handwriting with AI</button>${listLeftLine()}` : ''}`
+      <p class="tiny muted" style="margin-top:8px">🔒 ${canSeeImages() ? `Read on this phone. Only sent to our AI if you tap ‘${isList ? 'Read with AI' : 'Try the AI scan'}’.` : 'Free, no AI. The photo is read on this phone and never uploaded.'} The first time downloads the free reader (about 5 MB).</p>
+      ${isList && canSeeImages() && !ocr.few ? `<button class="btn btn-ghost btn-block" data-act="listAI" style="margin-top:8px">✍️ Read with AI</button>${listLeftLine()}` : ''}`
         : isList ? `<button class="btn btn-primary btn-block" data-act="listAI">Read list</button>${listLeftLine()}`
         : `<button class="btn btn-primary btn-block" data-act="analyze">Analyze ${scan.images.length} photo${scan.images.length === 1 ? '' : 's'}</button>`}`
       : `<p class="small muted" style="text-align:center">${isList ? 'Snap your shopping list, printed or handwritten. We’ll line each item up with Amazon.' : scan.type === 'receipt' ? 'Flatten the receipt and get every line in frame. Long receipts? Add a few photos.' : 'Open the door wide, use good light, and take one photo per shelf if it’s crowded.'}</p>`}
     ${loose && aiMode() === 'backend' && quota.scan ? `<p class="small muted" style="text-align:center;margin-top:8px">${quota.scan.left} of ${quota.scan.limit} scans left this month</p>` : ''}
-    ${ocrReceipt && ocr.few && !scan.error ? `<div class="note warn" style="margin-top:14px">${canSeeImages() ? `<b>Couldn’t read much from that photo.</b> The AI ${isList ? 'reads handwriting' : 'scan reads receipts'} better.` : 'Couldn’t read much. Try a flatter, brighter photo, or add items by hand.'}
-      ${canSeeImages() ? `<br><button class="btn btn-sm btn-soft" data-act="${isList ? 'listAI' : 'analyze'}" style="margin-top:8px">${isList ? 'Read handwriting with AI' : 'Try the AI scan'}</button>` : ''}
+    ${ocrReceipt && ocr.few && !scan.error ? `<div class="note warn" style="margin-top:14px" id="ocr-few">${!canSeeImages() ? 'Couldn’t read much. Try a flatter, brighter photo, or add items by hand.' : isList ? listAiAsk() : '<b>Couldn’t read much from that photo.</b> The AI scan reads receipts better.'}
+      ${canSeeImages() ? `<br><button class="btn btn-sm btn-soft" data-act="${isList ? 'listAI' : 'analyze'}" style="margin-top:8px">${isList ? 'Read with AI' : 'Try the AI scan'}</button>` : ''}
       ${ocr.found && ocr.found.length ? `<br><button class="btn btn-sm btn-ghost" data-act="ocrReview" style="margin-top:8px">Review the ${ocr.found.length} item${ocr.found.length === 1 ? '' : 's'} it found</button>` : ''}</div>` : ''}
-    ${scan.error && scan.errorCode === 'ocr' ? `<div class="note danger" style="margin-top:14px">${esc(scan.error)}${canSeeImages() ? `<br><button class="btn btn-sm btn-soft" data-act="${isList ? 'listAI' : 'analyze'}" style="margin-top:8px">${isList ? 'Read handwriting with AI' : 'Try the AI scan'}</button>` : ''}</div>` : ''}
+    ${scan.error && scan.errorCode === 'ocr' ? `<div class="note danger" style="margin-top:14px">${esc(scan.error)}${canSeeImages() ? `<br><button class="btn btn-sm btn-soft" data-act="${isList ? 'listAI' : 'analyze'}" style="margin-top:8px">${isList ? 'Read with AI' : 'Try the AI scan'}</button>` : ''}</div>` : ''}
     ${scan.error && scan.errorCode !== 'ocr' ? `<div style="margin-top:14px">${aiErrorHtml(scan.error, scan.errorCode)}</div>` : ''}
     ${!canSeeImages() && !ocrReceipt ? `<div class="note warn" style="margin-top:14px">${loose ? 'Premium scans need a connection to Pantry Pal. Open the app from the Pantry Pal website, or add your own Anthropic key.' : 'Photo scanning needs AI. Add your own Anthropic key to turn it on — or add items by hand in Pantry.'} <button class="btn btn-sm btn-soft" data-act="goto" data-tab="settings" style="margin-top:8px">Add my key</button></div>` : ''}`;
 }
 function listLeftLine() { return quota.list && aiMode() === 'backend' ? `<p class="tiny muted" style="text-align:center;margin-top:6px">${quota.list.left} free handwriting read${quota.list.left === 1 ? '' : 's'} left this month</p>` : ''; }
+// Asked before any list photo goes to the AI: what it costs and where the photo goes. Nothing is sent until the tap.
+function listAiAsk() {
+  const n = quota.list ? quota.list.left : health?.freeListPerMonth;
+  const cost = aiMode() === 'own' ? 'uses your own Anthropic key; the photo is sent to Anthropic'
+    : `uses 1 of your ${n ? `${n} ` : ''}free reads${quota.list ? ' left' : ''} this month; the photo is sent to our AI service`;
+  return `<b>Couldn’t read much.</b> Read the handwriting with AI? (${cost})`;
+}
 // Free users tapping Fridge, Pantry or Freezer. Nothing is sent anywhere from here.
 function premiumCard() {
   const get = CONFIG.STRIPE_LINK ? `<a class="btn btn-accent btn-block" href="${esc(CONFIG.STRIPE_LINK)}" target="_blank" rel="noopener">Get Premium</a>`
@@ -2778,7 +2784,7 @@ function listRow(it) { const c = catalogFind(it.name); return { asin: cartAsin(c
 function viewListReview() {
   const L = scan.list, on = L.filter(i => i.on).length;
   return `<div class="row" style="justify-content:space-between;margin-bottom:8px"><h2>Shopping list → Amazon</h2>${L.length ? `<button class="btn btn-ghost btn-sm" data-act="listToggleAll">${on === L.length ? 'Uncheck all' : 'Check all'}</button>` : ''}</div>
-    <p class="small muted" style="margin-bottom:12px">${scan.listSource === 'ai' ? 'Read with AI. ' : ''}Check the names, then send them to Amazon. Amazon shows the matching products. Prices and product photos in the app come later.</p>
+    <p class="small muted" style="margin-bottom:12px">${scan.listSource === 'ai' ? 'Read with AI. ' : ''}Check the names, then send them to Amazon. Amazon shows the matching products.</p>
     ${hasAllergies() ? allergyNote('margin:-6px 0 12px') : ''}
     ${L.map((it, i) => { const r = listRow(it); return `<div class="review-item ${it.on ? '' : 'off'}">
       <div class="review-top"><input type="checkbox" ${it.on ? 'checked' : ''} data-li="${i}" data-f="on" aria-label="Include"><input class="input" data-li="${i}" data-f="name" value="${esc(it.name)}" aria-label="Item name"></div>
@@ -2794,7 +2800,7 @@ function viewListReview() {
       <button class="btn btn-accent btn-block" data-act="listCart" ${on ? '' : 'disabled'}>🛒 Send ${on} item${on === 1 ? '' : 's'} to Amazon</button>
       <button class="btn btn-soft btn-block" data-act="listToShop" ${on ? '' : 'disabled'}>＋ Add to my shopping list</button></div></div>
     <div class="stack" style="margin-top:10px">
-      ${scan.listSource !== 'ai' && scan.images.length && canSeeImages() ? `<button class="btn btn-ghost btn-block" data-act="listAI">✍️ Not right? Read handwriting with AI</button>` : ''}${listLeftLine()}
+      ${scan.listSource !== 'ai' && scan.images.length && canSeeImages() ? `<button class="btn btn-ghost btn-block" data-act="listAI">✍️ Not right? Read with AI</button>` : ''}${listLeftLine()}
       <button class="btn btn-ghost btn-block" data-act="listDiscard">Discard</button></div>
     ${scan.error ? `<div style="margin-top:14px">${aiErrorHtml(scan.error, scan.errorCode)}</div>` : ''}
     <p class="disclosure">As an Amazon Associate, Pantry Pal earns from qualifying purchases.</p>`;
@@ -3171,7 +3177,7 @@ async function checkHealth(silent) {
     const res = await fetch(b + '/api/health', { headers: bheaders(false) });
     const data = await res.json().catch(() => ({}));
     health = res.ok ? Object.assign({ ok: true }, data) : { ok: false, error: String(data.error || ('Backend returned ' + res.status)) };
-    if (health.ok) health.freePerDay = Number(health.freePerDay) || 0;   // shown unescaped in Settings/onboarding
+    if (health.ok) { health.freePerDay = Number(health.freePerDay) || 0; health.freeListPerMonth = Number(health.freeListPerMonth) || 0; }   // shown unescaped
     if (!S.onboarded) renderOnboard();
   } catch (e) { health = { ok: false, error: 'Couldn’t reach that URL. Check it and your Worker’s CORS settings.' }; }
   if (!silent || S.ui.tab === 'settings') render();
