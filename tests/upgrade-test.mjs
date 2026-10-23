@@ -49,7 +49,7 @@ const cartLinks = async (page, names) => {
   const hrefs = await page.locator('#sheet-body a[href]').evaluateAll(a => a.map(x => x.href));
   const text = await page.locator('#sheet-body').innerText();
   await page.click('#sheet-body [data-act=closeSheet]');
-  return { cart: hrefs.find(h => h.includes('/cart/add.html')) || '', searches: hrefs.filter(h => h.includes('/s?')), text };
+  return { cart: hrefs.find(h => h.includes('/cart/add.html')) || '', searches: [...new Set(hrefs.filter(h => h.includes('/s?')))], text };   // the "Next ↗" button repeats one search link
 };
 const realErrors = e => e.filter(x => !/Failed to load resource: net::ERR_FAILED/.test(x)); // aborted external font requests
 

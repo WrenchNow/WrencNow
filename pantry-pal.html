@@ -3096,14 +3096,15 @@ async function redeemPremium(code) {
 
 /* ---- Amazon cart builder sheet ---- */
 function openCartBuilder(title, items, needLabel = 'Recipe needs') {
-  cartDraft = { title, items, needLabel };
+  cartDraft = { title, items, needLabel, opened: [] };
   openSheet(cartSheet);
   if (pickerAvailable()) items.filter(i => !i.asin).forEach(loadOptions);
 }
 function cartSheet() {
   const d = cartDraft; const on = d.items.filter(i => i.on);
   const withAsin = on.filter(i => i.asin), searches = on.filter(i => !i.asin);
-  return `${sheetBar('Add to Amazon cart')}<p class="small muted" style="margin:-8px 0 12px">For ${esc(d.title)}</p>
+  const left = searches.filter(it => !d.opened.includes(it.key)), nx = left[0], k = searches.length - left.length + 1;
+  return `${sheetBar(withAsin.length ? 'Add to Amazon cart' : 'Find on Amazon')}<p class="small muted" style="margin:-8px 0 12px">For ${esc(d.title)}</p>
     ${d.items.map((it, i) => `<div class="cart-row ${it.on ? '' : 'off'}">
       <div class="row"><label class="hit"><input type="checkbox" ${it.on ? 'checked' : ''} data-cartck="${i}" style="width:22px;height:22px;accent-color:var(--brand)" aria-label="Include ${esc(it.name)}"></label>
         <div class="grow"><div class="li-title" style="text-transform:capitalize">${esc(it.name)}</div><div class="tiny muted">${esc(d.needLabel || 'Recipe needs')} ${esc(it.need || '—')}</div>
@@ -3116,8 +3117,11 @@ function cartSheet() {
     </div>`).join('')}
     <div class="sheet-foot static"><div class="stack">
       ${withAsin.length ? `<a class="btn btn-accent btn-block" href="${esc(cartUrl(withAsin))}" target="_blank" rel="noopener sponsored" data-act="cartOpened">🛒 Open Amazon cart · ${withAsin.length} item${withAsin.length === 1 ? '' : 's'}</a>` : ''}
-      ${searches.length ? `<p class="small muted" style="margin-top:4px">${withAsin.length ? 'These need a quick search:' : 'Tap each to find it on Amazon:'}</p>
-        ${searches.map(it => `<a class="btn btn-ghost btn-block" href="${esc(searchUrl(it.term))}" target="_blank" rel="noopener sponsored" data-act="searchOpened" data-key="${it.key}">Search “${esc(it.term)}” ↗</a>`).join('')}` : ''}
+      ${searches.length ? `<p class="small muted" style="margin-top:4px">${withAsin.length ? 'These need a quick search, one at a time:' : 'Amazon opens one search at a time. Tap again for the next item.'}</p>
+        ${nx ? `<a class="btn ${withAsin.length ? 'btn-primary' : 'btn-accent'} btn-block" href="${esc(searchUrl(nx.term))}" target="_blank" rel="noopener sponsored" data-act="searchNext" data-key="${nx.key}">${k === 1 ? 'Start with' : 'Next:'} ${esc(nx.term)} ↗ (${k} of ${searches.length})</a>`
+          : `<p class="small" style="color:var(--ok);font-weight:600">✓ All ${searches.length} searches opened</p>`}
+        ${searches.length > 1 ? `<details class="cart-each" ${d.each ? 'open' : ''}><summary class="small">Or pick an item</summary>
+        ${searches.map(it => `<a class="btn btn-ghost btn-block" href="${esc(searchUrl(it.term))}" target="_blank" rel="noopener sponsored" data-act="searchOpened" data-key="${it.key}">${d.opened.includes(it.key) ? '✓ ' : ''}Search “${esc(it.term)}” ↗</a>`).join('')}</details>` : ''}` : ''}
       ${!on.length ? `<p class="small muted">Nothing selected.</p>` : ''}
       <p class="disclosure">As an Amazon Associate, Pantry Pal earns from qualifying purchases. Prices and availability are set by Amazon.</p></div></div>`;
 }
@@ -3382,7 +3386,8 @@ const ACT = {
   loadOpts: el => loadOptions(cartDraft.items[Number(el.dataset.i)]),
   pickOpt: el => { const it = cartDraft.items[Number(el.dataset.i)]; rememberPick(it, it.options[Number(el.dataset.j)]); drawSheet(); },
   cartOpened: () => { arrival.left = true; recordPending(cartDraft.items.filter(i => i.on && i.asin)); toast('Opening Amazon… tap “Mark as bought” in Shop after checkout'); render(); setTimeout(drawSheet, 50); },
-  searchOpened: el => { arrival.left = true; const it = cartDraft.items.find(i => i.key === el.dataset.key); if (it) recordPending([it]); render(); },
+  searchOpened: el => { arrival.left = true; const it = cartDraft.items.find(i => i.key === el.dataset.key); if (el.closest('details')) cartDraft.each = true; if (it) { recordPending([it]); if (!cartDraft.opened.includes(it.key)) cartDraft.opened.push(it.key); } render(); setTimeout(drawSheet, 50); },
+  searchNext: el => ACT.searchOpened(el),
 
   scanType: el => { scan.type = el.dataset.v; paste.empty = false; paste.text = ''; scan.error = ''; scan.errorCode = ''; ocr.few = false; ocr.found = null; render(); },
   premiumCode: () => { codeDraft = { err: '', busy: false }; openSheet(codeSheet); setTimeout(() => $('[data-form=premiumCode] input')?.focus(), 250); },

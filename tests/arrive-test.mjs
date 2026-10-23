@@ -76,7 +76,7 @@ await page.click('[data-act=cookView][data-v=library]'); await page.fill('[data-
 await page.locator('#lib-results .card').first().click(); await page.waitForSelector('#sheet.open');
 await page.click('#sheet-body [data-act=cartMissing]'); await page.waitForTimeout(150);
 const popupP = ctx.waitForEvent('page', { timeout: 3000 }).catch(() => null);
-await page.locator('#sheet-body [data-act=searchOpened]').first().click();
+await page.locator('#sheet-body [data-act=searchNext]').first().click();   // the single "Start with … ↗ (1 of N)" button
 const pop = await popupP; if (pop) await pop.close();
 await page.evaluate(() => closeSheet()); await page.click('[data-act=cookView][data-v=feed]');
 await page.evaluate(() => { Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true }); document.dispatchEvent(new Event('visibilitychange')); Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true }); document.dispatchEvent(new Event('visibilitychange')); });
