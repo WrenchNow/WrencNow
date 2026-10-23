@@ -1,0 +1,28 @@
+USDA FSIS FoodKeeper data - provenance (retrieved 2026-10-23)
+
+foodkeeper-fsis-v128-raw.json
+  What: the official FSIS FoodKeeper JSON export, file "FMA-Data-v128.xlsx",
+        data version 128, Modified_Date 09-06-2018 (sheets: Version, Category,
+        Product[661], CookingTips[93], CookingMethods[89], Data Dictionary).
+  Official URL: https://www.fsis.usda.gov/shared/data/EN/foodkeeper.json
+  Catalog:      https://catalog.data.gov/dataset/fsis-foodkeeper-data
+  Obtained from (official hosts block this sandbox with 403):
+     https://gitlab.com/LibreFoodPantry/common-services/FoodKeeper-API
+     file foodkeeper.json, commit 736196ca237b239cdb2cb5b827352ee05e10c77d;
+     file last touched 2019-04-02 (c4f5fcd); README cites the FSIS URL above.
+  License: U.S. Government work (17 U.S.C. 105), public domain; listed as
+     CC0 on data.gov. (The GitLab repo's GPL covers its Java code, not USDA data.)
+
+Faithfulness check (all three copies obtained independently):
+  - vs github.com/prashanth1705498-lab/food-equity data/foodkeeper.json
+    (commit 36df397, 2026-10-20; the current foodsafety.gov feed format,
+    https://www.foodsafety.gov/sites/default/files/foodkeeper_data_url_en.json):
+    661/661 products, 5,949 storage fields compared; all match except
+    singular/plural wording, a "1 Yea" typo on their side (IDs 218, 222),
+    and 4 fields where the source has text in a numeric column (431, 432, 462, 463).
+    Saved as crosscheck-foodsafetygov-format.json.
+  - vs github.com/jelera/food-shelflife-db lib/seeds/ingredients.csv
+    (commit a7bf41f, 2019-06-28): 661 rows, 0 numeric min/max mismatches.
+
+foodkeeper-compact.json: derived by compact.py (in this folder) from the raw file only.
+  Units kept exactly as published (no unit conversion, no estimates).
