@@ -58,7 +58,6 @@ Known constraints (keep them honest in the UI and the plans):
 - Real Amazon product search (needs Associates approval and the Creators API)
 - A weekly "use it up" reminder
 - Shareable recipe cards
-- Ingredient-combination SEO pages
 
 ## Team (subagents in `.claude/agents/`)
 

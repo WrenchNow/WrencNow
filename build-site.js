@@ -39,7 +39,10 @@ a{color:var(--brand)}h1,h2,h3{font-family:Fraunces,Georgia,serif;line-height:1.1
 ul.ing{padding-left:20px}ol.steps li{margin-bottom:10px}
 .box{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin:18px 0}
 footer{margin-top:40px;font-size:13px;color:var(--muted)}footer nav{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:8px}
-.ph{background:#FFF3C4;color:#5A4500;padding:0 4px;border-radius:4px}`;
+.ph{background:#FFF3C4;color:#5A4500;padding:0 4px;border-radius:4px}
+.crumbs{font-size:14px;color:var(--muted);margin:0 0 14px}.crumbs ol{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:4px}.crumbs li+li::before{content:"›";margin-right:4px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 24px;padding:0;list-style:none}.chips a{display:block;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:6px 14px;text-decoration:none;color:var(--ink);font-size:15px}.chips small{color:var(--muted);margin-left:6px}
+.grid .also{margin-top:2px;font-size:13px}.box .cta{margin-top:10px}`;
 // img = { url, w, h, alt } for og:image / twitter:image. opts.nav = false hides the header CTA (landing page has its own).
 const head = (title, desc, canonical, extra = '', type = 'website', img = SITE_IMG, opts = {}) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)}</title><meta name="description" content="${esc(desc)}"><link rel="canonical" href="${canonical}">
@@ -51,7 +54,7 @@ const head = (title, desc, canonical, extra = '', type = 'website', img = SITE_I
 <style>${CSS}</style>${extra}</head><body><div class="wrap">
 <div class="nav"><a href="${SITE}/" style="text-decoration:none;color:inherit"><b>${NAV_ICON}Pantry Pal</b></a>${opts.nav === false ? '' : `<a class="cta" href="${SITE}/app/">Open the app</a>`}</div>`;
 const DISCLOSURE = 'As an Amazon Associate, Pantry Pal earns from qualifying purchases.';
-const foot = (extra = '') => `<footer><nav><a href="${SITE}/">Recipes</a><a href="${SITE}/cuisine/">Cuisines</a><a href="${SITE}/start/">How it works</a><a href="${SITE}/about.html">About</a><a href="${SITE}/privacy.html">Privacy</a></nav>Pantry Pal recipes are written for home cooks. ${DISCLOSURE}${extra}</footer></div></body></html>`;
+const foot = (extra = '') => `<footer><nav><a href="${SITE}/">Recipes</a><a href="${SITE}/cuisine/">Cuisines</a><a href="${SITE}/with/">Cook with what you have</a><a href="${SITE}/start/">How it works</a><a href="${SITE}/about.html">About</a><a href="${SITE}/privacy.html">Privacy</a></nav>Pantry Pal recipes are written for home cooks. ${DISCLOSURE}${extra}</footer></div></body></html>`;
 
 // ---------- Title-card images (SVG source, optional PNG render) ----------
 const C = { cream: '#FAF6EF', green: '#2E6A4E', tomato: '#D9572F', tomatoText: '#B3431F', ink: '#1E2721', muted: '#636A63', line: '#E6DED0' };
@@ -99,7 +102,7 @@ function recipeCard(r, shape) {
 const SITE_CARD = svgOpen(1200, 630, 'Pantry Pal: use what you have before it goes bad') + `<rect width="420" height="630" fill="${C.green}"/>${jar(90, 195, 240)}${brand(480, 60, 56)}${textLines(fit('Use what you have before it goes bad.', 660, [72, 66], 3), 480, 225, SERIF, C.ink)}<text x="480" y="470" font-family="${SANS}" font-size="30" fill="${C.muted}">See what you can cook tonight.</text>${pills([['Free', C.tomatoText, '#fff'], ['No sign-up', '#fff', C.ink, C.line], ['Works in your browser', '#fff', C.ink, C.line]], 480, 515, 26)}</svg>`;
 
 const out = path.join(__dirname, 'site'); fs.rmSync(out, { recursive: true, force: true });
-for (const d of ['recipes', 'app', 'cuisine', 'start', 'img/recipes']) fs.mkdirSync(path.join(out, d), { recursive: true });
+for (const d of ['recipes', 'app', 'cuisine', 'start', 'with', 'img/recipes']) fs.mkdirSync(path.join(out, d), { recursive: true });
 
 // Card list: name -> svg. Rendered (or loaded from cache) before any page is written so pages know .png vs .svg.
 const CARD_VERSION = 2; // bump to force re-render after a design change
@@ -164,6 +167,58 @@ const cuisineUrl = c => `${SITE}/cuisine/${slug(c)}.html`;
 const BASIC = /^(salt|black pepper|pepper|water|olive oil|vegetable oil|oil|butter|sugar|garlic|flour|all-purpose flour)$/i;
 const keyIngs = r => new Set(r.ingredients.map(i => i.name.toLowerCase()).filter(n => !BASIC.test(n)));
 
+// ---------- Ingredient-pair pages (/with/a-and-b/) ----------
+// Main ingredients only: near-duplicates fold into one name (chicken breast + chicken thighs = chicken),
+// and basics, spices, sauces, herbs and broths are ignored. A pair gets a page only if 3+ recipes share it.
+const PAIR_GROUPS = {
+  chicken: ['chicken breast', 'chicken thighs', 'cooked chicken', 'ground chicken', 'whole chicken'],
+  beef: ['ground beef', 'ribeye steak', 'ribeye steaks', 'sirloin steak', 'flank steak', 'beef chuck', 'beef sirloin'],
+  pork: ['pork shoulder', 'pork belly', 'ground pork', 'pork chops'],
+  sausage: ['breakfast sausage', 'smoked sausage', 'italian sausage', 'chorizo'],
+  turkey: ['ground turkey', 'deli turkey'], salmon: ['salmon fillet'], cod: ['cod fillet'], tofu: ['firm tofu', 'soft tofu'], eggs: ['eggs', 'egg'],
+  rice: ['cooked rice', 'jasmine rice', 'long grain rice', 'basmati rice', 'rice', 'short grain rice', 'arborio rice', 'glutinous rice'],
+  pasta: ['spaghetti', 'penne', 'linguine', 'elbow macaroni', 'ditalini pasta', 'small pasta', 'rotini pasta', 'lasagna noodles', 'ziti', 'potato gnocchi'],
+  noodles: ['rice noodles', 'egg noodles', 'lo mein noodles', 'wide rice noodles', 'yakisoba noodles', 'sweet potato noodles', 'instant ramen'],
+  tortillas: ['corn tortillas', 'flour tortillas'],
+  bread: ['bread', 'baguette', 'ciabatta', 'pita bread', 'hamburger buns', 'hoagie rolls', 'baguette rolls', 'flatbreads'],
+  cheddar: ['cheddar cheese'], parmesan: ['parmesan cheese'], feta: ['feta cheese'], mozzarella: ['mozzarella cheese', 'fresh mozzarella'], cotija: ['cotija cheese'],
+  tomatoes: ['tomato', 'tomatoes', 'cherry tomatoes', 'diced tomatoes', 'crushed tomatoes'], 'tomato sauce': ['tomato sauce', 'marinara sauce'],
+  'white beans': ['cannellini beans'], lentils: ['red lentils', 'green lentils'],
+  potatoes: ['potatoes', 'baby potatoes', 'russet potatoes'], 'sweet potatoes': ['sweet potatoes', 'sweet potato'],
+  'bell peppers': ['bell pepper', 'bell peppers', 'green bell pepper'], carrots: ['carrot', 'carrots'], cucumber: ['cucumber', 'cucumbers'], avocado: ['avocado', 'avocados'],
+  cabbage: ['green cabbage', 'red cabbage', 'coleslaw mix'], lettuce: ['lettuce', 'romaine lettuce', 'butter lettuce'], eggplant: ['eggplant', 'eggplants'],
+  peas: ['frozen peas', 'frozen peas and carrots'], bananas: ['bananas', 'banana', 'frozen bananas'], apples: ['apple', 'apples'], yogurt: ['greek yogurt', 'plain yogurt'], oats: ['rolled oats'],
+};
+const PAIR_NORM = {}; for (const [k, v] of Object.entries(PAIR_GROUPS)) for (const n of v) PAIR_NORM[n] = k;
+const PAIR_STOP = new Set(('salt,black pepper,pepper,flaky salt,water,olive oil,vegetable oil,sesame oil,oil,butter,ghee,sugar,brown sugar,powdered sugar,garlic,garlic powder,onion,onions,white onion,red onion,green onions,green onion,shallot,flour,cornstarch,baking powder,baking soda,vanilla extract,' +
+  'cumin,cumin seeds,cinnamon,paprika,smoked paprika,chili powder,turmeric,garam masala,curry powder,oregano,italian seasoning,red pepper flakes,thyme,rosemary,sage,nutmeg,allspice,dry mustard,cajun seasoning,taco seasoning,fajita seasoning,pumpkin pie spice,saffron,' +
+  'soy sauce,fish sauce,oyster sauce,hoisin sauce,rice vinegar,red wine vinegar,apple cider vinegar,mirin,honey,maple syrup,ketchup,mayonnaise,mustard,dijon mustard,worcestershire sauce,sriracha,balsamic glaze,' +
+  'lemon,lemon juice,lime,lime juice,limes,cilantro,parsley,basil,mint,dill,chives,ginger,tomato paste,milk,sesame seeds,breadcrumbs,chicken broth,vegetable broth,beef broth,white wine,red wine,thai chilies,jalapeño,green chiles').split(','));
+const mainIngs = r => [...new Set(r.ingredients.map(i => i.name.toLowerCase()).filter(n => !PAIR_STOP.has(n)).map(n => PAIR_NORM[n] || n))];
+for (const r of LIB) r._main = mainIngs(r);
+// Word order reads naturally: protein, then starch, then produce, then cheese/sauces ("chicken and rice", "pasta and parmesan").
+const TIER = n => /^(chicken|beef|pork|sausage|turkey|salmon|cod|shrimp|tuna|bacon)$/.test(n) ? 0
+  : /^(tofu|eggs|chickpeas|black beans|white beans|lentils)$/.test(n) ? 0.5
+  : /^(pasta|noodles|rice|tortillas|bread|potatoes|sweet potatoes|oats)$/.test(n) ? 1
+  : /^(cheddar|parmesan|feta|mozzarella|cotija|sour cream|salsa|yogurt|tomato sauce|tahini|coconut milk|heavy cream|peanut butter|gochujang|tzatziki)$/.test(n) ? 3 : 2;
+const ING_FREQ = {}; LIB.forEach(r => r._main.forEach(n => { ING_FREQ[n] = (ING_FREQ[n] || 0) + 1; }));
+const ingOrder = (a, b) => TIER(a) - TIER(b) || ING_FREQ[b] - ING_FREQ[a] || a.localeCompare(b);
+const PAIR_MIN = 3, PAIR_MAX = 100;
+const PAIRS = (() => {
+  const m = {};
+  LIB.forEach(r => { const g = [...r._main].sort(ingOrder); for (let i = 0; i < g.length; i++) for (let j = i + 1; j < g.length; j++) { const k = g[i] + '|' + g[j]; (m[k] = m[k] || []).push(r); } });
+  const cand = Object.entries(m).filter(e => e[1].length >= PAIR_MIN).sort((x, y) => y[1].length - x[1].length || x[0].localeCompare(y[0]));
+  // Skip near-duplicate pages: a pair whose recipe list mostly matches a bigger page already kept (Jaccard >= 0.75).
+  const jac = (a, b) => { const s = new Set(a); const n = b.filter(x => s.has(x)).length; return n / (a.length + b.length - n); };
+  const kept = [];
+  for (const [k, list] of cand) { if (kept.length >= PAIR_MAX) break; if (kept.some(p => jac(p.list, list) >= 0.75)) continue; const [a, b] = k.split('|'); kept.push({ a, b, list }); }
+  for (const p of kept) { p.name = `${p.a} and ${p.b}`; p.slug = `${slug(p.a)}-and-${slug(p.b)}`; p.url = `${SITE}/with/${p.slug}/`; p.list.sort((x, y) => x.time - y.time || x.title.localeCompare(y.title)); }
+  return kept;
+})();
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+// Recipe -> its pair pages, biggest first (used for "More with ..." links on recipe pages).
+const PAIRS_OF = new Map(); for (const p of PAIRS) for (const r of p.list) { if (!PAIRS_OF.has(r)) PAIRS_OF.set(r, []); PAIRS_OF.get(r).push(p); }
+
 const urls = [`${SITE}/`];
 for (const r of LIB) r._url = `${SITE}/recipes/${slug(r.title)}.html`;
 for (const r of LIB) {
@@ -185,7 +240,8 @@ for (const r of LIB) {
 <div class="box"><b>Have some of these already?</b> Pantry Pal scans your fridge and tells you exactly what you can cook tonight — and scales this recipe to any party size. <a href="${SITE}/app/">Try it free →</a></div>
 <h2>Ingredients</h2><ul class="ing">${r.ingredients.map(i => `<li><b>${esc(amt(i))}</b> ${esc(i.name)}</li>`).join('')}</ul>
 <h2>Steps</h2><ol class="steps">${r.steps.map(t => `<li>${esc(t)}</li>`).join('')}</ol>
-<h2>More like this</h2><ul class="grid">${related.map(x => `<li><a href="${SITE}/recipes/${slug(x.title)}.html">${esc(x.title)}<small>${x.time} min · ${esc(x.cuisine)}</small></a></li>`).join('')}</ul>` + foot());
+<h2>More like this</h2><ul class="grid">${related.map(x => `<li><a href="${SITE}/recipes/${slug(x.title)}.html">${esc(x.title)}<small>${x.time} min · ${esc(x.cuisine)}</small></a></li>`).join('')}</ul>${(PAIRS_OF.get(r) || []).length ? `
+<h2>Cook with what you have</h2><ul class="chips">${PAIRS_OF.get(r).slice(0, 4).map(p => `<li><a href="${p.url}">More with ${esc(p.name)}<small>${p.list.length} recipes</small></a></li>`).join('')}</ul>` : ''}` + foot());
 }
 
 const meals = ['Breakfast', 'Lunch', 'Dinner', 'Side', 'Snack', 'Dessert'];
@@ -194,6 +250,9 @@ fs.writeFileSync(path.join(out, 'index.html'), head('Pantry Pal — cook what yo
 <p class="muted">Snap your fridge or a grocery receipt. Pantry Pal lists what you’ve got, flags what’s about to expire, and shows recipes you can make tonight — scaled for your crew, with allergy flags to help you choose (always check labels yourself).</p>
 <p><a class="cta" href="${SITE}/app/">Open Pantry Pal — free</a></p><p style="margin:0"><a href="${SITE}/start/">New here? See how Pantry Pal works →</a></p></section>
 <h2>Browse by cuisine</h2><div class="meta">${CUISINES.map(c => `<span><a href="${cuisineUrl(c)}">${esc(c)}</a> ${LIB.filter(r => r.cuisine === c).length}</span>`).join('')}</div>
+<h2>Cook with what you have</h2><p class="muted" style="margin-top:0">Got two things in the fridge? Pick them and see every recipe that uses both.</p>
+<ul class="chips">${PAIRS.slice(0, 12).map(p => `<li><a href="${p.url}">${esc(cap(p.name))}<small>${p.list.length}</small></a></li>`).join('')}</ul>
+<p style="margin-top:-12px"><a href="${SITE}/with/">See all ${PAIRS.length} ingredient pairs →</a></p>
 ${meals.map(m => { const l = LIB.filter(r => r.meal === m); return l.length ? `<h2>${m} <span class="muted" style="font-size:16px">${l.length}</span></h2><ul class="grid">${l.map(r => `<li><a href="${r._url}">${esc(r.title)}<small>${r.time} min · ${esc(r.cuisine)} · ${r.nutrition.kcal} cal</small></a></li>`).join('')}</ul>` : ''; }).join('')}` + foot());
 
 // Cuisine pages: intro is built from the recipe data so each page is unique.
@@ -213,6 +272,56 @@ ${byMeal.map(([m, x]) => `<h2>${m}</h2><ul class="grid">${x.map(card).join('')}<
 urls.push(`${SITE}/cuisine/`);
 fs.writeFileSync(path.join(out, 'cuisine', 'index.html'), head('Recipes by Cuisine — Pantry Pal', `Browse ${LIB.length} Pantry Pal recipes across ${CUISINES.length} cuisines, from ${CUISINES[0]} to ${CUISINES[CUISINES.length - 1]}.`, `${SITE}/cuisine/`) + `
 <h1>Recipes by cuisine</h1><ul class="grid">${CUISINES.map(c => `<li><a href="${cuisineUrl(c)}">${esc(c)}<small>${LIB.filter(r => r.cuisine === c).length} recipes</small></a></li>`).join('')}</ul>` + foot());
+
+// Ingredient-pair pages: every sentence is built from that pair's own recipes, so no two pages read alike.
+{
+  const andList = a => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
+  const PLURAL = { Breakfast: 'breakfasts', Lunch: 'lunches', Dinner: 'dinners', Side: 'sides', Snack: 'snacks', Dessert: 'desserts' };
+  const mealMix = l => meals.map(m => [m, l.filter(r => r.meal === m).length]).filter(e => e[1]).sort((x, y) => y[1] - x[1]).map(([m, n]) => `${n} ${n === 1 ? m.toLowerCase() : PLURAL[m]}`);
+  const crumbs = items => `<nav class="crumbs" aria-label="Breadcrumb"><ol>${items.map(([t, u], i) => `<li>${i < items.length - 1 ? `<a href="${u}">${esc(t)}</a>` : `<span aria-current="page">${esc(t)}</span>`}</li>`).join('')}</ol></nav>`;
+  const crumbLd = items => ({ '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: items.map(([t, u], i) => ({ '@type': 'ListItem', position: i + 1, name: t, item: u })) });
+  const ldTag = o => `<script type="application/ld+json">${JSON.stringify(o).replace(/</g, '\\u003c')}</script>`;
+  const WITH = `${SITE}/with/`;
+  const appBox = (lead) => `<div class="box"><b>${lead}</b> Open Pantry Pal and see what else you can make. It checks your fridge, pantry and freezer and shows what you can cook tonight, plus the one or two things you're missing.<br><a class="cta" href="${SITE}/app/">Open Pantry Pal, it's free</a></div>`;
+  for (const p of PAIRS) {
+    const l = p.list, n = l.length, Name = cap(p.name); urls.push(p.url);
+    const quick = l[0], slow = l[n - 1];
+    const avg = Math.round(l.reduce((t, r) => t + r.nutrition.kcal, 0) / n), avgP = Math.round(l.reduce((t, r) => t + r.nutrition.protein, 0) / n);
+    const protein = [...l].sort((x, y) => y.nutrition.protein - x.nutrition.protein)[0];
+    const cuis = [...new Set(l.map(r => r.cuisine))];
+    const mix = mealMix(l);
+    // Other main ingredients that show up in 2+ of these recipes.
+    const cnt = {}; l.forEach(r => r._main.forEach(g => { if (g !== p.a && g !== p.b) cnt[g] = (cnt[g] || 0) + 1; }));
+    const joins = Object.entries(cnt).filter(e => e[1] > 1).sort((x, y) => y[1] - x[1] || x[0].localeCompare(y[0])).slice(0, 5);
+    // When a name covers several ingredients (chicken = breast, thighs...), say which ones these recipes use.
+    const covers = [p.a, p.b].map(g => { const v = [...new Set(l.flatMap(r => r.ingredients.map(i => i.name.toLowerCase()).filter(x => PAIR_NORM[x] === g && x !== g && x !== g.replace(/s$/, ''))))].sort(); return v.length ? `“${g}” includes ${andList(v)}` : ''; }).filter(Boolean);
+    const related = PAIRS.filter(q => q !== p && (q.a === p.a || q.b === p.a || q.a === p.b || q.b === p.b)).slice(0, 6);
+    const desc = `${n} recipes with ${p.name}, from ${quick.title} (${quick.time} min) to ${slow.title}. ${cap(andList(mix))}, about ${avg} calories a serving.`;
+    const items = [['Recipes', `${SITE}/`], ['Cook with what you have', WITH], [Name, p.url]];
+    const itemList = { '@context': 'https://schema.org', '@type': 'ItemList', name: `${Name} recipes`, numberOfItems: n, itemListElement: l.map((r, i) => ({ '@type': 'ListItem', position: i + 1, url: r._url, name: r.title })) };
+    const recipeCard = r => { const also = r._main.filter(g => g !== p.a && g !== p.b).sort(ingOrder).slice(0, 3); return `<li><a href="${r._url}">${esc(r.title)}<small>${r.time} min · ${esc(r.meal)} · ${r.nutrition.kcal} cal</small>${also.length ? `<small class="also">Also uses ${esc(andList(also))}</small>` : ''}</a></li>`; };
+    fs.mkdirSync(path.join(out, 'with', p.slug), { recursive: true });
+    fs.writeFileSync(path.join(out, 'with', p.slug, 'index.html'), head(`${Name} recipes (${n}) — Pantry Pal`, desc, p.url, ldTag(itemList) + ldTag(crumbLd(items))) + `
+${crumbs(items)}<h1>${esc(Name)} recipes</h1>
+<p>${n} Pantry Pal recipes use both ${esc(p.a)} and ${esc(p.b)}: ${esc(andList(mix))}${cuis.length > 1 ? `, from ${cuis.length} cuisines (${esc(andList(cuis))})` : `, all ${esc(cuis[0])}`}. The quickest is <a href="${quick._url}">${esc(quick.title)}</a> at ${quick.time} minutes${slow.time > quick.time ? `, and the longest, <a href="${slow._url}">${esc(slow.title)}</a>, takes ${fmtTime(slow.time)}` : ''}. They average ${avg} calories and ${avgP}g protein per serving${protein !== quick ? `, and <a href="${protein._url}">${esc(protein.title)}</a> has the most protein at ${protein.nutrition.protein}g` : ''}.</p>
+${joins.length ? `<p>Ingredients that often join ${esc(p.a)} and ${esc(p.b)} here: ${esc(andList(joins.map(([g, c]) => `${g} (${c} recipes)`)))}.${covers.length ? ` On this page, ${esc(andList(covers))}.` : ''}</p>` : covers.length ? `<p>On this page, ${esc(andList(covers))}.</p>` : ''}
+<h2>${n} recipes, quickest first</h2><ul class="grid">${l.map(recipeCard).join('')}</ul>
+${appBox('Have these at home?')}
+${related.length ? `<h2>More ingredient pairs</h2><ul class="chips">${related.map(q => `<li><a href="${q.url}">${esc(cap(q.name))}<small>${q.list.length}</small></a></li>`).join('')}</ul>` : ''}
+<p><a href="${WITH}">All ingredient pairs →</a></p>` + foot());
+  }
+  // Index: grouped by the first ingredient of each pair, biggest groups first.
+  urls.push(WITH);
+  const groups = {}; for (const p of PAIRS) (groups[p.a] = groups[p.a] || []).push(p);
+  const order = Object.keys(groups).sort((x, y) => groups[y].length - groups[x].length || ingOrder(x, y));
+  const items = [['Recipes', `${SITE}/`], ['Cook with what you have', WITH]];
+  const covered = new Set(PAIRS.flatMap(p => p.list)).size;
+  fs.writeFileSync(path.join(out, 'with', 'index.html'), head('Cook with what you have: recipes by ingredient pair — Pantry Pal', `${PAIRS.length} ingredient pairs, from ${PAIRS[0].name} to ${PAIRS[PAIRS.length - 1].name}. Pick two things you already have and see every Pantry Pal recipe that uses both.`, WITH, ldTag(crumbLd(items))) + `
+${crumbs(items)}<h1>Cook with what you have</h1>
+<p>Pick two ingredients you already have and see every recipe that uses both. There are ${PAIRS.length} pairs here, each with at least ${PAIR_MIN} recipes, covering ${covered} of the ${LIB.length} recipes in the library. Similar ingredients count together, so chicken breast and chicken thighs both count as chicken. The biggest pair is <a href="${PAIRS[0].url}">${esc(PAIRS[0].name)}</a> with ${PAIRS[0].list.length} recipes.</p>
+${order.map(g => `<h2>${esc(cap(g))}</h2><ul class="grid">${groups[g].map(p => `<li><a href="${p.url}">${esc(cap(p.name))}<small>${p.list.length} recipes · quickest ${p.list[0].time} min</small></a></li>`).join('')}</ul>`).join('')}
+${appBox('Have more than two things at home?')}` + foot());
+}
 
 // About + Privacy. Text in [PLACEHOLDER] boxes is for Wyatt to replace before applying to Amazon Associates.
 const PH = t => `<span class="ph">[PLACEHOLDER: ${t}]</span>`;
@@ -324,6 +433,6 @@ fs.copyFileSync(path.join(__dirname, 'pantry-pal.html'), path.join(out, 'app', '
 fs.copyFileSync(path.join(__dirname, 'sw.js'), path.join(out, 'app', 'sw.js'));
 fs.writeFileSync(path.join(out, 'favicon.svg'), ICON_SVG + '\n');
 fs.copyFileSync(path.join(__dirname, 'src', 'apple-touch-icon.png'), path.join(out, 'apple-touch-icon.png'));
-console.log(`Built ${LIB.length} recipe pages, ${CUISINES.length} cuisine pages, index, landing page (/start/), about and privacy into site/ for ${SITE} (${urls.length} URLs in sitemap)`);
+console.log(`Built ${LIB.length} recipe pages, ${CUISINES.length} cuisine pages, ${PAIRS.length} ingredient-pair pages (/with/), index, landing page (/start/), about and privacy into site/ for ${SITE} (${urls.length} URLs in sitemap)`);
 }
 main().catch(e => { console.error(e); process.exit(1); });
