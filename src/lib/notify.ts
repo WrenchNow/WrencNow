@@ -197,3 +197,34 @@ export async function notifyEmail(key: string, email: string, subject: string, t
     console.error("notifyEmail failed", key, e);
   }
 }
+
+/** Parts quote events: customer gets the quote to approve; mechanic hears the answer. */
+export async function notifyBookingParts(bookingId: string, event: "quoted" | "approved" | "declined") {
+  if (!emailConfigured() && !smsConfigured()) return;
+  try {
+    const admin = createAdminClient();
+    const { data: b } = await admin.from("bookings").select("*, services(name), mechanics(display_name)").eq("id", bookingId).single();
+    if (!b) return;
+    const version = b.parts_quote_sent_at ?? "";
+    const mechanicName = b.mechanics?.display_name ?? "Your mechanic";
+    if (event === "quoted") {
+      const link = `${siteUrl()}/account/bookings/${b.id}`;
+      return deliver(`booking:${b.id}:parts_quoted:${version}:customer`, await contactFor(b.customer_id), "parts_quoted", {
+        subject: `${mechanicName} sent a parts quote`,
+        text: `${mechanicName} sent an itemized parts quote for your ${b.services?.name ?? "job"}. Review and approve it before they buy the parts: ${link}`,
+        sms: `${mechanicName} sent a parts quote. Review and approve it: ${link}`,
+      });
+    }
+    const link = `${siteUrl()}/mechanic/jobs#${b.id}`;
+    return deliver(`booking:${b.id}:parts_${event}:${version}:mechanic`, await contactFor(b.mechanic_id), `parts_${event}`, {
+      subject: event === "approved" ? "Parts quote approved — you can buy the parts" : "Parts quote declined",
+      text:
+        event === "approved"
+          ? `The customer approved your parts quote. Buy the parts and upload each receipt in the app: ${link}`
+          : `The customer declined your parts quote. Talk with them and send a new quote if needed: ${link}`,
+      sms: event === "approved" ? `Parts quote approved. Upload receipts in the app: ${link}` : `Parts quote declined: ${link}`,
+    });
+  } catch (e) {
+    console.error("notifyBookingParts failed", bookingId, event, e);
+  }
+}

@@ -13,7 +13,9 @@ import {
   type Actor,
   type BookingStatus,
 } from "@/lib/booking-status";
-import { customerNoShowFeeCents, onboardingFeePerJobCents, platformFeeBps, processingFeeBps, processingFeeFixedCents } from "@/lib/env";
+import { customerNoShowFeeCents, onboardingFeePerJobCents, partsHandlingBps, platformFeeBps, processingFeeBps, processingFeeFixedCents } from "@/lib/env";
+import { partsEstimateFor } from "@/lib/parts";
+import { jobFees, partsChargeCents, partsHandlingCents, planCapture } from "@/lib/parts-math";
 import { geocode } from "@/lib/geocode";
 import { estimateMaxCents, mechanicDeductionsCents } from "@/lib/fees";
 import { isOfferedSlot } from "@/lib/slots";
@@ -23,7 +25,8 @@ import type { Database } from "@/types/database";
 
 export type BookingRow = Database["public"]["Tables"]["bookings"]["Row"];
 
-export class BookingError extends Error {}
+export { BookingError } from "@/lib/booking-error";
+import { BookingError } from "@/lib/booking-error";
 
 const STALE_UNPAID_MINUTES = 30;
 
@@ -140,7 +143,10 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
 
   const start = new Date(input.start);
   const end = new Date(start.getTime() + service.est_minutes_max * 60_000);
-  const estimate = estimateMaxCents(mechanic.hourly_rate_cents, service.est_minutes_max);
+  const laborMax = estimateMaxCents(mechanic.hourly_rate_cents, service.est_minutes_max);
+  // Parts estimate (cost) from real receipts for similar jobs, else the mechanic's typical price; handling added on top.
+  const partsEst = await partsEstimateFor(mechanic.id, service.id, vehicle.make, vehicle.model);
+  const estimate = laborMax + partsChargeCents(partsEst.cents, partsHandlingBps());
   const deductions = feesFor(estimate);
   const fee = deductions.platform;
   const vehicleDesc = [vehicle.year, vehicle.make, vehicle.model, vehicle.trim].filter(Boolean).join(" ");
@@ -161,6 +167,11 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
       scheduled_end: end.toISOString(),
       hourly_rate_cents: mechanic.hourly_rate_cents,
       estimated_max_cents: estimate,
+      hold_cents: estimate,
+      labor_max_cents: laborMax,
+      parts_estimate_cents: partsEst.cents,
+      vehicle_make: vehicle.make,
+      vehicle_model: vehicle.model,
       platform_fee_cents: fee,
       // Colorado Motor Vehicle Repair Act: record the customer's consent to the written estimate.
       estimate_approved_at: new Date().toISOString(),
@@ -207,7 +218,7 @@ function feesFor(totalCents: number) {
   return mechanicDeductionsCents(totalCents, platformFeeBps(), processingFeeBps(), processingFeeFixedCents());
 }
 
-export type TransitionOptions = { finalAmountCents?: number; laborCents?: number; partsCents?: number; reason?: string; arrivalCode?: string };
+export type TransitionOptions = { finalAmountCents?: number; laborCents?: number; reason?: string; arrivalCode?: string };
 
 function insuranceCurrent(expiresOn: string | null): boolean {
   return Boolean(expiresOn && expiresOn >= new Date().toISOString().slice(0, 10));
@@ -354,60 +365,85 @@ async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor
       break;
     }
     case "completed": {
-      // Itemized receipt: labor + parts make up the final amount.
-      if (opts.laborCents !== undefined || opts.partsCents !== undefined) {
-        const labor = opts.laborCents ?? 0;
-        const parts = opts.partsCents ?? 0;
-        if (!Number.isInteger(labor) || !Number.isInteger(parts) || labor < 0 || parts < 0) throw new BookingError("Enter labor and parts as dollar amounts.");
-        opts.finalAmountCents = labor + parts;
-        update.labor_cents = labor;
-        update.parts_cents = parts;
+      // Labor is entered by the mechanic; parts come from uploaded receipts (+ disclosed handling).
+      const labor = opts.laborCents;
+      if (labor === undefined || !Number.isInteger(labor) || labor < 0) throw new BookingError("Enter the labor charge.");
+      const laborMax = b.labor_max_cents ?? b.estimated_max_cents;
+      if (labor > laborMax) throw new BookingError(`Labor can't be more than the approved labor estimate (${(laborMax / 100).toFixed(2)}).`);
+      const { data: parts } = await admin.from("booking_parts").select("status, receipt_cents").eq("booking_id", b.id);
+      if ((parts ?? []).some((p) => p.status === "approved")) {
+        throw new BookingError("Upload the receipt for each approved part, or remove parts you didn't use.");
       }
-      const final = opts.finalAmountCents;
-      if (!final || !Number.isInteger(final) || final <= 0) throw new BookingError("Enter the final amount for the job.");
-      if (final > b.estimated_max_cents) throw new BookingError("The final amount can't be more than the estimate the customer approved.");
+      if ((parts ?? []).some((p) => p.status === "quoted")) throw new BookingError("The customer hasn't approved your parts quote yet.");
+      const partsReceipt = (parts ?? []).filter((p) => p.status === "purchased").reduce((sum, p) => sum + (p.receipt_cents ?? 0), 0);
+      const handling = partsHandlingCents(partsReceipt, partsHandlingBps());
+      const final = labor + partsReceipt + handling;
+      if (final <= 0) throw new BookingError("Enter what the job cost.");
+      if (final > b.estimated_max_cents) throw new BookingError("The total can't be more than the estimate the customer approved.");
       if (!b.stripe_payment_intent_id || !["authorized", "captured"].includes(b.payment_status)) {
         throw new BookingError("There's no authorized payment to capture.");
       }
-      // If a previous attempt captured but failed to save, don't capture twice — record what Stripe actually took.
-      const pi = await stripe.paymentIntents.retrieve(b.stripe_payment_intent_id);
+
+      const fees = jobFees(labor, final, platformFeeBps(), processingFeeBps(), processingFeeFixedCents());
+      const main = await stripe.paymentIntents.retrieve(b.stripe_payment_intent_id);
+      const topup = b.topup_payment_intent_id ? await stripe.paymentIntents.retrieve(b.topup_payment_intent_id) : null;
       let captured = final;
       let onboarding = 0;
-      if (pi.status === "requires_capture") {
-        const { platform, processing } = feesFor(final);
-        const platformFee = platform + processing;
+      if (main.status === "requires_capture") {
         // Onboarding fee installment comes out of the mechanic's share, on top of the platform and processing fees.
         const { data: claimed } = await admin.rpc("claim_onboarding_fee", {
           p_booking_id: b.id,
           p_per_job_cents: onboardingFeePerJobCents(),
           p_final_cents: final,
-          p_platform_fee_cents: platformFee,
+          p_platform_fee_cents: fees.platform + fees.processing,
         });
         onboarding = claimed ?? 0;
+        const topupAuth = topup?.status === "requires_capture" ? topup.amount_capturable : 0;
+        const plan = planCapture(final, main.amount_capturable, topupAuth, fees.platform + fees.processing + onboarding);
         try {
           await stripe.paymentIntents.capture(
-            b.stripe_payment_intent_id,
-            { amount_to_capture: final, application_fee_amount: platformFee + onboarding },
+            main.id,
+            { amount_to_capture: plan.mainCapture, application_fee_amount: plan.mainFee },
             { idempotencyKey: `capture-${b.id}-${final}-${onboarding}` },
           );
+          if (topup && topup.status === "requires_capture") {
+            if (plan.topupCapture > 0) {
+              await stripe.paymentIntents.capture(
+                topup.id,
+                { amount_to_capture: plan.topupCapture, application_fee_amount: plan.topupFee },
+                { idempotencyKey: `capture-topup-${b.id}-${final}` },
+              );
+            } else {
+              await stripe.paymentIntents.cancel(topup.id).catch(() => undefined);
+            }
+          }
         } catch (e) {
           if (onboarding) await admin.rpc("release_onboarding_fee", { p_booking_id: b.id });
           throw e;
         }
-      } else if (pi.status === "succeeded") {
-        captured = pi.amount_received;
+      } else if (main.status === "succeeded") {
+        // A previous attempt captured but failed to save — record what Stripe actually took.
+        captured = main.amount_received + (topup?.status === "succeeded" ? topup.amount_received : 0);
         const { data: row } = await admin.from("onboarding_fee_charges").select("amount_cents").eq("booking_id", b.id).maybeSingle();
         onboarding = row?.amount_cents ?? 0;
       } else {
         throw new BookingError("The customer's payment can't be captured. Contact support.");
       }
+      update.labor_cents = labor;
+      update.parts_cents = partsReceipt;
+      update.parts_handling_cents = handling;
       update.final_amount_cents = captured;
-      update.platform_fee_cents = feesFor(captured).platform;
-      update.processing_fee_cents = feesFor(captured).processing;
+      update.platform_fee_cents = fees.platform;
+      update.processing_fee_cents = fees.processing;
       update.onboarding_fee_cents = onboarding;
       update.payment_status = "captured";
       break;
     }
+  }
+
+  // Release any unused parts top-up hold when a job ends without completing.
+  if (["cancelled", "no_show", "customer_no_show"].includes(to) && b.topup_payment_intent_id) {
+    await stripe.paymentIntents.cancel(b.topup_payment_intent_id).catch(() => undefined);
   }
 
   update.processing_until = null;

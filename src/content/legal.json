@@ -92,6 +92,9 @@
       "p": "Customers pay for services through the WrenchNow platform. WrenchNow charges a platform fee on each transaction. All payments are processed by Stripe, Inc. and are subject to Stripe's terms and conditions. WrenchNow is not responsible for any errors, delays, or failures in payment processing."
      },
      {
+      "p": "Parts: your estimate includes labor and, where available, a parts estimate. Before buying parts, your Mechanic sends an itemized parts list for your approval in the app; your approval is recorded with the date and time. Parts are billed at the receipt price, never more than the amount you approved, plus a handling charge of {{PARTS_HANDLING}} of the parts cost. You can view each receipt in the app."
+     },
+     {
       "p": "All sales are final unless WrenchNow determines at its sole discretion that a refund is warranted. Disputes regarding payment must be raised within 30 days of the transaction."
      },
      {
@@ -594,6 +597,9 @@
      },
      {
       "p": "Payments are processed through Stripe Connect. You are required to maintain a valid Stripe Connect account to receive payments. WrenchNow is not responsible for delays or failures in payment processing caused by Stripe or by errors in your account information."
+     },
+     {
+      "p": "Parts: before buying parts for a job, you must send the customer an itemized parts quote through WrenchNow and receive their approval in the app. You must upload a genuine receipt for each part and may not charge more than the receipt amount or the approved quote. A handling charge of {{PARTS_HANDLING}} of the parts cost is added for you. Altered or false receipts are grounds for removal from the platform."
      }
     ]
    },

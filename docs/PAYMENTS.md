@@ -43,3 +43,20 @@ Nothing is paid up front. At capture, `claim_onboarding_fee()` reserves this job
 `ONBOARDING_FEE_TOTAL_CENTS`, $50). It's added to `application_fee_amount`, so it comes out of the mechanic's
 transfer and the customer's charge is unchanged. If the capture fails, or the job is later fully refunded,
 `release_onboarding_fee()` gives the installment back.
+
+## Parts (quote → approval → receipts)
+- **Estimate at booking** = labor (rate × max time) + a parts estimate. The parts estimate is the median receipt
+  cost for the same service and car make/model (5+ completed jobs), else for the service overall (5+), else the
+  mechanic's own typical parts price, else nothing. It never shows a made-up number. Handling (`PARTS_HANDLING_BPS`,
+  default 5%) is added on top. The original card hold covers this total (`hold_cents`).
+- **Parts quote:** once a mechanic accepts, they send itemized lines (part, part #, quantity, price). The customer
+  approves in the app, and `parts_approved_at` plus an audit row record the consent (C.R.S. § 42-9-104/105). If
+  labor max + quoted parts + handling is more than the original hold, a second manual-capture **top-up**
+  PaymentIntent is authorized for the difference before the approval takes effect.
+- **Receipts:** for each approved part, the mechanic uploads a receipt photo (private `part-receipts` bucket) and
+  enters the amount, which can't be more than that line's approved quote. Customers see receipts through 10-minute
+  signed links.
+- **Completion:** the mechanic enters labor (≤ labor max). Parts = sum of receipts + handling. The charge fills the
+  original hold first, then the top-up (`planCapture`); an unused top-up is cancelled. The platform fee applies to
+  labor only; card processing applies to the whole charge.
+- **Learning:** every completed job's receipts feed `typical_parts_cost()`, so estimates get more accurate on their own.

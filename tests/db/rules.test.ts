@@ -581,3 +581,56 @@ run("Colorado repair act fields", () => {
   });
 });
 
+run("parts quotes and receipts", () => {
+  type Q = (sql: string, params?: unknown[]) => Promise<pg.QueryResult>;
+  const addPart = (q: Q, booking: string, status = "quoted", receipt: number | null = null) =>
+    q(
+      "insert into public.booking_parts (booking_id, mechanic_id, name, quantity, quoted_unit_cents, status, receipt_cents) values ($1, $2, 'Brake pads', 1, 4500, $3, $4) returning id",
+      [booking, ids["mechanic.basic"], status, receipt],
+    );
+
+  it("only the booking's customer and mechanic can see its parts", async () => {
+    await tx(async (q) => {
+      const id = await insertBooking(q, ids["mechanic.basic"], "oil-change", future(1));
+      await addPart(q, id);
+      for (const [who, n] of [["customer", 1], ["mechanic.basic", 1], ["mechanic.certified", 0]] as const) {
+        await q("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: ids[who], role: "authenticated" })]);
+        await q("set local role authenticated");
+        expect((await q("select count(*)::int as n from public.booking_parts")).rows[0].n).toBe(n);
+        await q("reset role");
+      }
+    });
+  });
+
+  it("nobody can write parts or receipts directly (server only)", async () => {
+    await expect(
+      tx(async (q) => {
+        const id = await insertBooking(q, ids["mechanic.basic"], "oil-change", future(1));
+        await q("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: ids["mechanic.basic"], role: "authenticated" })]);
+        await q("set local role authenticated");
+        await q("insert into public.booking_parts (booking_id, mechanic_id, name, quoted_unit_cents) values ($1, auth.uid(), 'x', 100)", [id]);
+      }),
+    ).rejects.toThrow(/permission denied/);
+  });
+
+  it("learns the typical parts cost from 5+ real receipts (median)", async () => {
+    await tx(async (q) => {
+      const svc = services["oil-change"];
+      const none = await q("select * from public.typical_parts_cost($1, 'Testmake', 'Testmodel')", [svc]);
+      expect(none.rowCount).toBe(0); // not enough data → no made-up number
+      const receipts = [3000, 3200, 3400, 9000, 3100];
+      for (let i = 0; i < receipts.length; i++) {
+        const id = await insertBooking(q, ids["mechanic.basic"], "oil-change", future(i + 1));
+        await q("update public.bookings set vehicle_make = 'Testmake', vehicle_model = 'Testmodel' where id = $1", [id]);
+        await addPart(q, id, "purchased", receipts[i]!);
+        await q("update public.bookings set payment_status = 'authorized' where id = $1", [id]);
+        await verifiedCode(q, id);
+        for (const st of ["accepted", "en_route", "in_progress"]) await q("update public.bookings set status = $2 where id = $1", [id, st]);
+        await q("update public.bookings set payment_status = 'captured', final_amount_cents = 9000, status = 'completed' where id = $1", [id]);
+      }
+      const r = (await q("select * from public.typical_parts_cost($1, 'testmake', 'TESTMODEL')", [svc])).rows[0];
+      expect(r).toEqual({ cents: 3200, sample: 5, basis: "model" });
+    });
+  });
+});
+

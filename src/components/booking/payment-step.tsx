@@ -13,7 +13,7 @@ function getStripe(key: string) {
   return stripePromise;
 }
 
-function PayForm({ bookingId, amountLabel }: { bookingId: string; amountLabel: string }) {
+function PayForm({ bookingId, amountLabel, returnQuery }: { bookingId: string; amountLabel: string; returnQuery: string }) {
   const stripe = useStripe();
   const elements = useElements();
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +26,7 @@ function PayForm({ bookingId, amountLabel }: { bookingId: string; amountLabel: s
     setError(null);
     const { error } = await stripe.confirmPayment({
       elements,
-      confirmParams: { return_url: `${window.location.origin}/account/bookings/${bookingId}?paid=1` },
+      confirmParams: { return_url: `${window.location.origin}/account/bookings/${bookingId}?${returnQuery}` },
     });
     // Only reached on an immediate error; success redirects to return_url.
     setError(error?.message ?? "Payment didn't go through. Please try again.");
@@ -45,7 +45,19 @@ function PayForm({ bookingId, amountLabel }: { bookingId: string; amountLabel: s
   );
 }
 
-export function PaymentStep({ publishableKey, clientSecret, bookingId, amountLabel }: { publishableKey: string; clientSecret: string; bookingId: string; amountLabel: string }) {
+export function PaymentStep({
+  publishableKey,
+  clientSecret,
+  bookingId,
+  amountLabel,
+  returnQuery = "paid=1",
+}: {
+  publishableKey: string;
+  clientSecret: string;
+  bookingId: string;
+  amountLabel: string;
+  returnQuery?: string;
+}) {
   const stripe = useMemo(() => getStripe(publishableKey), [publishableKey]);
   return (
     <Elements
@@ -58,7 +70,7 @@ export function PaymentStep({ publishableKey, clientSecret, bookingId, amountLab
         },
       }}
     >
-      <PayForm bookingId={bookingId} amountLabel={amountLabel} />
+      <PayForm bookingId={bookingId} amountLabel={amountLabel} returnQuery={returnQuery} />
     </Elements>
   );
 }

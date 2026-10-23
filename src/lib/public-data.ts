@@ -43,3 +43,16 @@ export async function getPublicMechanic(id: string) {
     .sort((a, b) => a.sort - b.sort);
   return { ...m, rating_avg: m.rating_avg === null ? null : Number(m.rating_avg), services, reviews: reviews ?? [], warranty_days: warranty ?? 0 };
 }
+
+/**
+ * Display names for mechanics on the viewer's own bookings. Customers can't read the
+ * private mechanics table (RLS), so names come from the service role — pass only ids
+ * taken from bookings the viewer was allowed to read.
+ */
+export async function mechanicNames(ids: string[]): Promise<Map<string, string>> {
+  const unique = [...new Set(ids)];
+  if (!unique.length) return new Map();
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const { data } = await createAdminClient().from("mechanics").select("id, display_name").in("id", unique);
+  return new Map((data ?? []).filter((m) => m.display_name).map((m) => [m.id, m.display_name!]));
+}

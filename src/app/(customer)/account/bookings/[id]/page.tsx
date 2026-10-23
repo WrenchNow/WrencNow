@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CustomerBookingActions, OffPlatformReport, ReviewForm } from "@/components/account/forms";
+import { PartsQuote, type CustomerPart } from "@/components/account/parts-quote";
 import { LiveRefresh } from "@/components/account/live-refresh";
 import { StatusTimeline } from "@/components/account/status-timeline";
 import { Stars } from "@/components/review-list";
@@ -13,9 +14,12 @@ import { PageHeader } from "@/components/ui/layout";
 import { requireRole } from "@/lib/auth";
 import { customerNoShowAt, noShowReportable } from "@/lib/booking-status";
 import { syncBookingPayment } from "@/lib/bookings";
-import { customerNoShowFeeCents, stripeConfigured } from "@/lib/env";
+import { customerNoShowFeeCents, partsHandlingBps, stripeConfigured } from "@/lib/env";
+import { receiptLinks, syncTopup } from "@/lib/parts";
+import { partsChargeCents } from "@/lib/parts-math";
 import { dateTime, money, timeOnly, warrantyLabel } from "@/lib/format";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { mechanicNames } from "@/lib/public-data";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Booking" };
@@ -36,16 +40,28 @@ export default async function BookingDetailPage({ params, searchParams }: PagePr
   const sp = await searchParams;
   const viewer = await requireRole(["customer"], `/account/bookings/${id}`);
   const supabase = await createClient();
+  if (sp.topup === "1" && stripeConfigured()) {
+    await syncTopup(id, viewer.id).catch((e) => console.error("syncTopup", e));
+  }
   // Back from Stripe: confirm the hold directly instead of waiting on the webhook.
   if (sp.paid === "1" && stripeConfigured()) {
     const { data: own } = await supabase.from("bookings").select("id, payment_status").eq("id", id).maybeSingle();
     if (own?.payment_status === "unpaid") await syncBookingPayment(own.id).catch((e) => console.error("syncBookingPayment", e));
   }
-  const { data: b } = await supabase.from("bookings").select("*, services(name, icon, slug), mechanics(display_name)").eq("id", id).maybeSingle();
+  const { data: b } = await supabase.from("bookings").select("*, services(name, icon, slug)").eq("id", id).maybeSingle();
   if (!b || (b.customer_id !== viewer.id && viewer.profile.role !== "admin")) notFound();
+  const mechanicName = (await mechanicNames([b.mechanic_id])).get(b.mechanic_id) ?? null;
   // One review per customer per mechanic — show theirs, whichever job it was left on.
   const { data: review } = await supabase.from("reviews").select("rating, body, booking_id").eq("customer_id", b.customer_id).eq("mechanic_id", b.mechanic_id).maybeSingle();
   const showArrival = b.status === "accepted" || b.status === "en_route";
+  const { data: partRows } = await supabase.from("booking_parts").select("*").eq("booking_id", b.id).order("created_at");
+  const links = await receiptLinks((partRows ?? []).map((p) => p.receipt_path).filter((x): x is string => Boolean(x)));
+  const parts: CustomerPart[] = (partRows ?? []).map((p) => ({ ...p, receipt_url: p.receipt_path ? (links.get(p.receipt_path) ?? null) : null }));
+  const handlingBps = partsHandlingBps();
+  const quotedCost = parts.filter((p) => p.status === "quoted").reduce((s2, p) => s2 + p.quantity * p.quoted_unit_cents, 0);
+  const boughtCost = parts.filter((p) => p.status === "purchased").reduce((s2, p) => s2 + (p.receipt_cents ?? 0), 0);
+  const laborMax = b.labor_max_cents ?? b.estimated_max_cents;
+  const quoteNewMax = laborMax + partsChargeCents(quotedCost + boughtCost, handlingBps);
   const warranty =
     b.status === "completed" ? ((await createAdminClient().from("mechanics").select("warranty_days").eq("id", b.mechanic_id).maybeSingle()).data?.warranty_days ?? null) : null;
   // RLS: only the customer can read the arrival code. Mechanic identity comes from the booking's own mechanic.
@@ -66,7 +82,7 @@ export default async function BookingDetailPage({ params, searchParams }: PagePr
       <PageHeader eyebrow="Booking" title={b.services?.name ?? "Booking"}>
         {dateTime(b.scheduled_start)} with{" "}
         <Link href={`/mechanics/${b.mechanic_id}`} className="text-ore hover:underline">
-          {b.mechanics?.display_name ?? "your mechanic"}
+          {mechanicName ?? "your mechanic"}
         </Link>
       </PageHeader>
 
@@ -135,6 +151,21 @@ export default async function BookingDetailPage({ params, searchParams }: PagePr
         </Card>
       )}
 
+      {parts.some((p) => p.status !== "removed") && (
+        <Card className="mb-6">
+          <h2 className="mb-4 text-2xl font-bold uppercase">Parts</h2>
+          <PartsQuote
+            bookingId={b.id}
+            parts={parts}
+            handlingBps={handlingBps}
+            laborMax={laborMax}
+            newMax={quoteNewMax}
+            approvedAt={b.parts_approved_at}
+            publishableKey={stripeConfigured() ? process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY! : null}
+          />
+        </Card>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
         <Card>
           <h2 className="mb-4 text-2xl font-bold uppercase">Details</h2>
@@ -154,6 +185,9 @@ export default async function BookingDetailPage({ params, searchParams }: PagePr
           <h2 className="mb-4 text-2xl font-bold uppercase">Payment</h2>
           <dl className="space-y-3 text-sm">
             <Detail label="Estimate (max)" value={money(b.estimated_max_cents)} />
+            {b.parts_estimate_cents > 0 && !b.parts_approved_at && (
+              <Detail label="Includes parts estimate" value={`about ${money(partsChargeCents(b.parts_estimate_cents, handlingBps))}`} />
+            )}
             {b.estimate_approved_at && <Detail label="Estimate approved" value={dateTime(b.estimate_approved_at)} />}
             {b.customer_no_show_fee_cents ? (
               <Detail label="No-show fee" value={money(b.customer_no_show_fee_cents)} />
@@ -161,7 +195,8 @@ export default async function BookingDetailPage({ params, searchParams }: PagePr
               b.final_amount_cents && (
                 <>
                   {b.labor_cents !== null && <Detail label="Labor" value={money(b.labor_cents)} />}
-                  {b.parts_cents !== null && <Detail label="Parts" value={money(b.parts_cents)} />}
+                  {b.parts_cents !== null && b.parts_cents > 0 && <Detail label="Parts (at receipt cost)" value={money(b.parts_cents)} />}
+                  {b.parts_handling_cents ? <Detail label="Parts handling" value={money(b.parts_handling_cents)} /> : null}
                   <Detail label="Total charged" value={money(b.final_amount_cents)} />
                 </>
               )
@@ -193,7 +228,7 @@ export default async function BookingDetailPage({ params, searchParams }: PagePr
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-2xl font-bold uppercase">Your review</h2>
             <ButtonLink href={`/book/${b.mechanic_id}?service=${b.services?.slug ?? ""}`} variant="subtle" size="sm">
-              Book {b.mechanics?.display_name?.split(" ")[0] ?? "them"} again
+              Book {mechanicName?.split(" ")[0] ?? "them"} again
             </ButtonLink>
           </div>
           {review && review.booking_id === b.id ? (

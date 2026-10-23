@@ -106,6 +106,7 @@ export default async function MechanicProfilePage({ params, searchParams }: Page
                         {m.hourly_rate_cents
                           ? `${money(estimateMinCents(m.hourly_rate_cents, s.est_minutes_min), { whole: true })}–${money(estimateMaxCents(m.hourly_rate_cents, s.est_minutes_max), { whole: true })}`
                           : "—"}
+                        <span className="block text-xs">labor + parts at receipt cost</span>
                         {dealerRate && m.hourly_rate_cents && (
                           <span className="block text-xs">
                             Dealer labor ≈ {money(estimateMaxCents(dealerRate, s.est_minutes_max), { whole: true })}

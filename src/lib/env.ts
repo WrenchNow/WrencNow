@@ -74,3 +74,9 @@ export function dealerLaborRateCents(): number | null {
   return Number.isInteger(n) && n > 0 ? n : null;
 }
 
+/** Handling charge on parts, on top of receipt cost; goes to the mechanic (covers card fees and the parts run). */
+export function partsHandlingBps(): number {
+  const n = Number(process.env.PARTS_HANDLING_BPS ?? 500);
+  return Number.isInteger(n) && n >= 0 && n <= 3000 ? n : 500;
+}
+

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { InsuranceForm, MechanicProfileForm, PhotoUpload, ServicesForm, SubmitApplicationForm } from "@/components/mechanic/forms";
+import { InsuranceForm, MechanicProfileForm, PhotoUpload, ServicesForm, SubmitApplicationForm, TypicalPartsForm } from "@/components/mechanic/forms";
 import { Readiness } from "@/components/mechanic/readiness";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import { onboardingJobsRemaining } from "@/lib/fees";
 import { money } from "@/lib/format";
 import { getMyMechanic, readiness } from "@/lib/mechanic";
 import { getServices } from "@/lib/public-data";
+import { createClient } from "@/lib/supabase/server";
 import { TIER_LABEL, tierRank } from "@/lib/tiers";
 import { syncStripeAccount } from "@/lib/stripe-sync";
 import { startStripeOnboarding } from "../actions";
@@ -24,6 +25,8 @@ export default async function MechanicOnboardingPage({ searchParams }: PageProps
   const [m, services] = await Promise.all([getMyMechanic(viewer.id), getServices()]);
   if (!m) return <Notice tone="danger">We couldn&apos;t find your mechanic profile. Contact support.</Notice>;
   const steps = readiness(m);
+  const { data: priceRows } = await (await createClient()).from("mechanic_services").select("service_id, typical_parts_cents").eq("mechanic_id", viewer.id);
+  const partsPrices = new Map((priceRows ?? []).map((r) => [r.service_id, r.typical_parts_cents]));
   const stripeDone = m.stripe_charges_enabled && m.stripe_payouts_enabled;
 
   return (
@@ -76,6 +79,14 @@ export default async function MechanicOnboardingPage({ searchParams }: PageProps
               selected={m.serviceIds}
               tierRank={tierRank(m.skill_tier)}
             />
+            <div className="mt-6 border-t border-line pt-5">
+              <h3 className="mb-3 text-lg font-bold text-cream uppercase">Typical parts cost</h3>
+              <TypicalPartsForm
+                services={services
+                  .filter((s) => m.serviceIds.includes(s.id))
+                  .map((s) => ({ id: s.id, name: s.name, icon: s.icon, typical_parts_cents: partsPrices.get(s.id) ?? null }))}
+              />
+            </div>
           </Card>
 
           <Card>

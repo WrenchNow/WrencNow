@@ -16,6 +16,28 @@ async function onPaymentIntent(admin: Admin, event: Stripe.Event) {
   const bookingId = bookingIdOf(pi);
   if (!bookingId) return;
 
+  // Top-up hold for an approved parts quote: finalize the approval once the card authorizes.
+  if (pi.metadata?.kind === "parts_topup") {
+    if (event.type === "payment_intent.amount_capturable_updated") {
+      const { data: b } = await admin.from("bookings").select("topup_payment_intent_id").eq("id", bookingId).maybeSingle();
+      if (b?.topup_payment_intent_id === pi.id) {
+        const { finalizePartsApproval } = await import("@/lib/parts");
+        await finalizePartsApproval(bookingId, null, pi.amount_capturable);
+      }
+    }
+    if (event.type === "payment_intent.succeeded") {
+      const { data: b } = await admin.from("bookings").select("mechanic_id").eq("id", bookingId).single();
+      await admin.from("ledger_entries").upsert(
+        [
+          { booking_id: bookingId, mechanic_id: b?.mechanic_id ?? null, type: "charge", amount_cents: pi.amount_received, stripe_object_id: pi.id },
+          { booking_id: bookingId, mechanic_id: b?.mechanic_id ?? null, type: "platform_fee", amount_cents: pi.application_fee_amount ?? 0, stripe_object_id: pi.id },
+        ],
+        { onConflict: "type,stripe_object_id", ignoreDuplicates: true },
+      );
+    }
+    return;
+  }
+
   switch (event.type) {
     case "payment_intent.amount_capturable_updated":
       {

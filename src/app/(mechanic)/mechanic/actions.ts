@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { BookingError, checkInAtAddress, transitionBooking } from "@/lib/bookings";
+import { recordPartReceipt, removePart, sendPartsQuote } from "@/lib/parts";
 import { featuredPriceCents, onboardingFeeTotalCents, siteUrl, stripeConfigured } from "@/lib/env";
 import { geocode } from "@/lib/geocode";
 import { getStripe } from "@/lib/stripe";
@@ -185,23 +186,15 @@ export async function mechanicTransition(_: FormState, formData: FormData): Prom
   const id = z.uuid().parse(formData.get("id"));
   const to = z.enum(["accepted", "en_route", "in_progress", "completed", "cancelled", "customer_no_show"]).parse(formData.get("to"));
   let laborCents: number | undefined;
-  let partsCents: number | undefined;
   if (to === "completed") {
-    const dollars = (name: string) => {
-      const v = String(formData.get(name) ?? "").replace(/[$,\s]/g, "");
-      return v === "" ? 0 : Number(v);
-    };
-    const labor = dollars("labor");
-    const parts = dollars("parts");
-    if (!Number.isFinite(labor) || !Number.isFinite(parts) || labor < 0 || parts < 0) return { error: "Enter labor and parts as dollar amounts." };
-    if (labor + parts <= 0) return { error: "Enter what the job cost (labor and parts)." };
+    const labor = Number(String(formData.get("labor") ?? "").replace(/[$,\s]/g, "") || "0");
+    if (!Number.isFinite(labor) || labor < 0) return { error: "Enter the labor charge in dollars." };
     laborCents = Math.round(labor * 100);
-    partsCents = Math.round(parts * 100);
   }
   const reason = String(formData.get("reason") ?? "").slice(0, 500) || undefined;
   const arrivalCode = String(formData.get("arrival_code") ?? "").slice(0, 8) || undefined;
   try {
-    await transitionBooking(id, { id: viewer.id, role: "mechanic" }, to, { laborCents, partsCents, reason, arrivalCode });
+    await transitionBooking(id, { id: viewer.id, role: "mechanic" }, to, { laborCents, reason, arrivalCode });
   } catch (e) {
     if (e instanceof BookingError) return { error: e.message };
     console.error(e);
@@ -314,4 +307,67 @@ export async function checkIn(bookingId: string, lat: number, lng: number): Prom
   }
   revalidatePath("/mechanic", "layout");
   return { ok: true, message: "Checked in. The customer has been told you're here." };
+}
+
+const quoteLineSchema = z.object({
+  name: z.string().trim().min(1, "Name each part").max(120),
+  part_number: z.string().trim().max(60).optional().transform((v) => v || null),
+  quantity: z.coerce.number().int().min(1).max(50),
+  unit_price: z.coerce.number().min(0, "Prices can't be negative").max(5000),
+});
+
+export async function sendPartsQuoteAction(bookingId: string, lines: z.input<typeof quoteLineSchema>[]): Promise<FormState> {
+  const viewer = await requireRole(["mechanic"], "/mechanic/jobs");
+  const parsed = z.array(quoteLineSchema).min(1, "Add at least one part").max(25).safeParse(lines);
+  if (!parsed.success) return { error: parsed.error.issues[0]!.message };
+  try {
+    await sendPartsQuote(
+      z.uuid().parse(bookingId),
+      viewer.id,
+      parsed.data.map((l) => ({ name: l.name, part_number: l.part_number, quantity: l.quantity, quoted_unit_cents: Math.round(l.unit_price * 100) })),
+    );
+  } catch (e) {
+    return { error: e instanceof BookingError ? e.message : "Couldn't send the quote. Please try again." };
+  }
+  revalidatePath("/mechanic/jobs");
+  return { ok: true, message: "Quote sent. The customer approves it in the app before you buy anything." };
+}
+
+export async function recordPartReceiptAction(bookingId: string, partId: string, receiptDollars: number, receiptPath: string): Promise<FormState> {
+  const viewer = await requireRole(["mechanic"], "/mechanic/jobs");
+  if (!Number.isFinite(receiptDollars) || receiptDollars < 0) return { error: "Enter the receipt amount." };
+  try {
+    await recordPartReceipt(z.uuid().parse(bookingId), viewer.id, z.uuid().parse(partId), Math.round(receiptDollars * 100), receiptPath);
+  } catch (e) {
+    return { error: e instanceof BookingError ? e.message : "Couldn't save the receipt. Please try again." };
+  }
+  revalidatePath("/mechanic/jobs");
+  return { ok: true, message: "Receipt saved." };
+}
+
+export async function removePartAction(bookingId: string, partId: string): Promise<FormState> {
+  const viewer = await requireRole(["mechanic"], "/mechanic/jobs");
+  try {
+    await removePart(z.uuid().parse(bookingId), viewer.id, z.uuid().parse(partId));
+  } catch (e) {
+    return { error: e instanceof BookingError ? e.message : "Couldn't remove that part." };
+  }
+  revalidatePath("/mechanic/jobs");
+  return { ok: true };
+}
+
+/** Mechanic's typical parts price per service (used for estimates until real receipts exist). */
+export async function saveTypicalPartsPrices(_: FormState, formData: FormData): Promise<FormState> {
+  const viewer = await requireRole(["mechanic"], "/mechanic/onboarding");
+  const supabase = await createClient();
+  for (const [key, value] of formData.entries()) {
+    const m = key.match(/^parts_(\d+)$/);
+    if (!m) continue;
+    const raw = String(value).trim();
+    const cents = raw === "" ? null : Math.round(Number(raw) * 100);
+    if (cents !== null && (!Number.isFinite(cents) || cents < 0 || cents > 500000)) return { error: "Parts prices must be between $0 and $5,000." };
+    await supabase.from("mechanic_services").update({ typical_parts_cents: cents }).eq("mechanic_id", viewer.id).eq("service_id", Number(m[1]));
+  }
+  revalidatePath("/mechanic", "layout");
+  return { ok: true, message: "Typical parts prices saved." };
 }

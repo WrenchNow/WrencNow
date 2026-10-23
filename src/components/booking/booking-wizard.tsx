@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
-import { createBookingAction } from "@/app/(customer)/account/actions";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { createBookingAction, estimateAction } from "@/app/(customer)/account/actions";
 import { VehicleForm } from "@/components/account/forms";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -68,8 +68,20 @@ export function BookingWizard({
   const days = useMemo(() => (service ? buildSlots(new Date(), service.max, busy) : []), [service, busy]);
   const vehicle = vehicles.find((v) => v.id === vehicleId);
   const slotLabel = start ? new Intl.DateTimeFormat("en-US", { timeZone: "America/Denver", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(start)) : "";
-  const estMin = service && mechanic.rateCents ? estimateMinCents(mechanic.rateCents, service.min) : 0;
-  const estMax = service && mechanic.rateCents ? estimateMaxCents(mechanic.rateCents, service.max) : 0;
+  const laborMinLocal = service && mechanic.rateCents ? estimateMinCents(mechanic.rateCents, service.min) : 0;
+  const laborMaxLocal = service && mechanic.rateCents ? estimateMaxCents(mechanic.rateCents, service.max) : 0;
+  // Exact numbers (incl. the parts estimate for this car) come from the server at the review step.
+  const [quote, setQuote] = useState<{ laborMin: number; laborMax: number; partsCharge: number; basis: string; total: number } | null>(null);
+  useEffect(() => {
+    if (step !== 3 || !serviceSlug || !vehicleId) return;
+    let live = true;
+    estimateAction(mechanic.id, serviceSlug, vehicleId).then((q) => live && setQuote(q));
+    return () => {
+      live = false;
+    };
+  }, [step, serviceSlug, vehicleId, mechanic.id]);
+  const estMin = (quote?.laborMin ?? laborMinLocal) + (quote?.partsCharge ?? 0);
+  const estMax = quote?.total ?? laborMaxLocal;
 
   if (services.length === 0) {
     return <Notice tone="warn" title="No services listed">This mechanic hasn&apos;t listed any services yet. Try another mechanic.</Notice>;
@@ -257,12 +269,22 @@ export function BookingWizard({
               <Summary label="Where" value={address} />
               <Summary label="When" value={slotLabel} />
               <Summary label="Estimate" value={`${money(estMin, { whole: true })}–${money(estMax, { whole: true })}`} />
+              <Summary label="Labor" value={`${money(quote?.laborMin ?? laborMinLocal, { whole: true })}–${money(quote?.laborMax ?? laborMaxLocal, { whole: true })}`} />
+              <Summary
+                label="Parts"
+                value={
+                  quote && quote.partsCharge > 0
+                    ? `about ${money(quote.partsCharge, { whole: true })} (${quote.basis === "mechanic" ? "mechanic's usual price" : `based on ${quote.basis}`})`
+                    : "Quoted in the app before purchase"
+                }
+              />
             </dl>
             <div className="rounded-[var(--radius-control)] border border-line bg-raised p-4 text-sm text-ink">
               <p className="font-semibold text-cream">How payment works</p>
               <ul className="mt-2 list-disc space-y-1 pl-5">
                 <li>We place a hold of {money(estMax)} on your card now. You aren&apos;t charged yet.</li>
                 <li>When the job is done, you&apos;re charged the final amount — never more than {money(estMax)}. The rest of the hold is released.</li>
+                <li>Parts are billed at the receipt price plus a small handling charge. Before buying, your mechanic sends an itemized parts list for you to approve in the app, and you&apos;ll see every receipt.</li>
                 <li>Cancel free any time before your mechanic heads out and the full hold is released.</li>
                 <li>
                   If your mechanic checks in at the address and you don&apos;t respond within 15 minutes, a {noShowFeeLabel} no-show fee is charged instead of the job.
@@ -335,7 +357,7 @@ export function BookingWizard({
                 Next: {STEPS[step + 1]}
               </Button>
             ) : (
-              <Button onClick={submit} disabled={pending || !publishableKey} className="flex-1">
+              <Button onClick={submit} disabled={pending || !publishableKey || !quote} className="flex-1">
                 {pending ? "Setting up…" : "Continue to payment"}
               </Button>
             )}

@@ -75,6 +75,70 @@ export type Database = {
           },
         ];
       };
+      booking_parts: {
+        Row: {
+          booking_id: string;
+          created_at: string;
+          id: string;
+          mechanic_id: string;
+          name: string;
+          part_number: string | null;
+          purchased_at: string | null;
+          quantity: number;
+          quoted_unit_cents: number;
+          receipt_cents: number | null;
+          receipt_path: string | null;
+          status: Database["public"]["Enums"]["part_status"];
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          booking_id: string;
+          created_at?: string;
+          id?: string;
+          mechanic_id: string;
+          name: string;
+          part_number?: string | null;
+          purchased_at?: string | null;
+          quantity?: number;
+          quoted_unit_cents: number;
+          receipt_cents?: number | null;
+          receipt_path?: string | null;
+          status?: Database["public"]["Enums"]["part_status"];
+          updated_at?: string;
+        };
+        Update: {
+          booking_id?: string;
+          created_at?: string;
+          id?: string;
+          mechanic_id?: string;
+          name?: string;
+          part_number?: string | null;
+          purchased_at?: string | null;
+          quantity?: number;
+          quoted_unit_cents?: number;
+          receipt_cents?: number | null;
+          receipt_path?: string | null;
+          status?: Database["public"]["Enums"]["part_status"];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "booking_parts_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "booking_parts_mechanic_id_fkey";
+            columns: ["mechanic_id"];
+            isOneToOne: false;
+            referencedRelation: "mechanics";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       bookings: {
         Row: {
           accepted_at: string | null;
@@ -95,13 +159,20 @@ export type Database = {
           estimate_approved_at: string | null;
           estimated_max_cents: number;
           final_amount_cents: number | null;
+          hold_cents: number | null;
           hourly_rate_cents: number;
           id: string;
           labor_cents: number | null;
+          labor_max_cents: number | null;
           location: unknown;
           mechanic_id: string;
           onboarding_fee_cents: number;
+          parts_approved_at: string | null;
+          parts_approved_cents: number | null;
           parts_cents: number | null;
+          parts_estimate_cents: number;
+          parts_handling_cents: number | null;
+          parts_quote_sent_at: string | null;
           payment_status: Database["public"]["Enums"]["payment_status"];
           platform_fee_cents: number | null;
           problem_description: string | null;
@@ -115,10 +186,14 @@ export type Database = {
           started_at: string | null;
           status: Database["public"]["Enums"]["booking_status"];
           stripe_payment_intent_id: string | null;
+          topup_authorized_cents: number;
+          topup_payment_intent_id: string | null;
           updated_at: string;
           urgency: Database["public"]["Enums"]["urgency"];
           vehicle_desc: string;
           vehicle_id: string | null;
+          vehicle_make: string | null;
+          vehicle_model: string | null;
         };
         ComputedFields: never;
         Insert: {
@@ -140,13 +215,20 @@ export type Database = {
           estimate_approved_at?: string | null;
           estimated_max_cents: number;
           final_amount_cents?: number | null;
+          hold_cents?: number | null;
           hourly_rate_cents: number;
           id?: string;
           labor_cents?: number | null;
+          labor_max_cents?: number | null;
           location?: unknown;
           mechanic_id: string;
           onboarding_fee_cents?: number;
+          parts_approved_at?: string | null;
+          parts_approved_cents?: number | null;
           parts_cents?: number | null;
+          parts_estimate_cents?: number;
+          parts_handling_cents?: number | null;
+          parts_quote_sent_at?: string | null;
           payment_status?: Database["public"]["Enums"]["payment_status"];
           platform_fee_cents?: number | null;
           problem_description?: string | null;
@@ -160,10 +242,14 @@ export type Database = {
           started_at?: string | null;
           status?: Database["public"]["Enums"]["booking_status"];
           stripe_payment_intent_id?: string | null;
+          topup_authorized_cents?: number;
+          topup_payment_intent_id?: string | null;
           updated_at?: string;
           urgency?: Database["public"]["Enums"]["urgency"];
           vehicle_desc: string;
           vehicle_id?: string | null;
+          vehicle_make?: string | null;
+          vehicle_model?: string | null;
         };
         Update: {
           accepted_at?: string | null;
@@ -184,13 +270,20 @@ export type Database = {
           estimate_approved_at?: string | null;
           estimated_max_cents?: number;
           final_amount_cents?: number | null;
+          hold_cents?: number | null;
           hourly_rate_cents?: number;
           id?: string;
           labor_cents?: number | null;
+          labor_max_cents?: number | null;
           location?: unknown;
           mechanic_id?: string;
           onboarding_fee_cents?: number;
+          parts_approved_at?: string | null;
+          parts_approved_cents?: number | null;
           parts_cents?: number | null;
+          parts_estimate_cents?: number;
+          parts_handling_cents?: number | null;
+          parts_quote_sent_at?: string | null;
           payment_status?: Database["public"]["Enums"]["payment_status"];
           platform_fee_cents?: number | null;
           problem_description?: string | null;
@@ -204,10 +297,14 @@ export type Database = {
           started_at?: string | null;
           status?: Database["public"]["Enums"]["booking_status"];
           stripe_payment_intent_id?: string | null;
+          topup_authorized_cents?: number;
+          topup_payment_intent_id?: string | null;
           updated_at?: string;
           urgency?: Database["public"]["Enums"]["urgency"];
           vehicle_desc?: string;
           vehicle_id?: string | null;
+          vehicle_make?: string | null;
+          vehicle_model?: string | null;
         };
         Relationships: [
           {
@@ -300,15 +397,18 @@ export type Database = {
         Row: {
           mechanic_id: string;
           service_id: number;
+          typical_parts_cents: number | null;
         };
         ComputedFields: never;
         Insert: {
           mechanic_id: string;
           service_id: number;
+          typical_parts_cents?: number | null;
         };
         Update: {
           mechanic_id?: string;
           service_id?: number;
+          typical_parts_cents?: number | null;
         };
         Relationships: [
           {
@@ -985,6 +1085,14 @@ export type Database = {
         }[];
       };
       tier_rank: { Args: { t: Database["public"]["Enums"]["skill_tier"] }; Returns: number };
+      typical_parts_cost: {
+        Args: { p_make: string; p_model: string; p_service_id: number };
+        Returns: {
+          basis: string;
+          cents: number;
+          sample: number;
+        }[];
+      };
     };
     Enums: {
       booking_status:
@@ -1007,6 +1115,7 @@ export type Database = {
       insurance_status: "none" | "submitted" | "verified" | "rejected";
       ledger_type: "charge" | "platform_fee" | "refund" | "dispute" | "subscription";
       mechanic_status: "pending" | "approved" | "paused" | "rejected" | "suspended";
+      part_status: "quoted" | "approved" | "declined" | "purchased" | "removed";
       payment_status:
         | "unpaid"
         | "authorized"
@@ -1156,6 +1265,7 @@ export const Constants = {
       insurance_status: ["none", "submitted", "verified", "rejected"],
       ledger_type: ["charge", "platform_fee", "refund", "dispute", "subscription"],
       mechanic_status: ["pending", "approved", "paused", "rejected", "suspended"],
+      part_status: ["quoted", "approved", "declined", "purchased", "removed"],
       payment_status: [
         "unpaid",
         "authorized",

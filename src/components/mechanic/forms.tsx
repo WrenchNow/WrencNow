@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { checkIn, mechanicTransition, saveMechanicProfile, savePhotoUrl, saveServices, submitApplication, submitInsurance, type FormState } from "@/app/(mechanic)/mechanic/actions";
+import { checkIn, saveTypicalPartsPrices, mechanicTransition, saveMechanicProfile, savePhotoUrl, saveServices, submitApplication, submitInsurance, type FormState } from "@/app/(mechanic)/mechanic/actions";
 import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/feedback";
 import { Checkbox, Field, Input, Select, Textarea } from "@/components/ui/form";
@@ -192,19 +192,25 @@ export function PhotoUpload({ userId, current }: { userId: string; current: stri
 export function JobActions({
   id,
   status,
-  estimateLabel,
   estimateMax,
   arrivedAt,
   noShowAt,
   noShowFeeLabel,
+  laborMax,
+  partsReceiptCents = 0,
+  handlingBps = 0,
+  partsPending = false,
 }: {
   id: string;
   status: string;
-  estimateLabel: string;
   estimateMax: number;
   arrivedAt?: string | null;
   noShowAt?: number | null;
   noShowFeeLabel?: string;
+  laborMax?: number;
+  partsReceiptCents?: number;
+  handlingBps?: number;
+  partsPending?: boolean;
 }) {
   const [state, action, pending] = useActionState(mechanicTransition, {});
   const [confirmDecline, setConfirmDecline] = useState(false);
@@ -280,7 +286,19 @@ export function JobActions({
           </Button>
         </form>
       )}
-      {status === "in_progress" && <CompleteJobForm hidden={hidden} action={action} pending={pending} estimateLabel={estimateLabel} estimateMax={estimateMax} id={id} />}
+      {status === "in_progress" && (
+        <CompleteJobForm
+          hidden={hidden}
+          action={action}
+          pending={pending}
+          estimateMax={estimateMax}
+          laborMax={laborMax ?? estimateMax}
+          partsReceiptCents={partsReceiptCents}
+          handlingBps={handlingBps}
+          partsPending={partsPending}
+          id={id}
+        />
+      )}
     </div>
   );
 }
@@ -423,39 +441,92 @@ function CompleteJobForm({
   hidden,
   action,
   pending,
-  estimateLabel,
   estimateMax,
+  laborMax,
+  partsReceiptCents,
+  handlingBps,
+  partsPending,
 }: {
   id: string;
   hidden: React.ReactNode;
   action: (fd: FormData) => void;
   pending: boolean;
-  estimateLabel: string;
   estimateMax: number;
+  laborMax: number;
+  partsReceiptCents: number;
+  handlingBps: number;
+  partsPending: boolean;
 }) {
   const [labor, setLabor] = useState("");
-  const [parts, setParts] = useState("");
-  const total = Math.round((Number(labor || 0) + Number(parts || 0)) * 100);
-  const over = total > estimateMax;
+  const laborCents = Math.round(Number(labor || 0) * 100);
+  const handling = Math.round((partsReceiptCents * handlingBps) / 10000);
+  const total = laborCents + partsReceiptCents + handling;
+  const over = laborCents > laborMax || total > estimateMax;
+  const usd = (c: number) => `$${(c / 100).toFixed(2)}`;
   return (
     <form action={action} className="flex flex-col gap-3">
       {hidden}
       <input type="hidden" name="to" value="completed" />
-      <p className="text-sm text-ink">Itemize the job for the customer&apos;s receipt. The total can&apos;t be more than the approved estimate ({estimateLabel}).</p>
-      <div className="grid grid-cols-2 gap-3 sm:max-w-md">
-        <Field label="Labor ($)" htmlFor={`labor-${id}`}>
+      {partsPending && <p className="text-sm text-warn">Finish the parts first: upload each receipt, or tap “Didn&apos;t need it”.</p>}
+      <div className="sm:max-w-xs">
+        <Field label={`Labor ($, up to ${usd(laborMax)})`} htmlFor={`labor-${id}`}>
           <Input id={`labor-${id}`} name="labor" type="number" min={0} step="0.01" inputMode="decimal" value={labor} onChange={(e) => setLabor(e.target.value)} />
         </Field>
-        <Field label="Parts ($)" htmlFor={`parts-${id}`}>
-          <Input id={`parts-${id}`} name="parts" type="number" min={0} step="0.01" inputMode="decimal" value={parts} onChange={(e) => setParts(e.target.value)} />
-        </Field>
       </div>
-      <p className={`text-sm ${over ? "text-danger" : "text-cream"}`}>
-        Total: ${(total / 100).toFixed(2)}
-        {over && " — over the approved estimate"}
-      </p>
-      <Button type="submit" disabled={pending || total <= 0 || over} className="self-start">
+      <dl className="grid max-w-sm grid-cols-2 gap-1 text-sm">
+        <dt className="text-muted">Labor</dt>
+        <dd className="text-right text-cream">{usd(laborCents)}</dd>
+        <dt className="text-muted">Parts (receipts)</dt>
+        <dd className="text-right text-cream">{usd(partsReceiptCents)}</dd>
+        <dt className="text-muted">Parts handling</dt>
+        <dd className="text-right text-cream">{usd(handling)}</dd>
+        <dt className="font-semibold text-cream">Customer pays</dt>
+        <dd className={`text-right font-semibold ${over ? "text-danger" : "text-cream"}`}>{usd(total)}</dd>
+      </dl>
+      {over && <p className="text-sm text-danger">That&apos;s over what the customer approved.</p>}
+      <Button type="submit" disabled={pending || total <= 0 || over || partsPending} className="self-start">
         {pending ? "Charging…" : "Complete & charge"}
+      </Button>
+    </form>
+  );
+}
+
+export function TypicalPartsForm({ services }: { services: { id: number; name: string; icon: string; typical_parts_cents: number | null }[] }) {
+  const [state, action, pending] = useActionState(saveTypicalPartsPrices, {});
+  if (services.length === 0) return <p className="text-sm text-muted">Pick your services first.</p>;
+  return (
+    <form action={action} className="flex flex-col gap-3">
+      <StateNotice state={state} />
+      <p className="text-sm text-ink">
+        What parts usually cost you for each job. Customers see it as a rough parts estimate when they book. You still send an itemized quote and receipts for each job,
+        and once there are enough real receipts, WrenchNow&apos;s data replaces these numbers.
+      </p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {services.map((s) => (
+          <label key={s.id} className="flex items-center justify-between gap-3 rounded-[var(--radius-control)] border border-line-strong bg-raised px-3 py-2 text-sm">
+            <span className="text-cream">
+              <span aria-hidden className="mr-1.5">
+                {s.icon}
+              </span>
+              {s.name}
+            </span>
+            <span className="flex items-center gap-1 text-muted">
+              $
+              <Input
+                name={`parts_${s.id}`}
+                type="number"
+                min={0}
+                step="1"
+                aria-label={`Typical parts cost for ${s.name}`}
+                defaultValue={s.typical_parts_cents !== null ? String(s.typical_parts_cents / 100) : ""}
+                className="w-24 py-1.5"
+              />
+            </span>
+          </label>
+        ))}
+      </div>
+      <Button type="submit" disabled={pending} className="self-start">
+        {pending ? "Saving…" : "Save parts prices"}
       </Button>
     </form>
   );

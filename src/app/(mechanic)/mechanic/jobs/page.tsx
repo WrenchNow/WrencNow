@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import { LiveRefresh } from "@/components/account/live-refresh";
 import { StatusBadge } from "@/components/account/status-timeline";
 import { JobActions } from "@/components/mechanic/forms";
+import { PartsPanel, type PartRow } from "@/components/mechanic/parts-panel";
 import { EmptyState } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/layout";
 import { requireRole } from "@/lib/auth";
 import { customerNoShowAt } from "@/lib/booking-status";
-import { customerNoShowFeeCents, platformFeeBps, processingFeeBps, processingFeeFixedCents } from "@/lib/env";
+import { customerNoShowFeeCents, partsHandlingBps, platformFeeBps, processingFeeBps, processingFeeFixedCents } from "@/lib/env";
 import { mechanicDeductionsCents } from "@/lib/fees";
 import { dateTime, money } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
@@ -35,6 +36,13 @@ export default async function MechanicJobsPage() {
     const d = mechanicDeductionsCents(cents, bps, processingFeeBps(), processingFeeFixedCents());
     return cents - d.platform - d.processing;
   };
+
+  const { data: partRows } = active.length
+    ? await supabase.from("booking_parts").select("*").in("booking_id", active.map((j) => j.id)).order("created_at")
+    : { data: [] as never[] };
+  const partsBy = new Map<string, PartRow[]>();
+  for (const p of partRows ?? []) partsBy.set(p.booking_id, [...(partsBy.get(p.booking_id) ?? []), p as PartRow]);
+  const handlingBps = partsHandlingBps();
 
   // Contact details are only fetched for jobs the mechanic has accepted.
   const acceptedCustomerIds = [...new Set(active.filter((j) => j.status !== "requested").map((j) => j.customer_id))];
@@ -81,7 +89,7 @@ export default async function MechanicJobsPage() {
                     <dd className={j.urgency === "stranded" ? "text-danger" : "text-cream"}>{URGENCY_LABEL[j.urgency]}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs tracking-wider text-muted uppercase">Max estimate · your share</dt>
+                    <dt className="text-xs tracking-wider text-muted uppercase">Approved max · your share</dt>
                     <dd className="text-cream">
                       {money(j.estimated_max_cents)} · {money(shareOf(j.estimated_max_cents))}
                     </dd>
@@ -120,15 +128,29 @@ export default async function MechanicJobsPage() {
                     </div>
                   )}
                 </dl>
+                {j.status !== "requested" && (
+                  <div className="mt-5">
+                    <PartsPanel
+                      bookingId={j.id}
+                      mechanicId={viewer.id}
+                      parts={partsBy.get(j.id) ?? []}
+                      handlingBps={handlingBps}
+                      hint={j.parts_estimate_cents ? { cents: j.parts_estimate_cents, basis: "booking" } : null}
+                    />
+                  </div>
+                )}
                 <div className="mt-5">
                   <JobActions
                     id={j.id}
                     status={j.status}
-                    estimateLabel={money(j.estimated_max_cents)}
                     estimateMax={j.estimated_max_cents}
                     arrivedAt={j.arrived_at}
                     noShowAt={j.arrived_at ? customerNoShowAt(j.arrived_at, j.scheduled_start) : null}
                     noShowFeeLabel={money(Math.min(customerNoShowFeeCents(), j.estimated_max_cents))}
+                    laborMax={j.labor_max_cents ?? j.estimated_max_cents}
+                    partsReceiptCents={(partsBy.get(j.id) ?? []).filter((p) => p.status === "purchased").reduce((sum, p) => sum + (p.receipt_cents ?? 0), 0)}
+                    handlingBps={handlingBps}
+                    partsPending={(partsBy.get(j.id) ?? []).some((p) => p.status === "approved" || p.status === "quoted")}
                   />
                 </div>
               </li>

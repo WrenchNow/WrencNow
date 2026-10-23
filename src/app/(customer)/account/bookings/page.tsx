@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/layout";
 import { requireRole } from "@/lib/auth";
 import { dateTime, money } from "@/lib/format";
+import { mechanicNames } from "@/lib/public-data";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Your bookings" };
@@ -15,12 +16,13 @@ export default async function BookingsPage() {
   const supabase = await createClient();
   const { data: bookings } = await supabase
     .from("bookings")
-    .select("id, status, scheduled_start, vehicle_desc, estimated_max_cents, final_amount_cents, payment_status, services(name), mechanics(display_name)")
+    .select("id, mechanic_id, status, scheduled_start, vehicle_desc, estimated_max_cents, final_amount_cents, payment_status, services(name)")
     .eq("customer_id", viewer.id)
     .neq("payment_status", "unpaid")
     .order("scheduled_start", { ascending: false })
     .limit(100);
 
+  const names = await mechanicNames((bookings ?? []).map((b) => b.mechanic_id));
   return (
     <>
       <PageHeader eyebrow="Bookings" title="Your bookings" />
@@ -32,7 +34,7 @@ export default async function BookingsPage() {
                 <span>
                   <span className="block font-semibold text-cream">{b.services?.name}</span>
                   <span className="block text-sm text-muted">
-                    {dateTime(b.scheduled_start)} · {b.mechanics?.display_name ?? "Mechanic"} · {b.vehicle_desc}
+                    {dateTime(b.scheduled_start)} · {names.get(b.mechanic_id) ?? "Mechanic"} · {b.vehicle_desc}
                   </span>
                 </span>
                 <span className="flex items-center gap-3">

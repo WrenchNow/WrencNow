@@ -183,3 +183,55 @@ export async function reportOffPlatformPayment(_: FormState, formData: FormData)
   await admin.from("audit_log").insert({ actor_id: viewer.id, action: "payment.off_platform_reported", entity: "booking", entity_id: booking.id, data: { report: report.id } });
   return { ok: true, message: "Thanks — we've got your report and will look into it. Don't pay outside the app; your card on the booking covers everything." };
 }
+
+export async function approvePartsAction(bookingId: string): Promise<{ error?: string; ok?: boolean; clientSecret?: string; topupCents?: number }> {
+  const viewer = await requireViewer("/account/bookings");
+  const { approvePartsQuote } = await import("@/lib/parts");
+  try {
+    const res = await approvePartsQuote(z.uuid().parse(bookingId), viewer.id);
+    revalidatePath(`/account/bookings/${bookingId}`);
+    return { ok: true, ...res };
+  } catch (e) {
+    return { error: e instanceof BookingError ? e.message : "Couldn't approve the quote. Please try again." };
+  }
+}
+
+export async function declinePartsAction(bookingId: string): Promise<{ error?: string; ok?: boolean }> {
+  const viewer = await requireViewer("/account/bookings");
+  const { declinePartsQuote } = await import("@/lib/parts");
+  try {
+    await declinePartsQuote(z.uuid().parse(bookingId), viewer.id);
+  } catch (e) {
+    return { error: e instanceof BookingError ? e.message : "Couldn't decline the quote." };
+  }
+  revalidatePath(`/account/bookings/${bookingId}`);
+  return { ok: true };
+}
+
+/** Exact estimate for the booking review step: labor range + parts estimate (with handling). */
+export async function estimateAction(mechanicId: string, serviceSlug: string, vehicleId: string) {
+  const viewer = await requireRole(["customer"], `/book/${mechanicId}`);
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const { partsEstimateFor } = await import("@/lib/parts");
+  const { partsChargeCents } = await import("@/lib/parts-math");
+  const { partsHandlingBps } = await import("@/lib/env");
+  const { estimateMaxCents, estimateMinCents } = await import("@/lib/fees");
+  const admin = createAdminClient();
+  const [{ data: m }, { data: svc }, { data: v }] = await Promise.all([
+    admin.from("mechanics").select("hourly_rate_cents").eq("id", z.uuid().parse(mechanicId)).single(),
+    admin.from("services").select("id, est_minutes_min, est_minutes_max").eq("slug", serviceSlug).single(),
+    admin.from("vehicles").select("owner_id, make, model").eq("id", z.uuid().parse(vehicleId)).single(),
+  ]);
+  if (!m?.hourly_rate_cents || !svc || !v || v.owner_id !== viewer.id) return null;
+  const parts = await partsEstimateFor(mechanicId, svc.id, v.make, v.model);
+  const partsCharge = partsChargeCents(parts.cents, partsHandlingBps());
+  return {
+    laborMin: estimateMinCents(m.hourly_rate_cents, svc.est_minutes_min),
+    laborMax: estimateMaxCents(m.hourly_rate_cents, svc.est_minutes_max),
+    partsCost: parts.cents,
+    partsCharge,
+    basis: parts.basis,
+    sample: parts.sample,
+    total: estimateMaxCents(m.hourly_rate_cents, svc.est_minutes_max) + partsCharge,
+  };
+}
