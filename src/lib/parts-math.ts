@@ -57,3 +57,20 @@ export function planCapture(totalCents: number, mainAuthorized: number, topupAut
 export function topupNeededCents(newMaxCents: number, mainAuthorized: number, topupAuthorized: number): number {
   return Math.max(0, newMaxCents - mainAuthorized - topupAuthorized);
 }
+
+export type Refundable = { id: string; refundable: number };
+
+/** Spread a refund over the job's charges, newest (top-up) first, never more than each can return. */
+export function planRefund(amountCents: number, charges: Refundable[]): { id: string; amount: number }[] {
+  const total = charges.reduce((s, c) => s + Math.max(c.refundable, 0), 0);
+  if (amountCents <= 0 || amountCents > total) throw new Error("refund exceeds what can be refunded");
+  const out: { id: string; amount: number }[] = [];
+  let left = amountCents;
+  for (const c of charges) {
+    if (left <= 0) break;
+    const take = Math.min(left, Math.max(c.refundable, 0));
+    if (take > 0) out.push({ id: c.id, amount: take });
+    left -= take;
+  }
+  return out;
+}

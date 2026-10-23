@@ -107,3 +107,14 @@ test("non-admins can't open admin pages", async ({ page }) => {
   await page.goto("/admin");
   await expect(page).toHaveURL(/\/account/);
 });
+
+test("no mechanics nearby → customer can send a request to be matched by hand", async ({ page }) => {
+  await page.goto("/search?loc=40.7128,-74.0060"); // far outside the Denver test data
+  await expect(page.getByText("No mechanics here yet")).toBeVisible();
+  await page.waitForLoadState("networkidle");
+  await page.getByLabel("Your name").fill("E2E Requester");
+  await page.getByLabel("Email").fill(`e2e.req.${Date.now()}@example.test`);
+  await page.getByRole("button", { name: "Send my request" }).click();
+  await expect(page.getByText("Request sent")).toBeVisible();
+});
+

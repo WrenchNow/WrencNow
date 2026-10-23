@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAdmin as requireAdminViewer } from "@/lib/auth";
 import { BookingError, cancelOpenBookingsForMechanic, transitionBooking } from "@/lib/bookings";
+import { planRefund, type Refundable } from "@/lib/parts-math";
 import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -41,11 +42,23 @@ export async function refundBooking(_: FormState, formData: FormData): Promise<F
   const amount = raw ? Math.round(Number(raw) * 100) : remaining;
   if (!Number.isInteger(amount) || amount <= 0 || amount > remaining) return { error: `Refund must be between $0.01 and ${(remaining / 100).toFixed(2)}.` };
   try {
-    // Pull the mechanic's share back and return the platform fee proportionally.
-    await getStripe().refunds.create(
-      { payment_intent: b.stripe_payment_intent_id, amount, reverse_transfer: true, refund_application_fee: true, metadata: { booking_id: id, by: viewer.id } },
-      { idempotencyKey: `refund-${id}-${b.refunded_cents}-${amount}` },
-    );
+    // The job may have been paid by the original hold plus a parts top-up: refund the top-up first.
+    const stripe = getStripe();
+    const ids = [b.topup_payment_intent_id, b.stripe_payment_intent_id].filter((x): x is string => Boolean(x));
+    const charges: Refundable[] = [];
+    for (const piId of ids) {
+      const pi = await stripe.paymentIntents.retrieve(piId, { expand: ["latest_charge"] });
+      const charge = pi.latest_charge && typeof pi.latest_charge !== "string" ? pi.latest_charge : null;
+      if (pi.status === "succeeded" && charge) charges.push({ id: piId, refundable: charge.amount_captured - charge.amount_refunded });
+    }
+    const plan = planRefund(amount, charges);
+    for (const part of plan) {
+      // Pull the mechanic's share back and return the platform fee proportionally.
+      await stripe.refunds.create(
+        { payment_intent: part.id, amount: part.amount, reverse_transfer: true, refund_application_fee: true, metadata: { booking_id: id, by: viewer.id } },
+        { idempotencyKey: `refund-${part.id}-${b.refunded_cents}-${part.amount}` },
+      );
+    }
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Refund failed." };
   }
@@ -119,4 +132,15 @@ export async function resolvePaymentReport(_: FormState, formData: FormData): Pr
   await admin.from("audit_log").insert({ actor_id: viewer.id, action: "payment_report.resolved", entity: "payment_report", entity_id: id });
   revalidatePath("/admin");
   return { ok: true, message: "Marked resolved." };
+}
+
+export async function setOpenRequestStatus(_: FormState, formData: FormData): Promise<FormState> {
+  const viewer = await requireAdmin();
+  const id = z.uuid().parse(formData.get("id"));
+  const status = z.enum(["matched", "closed", "open"]).parse(formData.get("status"));
+  const admin = createAdminClient();
+  await admin.from("open_requests").update({ status }).eq("id", id);
+  await admin.from("audit_log").insert({ actor_id: viewer.id, action: `open_request.${status}`, entity: "open_request", entity_id: id });
+  revalidatePath("/admin");
+  return { ok: true, message: status === "open" ? "Reopened." : `Marked ${status}.` };
 }

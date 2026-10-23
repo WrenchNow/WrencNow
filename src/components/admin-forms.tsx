@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { adminCancelBooking, refundBooking, resolvePaymentReport, reviewInsurance, reviewMechanic, waiveOnboardingFee, type FormState } from "@/app/(admin)/admin/actions";
+import { adminCancelBooking, refundBooking, resolvePaymentReport, reviewInsurance, setOpenRequestStatus, reviewMechanic, waiveOnboardingFee, type FormState } from "@/app/(admin)/admin/actions";
 import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/feedback";
 import { Input, Select } from "@/components/ui/form";
@@ -120,6 +120,22 @@ export function ResolveReportForm({ id }: { id: string }) {
       <input type="hidden" name="id" value={id} />
       <Button type="submit" size="sm" variant="subtle" disabled={pending}>
         Mark resolved
+      </Button>
+    </form>
+  );
+}
+
+export function OpenRequestActions({ id }: { id: string }) {
+  const [s, action, pending] = useActionState(setOpenRequestStatus, {});
+  return (
+    <form action={action} className="flex flex-wrap items-center gap-2">
+      <Msg s={s} />
+      <input type="hidden" name="id" value={id} />
+      <Button type="submit" name="status" value="matched" size="sm" disabled={pending}>
+        Matched
+      </Button>
+      <Button type="submit" name="status" value="closed" size="sm" variant="subtle" disabled={pending}>
+        Close
       </Button>
     </form>
   );

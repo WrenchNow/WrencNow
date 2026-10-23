@@ -92,25 +92,32 @@ async function onCharge(admin: Admin, event: Stripe.Event) {
   const charge = event.data.object as Stripe.Charge;
   const piId = typeof charge.payment_intent === "string" ? charge.payment_intent : charge.payment_intent?.id;
   if (!piId) return;
-  const { data: b } = await admin.from("bookings").select("id, mechanic_id").eq("stripe_payment_intent_id", piId).maybeSingle();
+  // A job can be paid by its original PaymentIntent and/or a parts top-up.
+  const { data: b } = await admin
+    .from("bookings")
+    .select("id, mechanic_id, final_amount_cents, payment_status")
+    .or(`stripe_payment_intent_id.eq.${piId},topup_payment_intent_id.eq.${piId}`)
+    .maybeSingle();
   if (!b) return;
 
   if (event.type === "charge.refunded") {
-    const refunded = charge.amount_refunded;
-    await admin
-      .from("bookings")
-      .update({ refunded_cents: refunded, payment_status: refunded >= charge.amount_captured ? "refunded" : "partially_refunded" })
-      .eq("id", b.id)
-      .neq("payment_status", "disputed");
-    await admin.from("bookings").update({ refunded_cents: refunded }).eq("id", b.id).eq("payment_status", "disputed");
-    // A fully refunded job doesn't count toward the mechanic's onboarding fee.
-    if (refunded >= charge.amount_captured) await admin.rpc("release_onboarding_fee", { p_booking_id: b.id });
     // One ledger row per refund (keyed by refund id), so partial refunds aren't double-counted.
     const refunds = await getStripe().refunds.list({ charge: charge.id, limit: 100 });
     const rows = refunds.data
       .filter((r) => r.status === "succeeded" || r.status === "pending")
       .map((r) => ({ booking_id: b.id, mechanic_id: b.mechanic_id, type: "refund" as const, amount_cents: -r.amount, stripe_object_id: r.id }));
     if (rows.length) await admin.from("ledger_entries").upsert(rows, { onConflict: "type,stripe_object_id", ignoreDuplicates: true });
+
+    // Total refunded across every charge on the booking.
+    const { data: all } = await admin.from("ledger_entries").select("amount_cents").eq("booking_id", b.id).eq("type", "refund");
+    const refunded = -(all ?? []).reduce((s, r) => s + r.amount_cents, 0);
+    const full = refunded >= (b.final_amount_cents ?? charge.amount_captured);
+    await admin
+      .from("bookings")
+      .update(b.payment_status === "disputed" ? { refunded_cents: refunded } : { refunded_cents: refunded, payment_status: full ? "refunded" : "partially_refunded" })
+      .eq("id", b.id);
+    // A fully refunded job doesn't count toward the mechanic's onboarding fee.
+    if (full) await admin.rpc("release_onboarding_fee", { p_booking_id: b.id });
   }
 }
 
@@ -118,7 +125,11 @@ async function onDispute(admin: Admin, event: Stripe.Event) {
   const dispute = event.data.object as Stripe.Dispute;
   const piId = typeof dispute.payment_intent === "string" ? dispute.payment_intent : dispute.payment_intent?.id;
   if (!piId) return;
-  const { data: b } = await admin.from("bookings").select("id, mechanic_id").eq("stripe_payment_intent_id", piId).maybeSingle();
+  const { data: b } = await admin
+    .from("bookings")
+    .select("id, mechanic_id")
+    .or(`stripe_payment_intent_id.eq.${piId},topup_payment_intent_id.eq.${piId}`)
+    .maybeSingle();
   if (!b) return;
   await admin.from("bookings").update({ payment_status: "disputed" }).eq("id", b.id);
   await admin

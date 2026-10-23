@@ -1,5 +1,7 @@
 # Weekend autopilot plan (Oct 23–26, 2026)
 
+Scheduled task id: `trig_01K4qTVdijzF7jCy5w5UuQCY` (every 3h; disable it when done or after Mon 8am Denver).
+
 The owner is away. Each scheduled check-in takes the **first unchecked item**, finishes it, then updates
 `docs/WEEKEND_LOG.md`.
 
@@ -15,7 +17,7 @@ The owner is away. Each scheduled check-in takes the **first unchecked item**, f
 - Small, focused commits.
 
 ## Backlog (in order)
-- [ ] 1. Admin refunds cover the parts top-up hold. Admin list of open requests (match by hand) with
+- [x] 1. Admin refunds cover the parts top-up hold. Admin list of open requests (match by hand) with
        resolve/matched actions. Tests for notifications (unit, with mocked fetch) and open requests.
 - [ ] 2. WrenchNow guarantee: a platform minimum warranty (`MIN_WARRANTY_DAYS`, default 90) that mechanics can't go
        below, a fair-price promise page plus a booking badge, and a "Report a problem with this repair" warranty

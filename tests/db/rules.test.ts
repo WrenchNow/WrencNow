@@ -634,3 +634,19 @@ run("parts quotes and receipts", () => {
   });
 });
 
+run("open requests (match by hand)", () => {
+  it("visitors and users can't write requests directly; requesters read only their own", async () => {
+    await expect(tx((q) => q("insert into public.open_requests (name, email, location_text) values ('x', 'x@example.test', 'Nowhere')"), anon)).rejects.toThrow(
+      /permission denied/,
+    );
+    await tx(async (q) => {
+      await q("insert into public.open_requests (customer_id, name, email, location_text) values ($1, 'Test', 'test.customer@example.test', 'Nowhere')", [ids["customer"]]);
+      await q("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: ids["customer"], role: "authenticated" })]);
+      await q("set local role authenticated");
+      expect((await q("select count(*)::int as n from public.open_requests")).rows[0].n).toBe(1);
+      await q("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: ids["mechanic.basic"], role: "authenticated" })]);
+      expect((await q("select count(*)::int as n from public.open_requests")).rows[0].n).toBe(0);
+    });
+  });
+});
+

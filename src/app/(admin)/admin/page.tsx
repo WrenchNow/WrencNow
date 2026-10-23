@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ResolveReportForm } from "@/components/admin-forms";
+import { OpenRequestActions, ResolveReportForm } from "@/components/admin-forms";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/layout";
 import { dateTime } from "@/lib/format";
@@ -13,7 +13,7 @@ export default async function AdminPage() {
   await requireAdmin();
   const admin = createAdminClient();
   const count = async (q: PromiseLike<{ count: number | null }>) => (await q).count ?? 0;
-  const [awaitingReview, live, activeBookings, disputed, { data: log }, { data: reports }] = await Promise.all([
+  const [awaitingReview, live, activeBookings, disputed, { data: log }, { data: reports }, { data: requests }] = await Promise.all([
     count(
       admin
         .from("mechanics")
@@ -30,6 +30,7 @@ export default async function AdminPage() {
       .eq("status", "open")
       .order("created_at", { ascending: false })
       .limit(50),
+    admin.from("open_requests").select("*").eq("status", "open").order("created_at", { ascending: false }).limit(100),
   ]);
 
   const tiles = [
@@ -37,12 +38,13 @@ export default async function AdminPage() {
     { label: "Live mechanics", value: live, href: "/admin/mechanics?filter=live" },
     { label: "Active bookings", value: activeBookings, href: "/admin/bookings?filter=active" },
     { label: "Disputes", value: disputed, href: "/admin/bookings?filter=disputed" },
+    { label: "Requests to match", value: requests?.length ?? 0, href: "/admin#requests" },
   ];
 
   return (
     <>
       <PageHeader eyebrow="Admin" title="Overview" />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {tiles.map((t) => (
           <Link key={t.label} href={t.href}>
             <Card className="hover:border-ore/50">
@@ -52,6 +54,40 @@ export default async function AdminPage() {
           </Link>
         ))}
       </div>
+      <h2 id="requests" className="mt-10 mb-3 scroll-mt-24 text-2xl font-bold uppercase">Requests to match by hand</h2>
+      {requests && requests.length > 0 ? (
+        <ul className="space-y-2">
+          {requests.map((r) => (
+            <li key={r.id} className="rounded-[var(--radius-card)] border border-warn/30 bg-surface p-4 text-sm">
+              <p className="font-semibold text-cream">
+                {r.service_slug ?? "Any service"} · {r.location_text}
+              </p>
+              <p className="mt-1 text-ink">
+                {r.name} ·{" "}
+                <a href={`mailto:${r.email}`} className="text-ore hover:underline">
+                  {r.email}
+                </a>
+                {r.phone && (
+                  <>
+                    {" · "}
+                    <a href={`tel:${r.phone}`} className="text-ore hover:underline">
+                      {r.phone}
+                    </a>
+                  </>
+                )}
+              </p>
+              {r.details && <p className="mt-1 text-ink">{r.details}</p>}
+              <p className="mt-1 text-xs text-muted">{dateTime(r.created_at)}</p>
+              <div className="mt-2">
+                <OpenRequestActions id={r.id} />
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-muted">No open requests.</p>
+      )}
+
       <h2 className="mt-10 mb-3 text-2xl font-bold uppercase">Off-platform payment reports</h2>
       {reports && reports.length > 0 ? (
         <ul className="space-y-2">

@@ -45,3 +45,20 @@ describe("capture across two holds", () => {
     expect(topupNeededCents(26000, 20000, 4000)).toBe(2000);
   });
 });
+
+import { planRefund } from "@/lib/parts-math";
+
+describe("refunds across the original charge and a parts top-up", () => {
+  it("takes from the first charge listed, then the next", () => {
+    expect(planRefund(7000, [{ id: "topup", refundable: 5000 }, { id: "main", refundable: 20000 }])).toEqual([
+      { id: "topup", amount: 5000 },
+      { id: "main", amount: 2000 },
+    ]);
+  });
+  it("skips charges with nothing left", () => {
+    expect(planRefund(1000, [{ id: "topup", refundable: 0 }, { id: "main", refundable: 3000 }])).toEqual([{ id: "main", amount: 1000 }]);
+  });
+  it("refuses to refund more than was charged", () => {
+    expect(() => planRefund(9000, [{ id: "main", refundable: 8000 }])).toThrow();
+  });
+});
