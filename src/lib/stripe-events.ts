@@ -1,6 +1,7 @@
 import "server-only";
 import type Stripe from "stripe";
 import { cancelOpenBookingsForMechanic } from "@/lib/bookings";
+import { notifyBooking } from "@/lib/notify";
 import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -17,7 +18,16 @@ async function onPaymentIntent(admin: Admin, event: Stripe.Event) {
 
   switch (event.type) {
     case "payment_intent.amount_capturable_updated":
-      await admin.from("bookings").update({ payment_status: "authorized" }).eq("id", bookingId).in("payment_status", ["unpaid", "failed"]);
+      {
+        const { data: changed } = await admin
+          .from("bookings")
+          .update({ payment_status: "authorized" })
+          .eq("id", bookingId)
+          .in("payment_status", ["unpaid", "failed"])
+          .select("id");
+        // The request only reaches the mechanic once the card hold is in place.
+        if (changed?.length) await notifyBooking(bookingId, "requested");
+      }
       break;
     case "payment_intent.succeeded": {
       await admin.from("bookings").update({ payment_status: "captured" }).eq("id", bookingId).in("payment_status", ["unpaid", "authorized"]);

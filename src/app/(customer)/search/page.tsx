@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 import { MechanicCard } from "@/components/search/mechanic-card";
+import { OpenRequestForm } from "@/components/search/open-request-form";
 import { UseLocationButton } from "@/components/search/use-location-button";
-import { Button, ButtonLink } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { EmptyState, Notice } from "@/components/ui/feedback";
 import { Input, Select } from "@/components/ui/form";
 import { Container, PageHeader, SetupRequired } from "@/components/ui/layout";
+import { getViewer } from "@/lib/auth";
 import { supabaseConfigured } from "@/lib/env";
 import { geocode } from "@/lib/geocode";
 import { getServices } from "@/lib/public-data";
@@ -120,20 +123,24 @@ async function Results({ loc, service, sort }: { loc: string; service: string | 
   }
 
   if (results.length === 0) {
+    const viewer = await getViewer();
+    const label = point.label === "Your location" ? "your location" : point.label;
     return (
-      <EmptyState
-        icon="🔧"
-        title="No mechanics here yet"
-        action={
-          <div className="flex flex-wrap justify-center gap-3">
-            <ButtonLink href="/search" variant="ghost">
-              Try another location
-            </ButtonLink>
-            <ButtonLink href="/for-mechanics">Know a mechanic? Send them our way</ButtonLink>
-          </div>
-        }
-      >
-        We&apos;re still building our network around {point.label}. {service ? "Try “Any service” or check back soon." : "Check back soon."}
+      <EmptyState icon="🔧" title="No mechanics here yet">
+        <p>
+          We&apos;re still building our network around {label}. Send your request and we&apos;ll match you with a mechanic by hand — or{" "}
+          <Link href="/search" className="text-ore hover:underline">
+            try another location
+          </Link>
+          .
+        </p>
+        <div className="mt-6">
+          <OpenRequestForm
+            location={label === "your location" ? loc : point.label}
+            service={service}
+            defaults={{ name: viewer?.profile?.full_name ?? "", email: viewer?.email ?? "", phone: viewer?.profile?.phone ?? "" }}
+          />
+        </div>
       </EmptyState>
     );
   }

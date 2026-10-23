@@ -1,5 +1,7 @@
 import "server-only";
 import { randomInt } from "node:crypto";
+import { after } from "next/server";
+import { notifyBooking, type BookingEvent } from "@/lib/notify";
 import {
   actorMayTransition,
   ARRIVAL_CODE_MAX_ATTEMPTS,
@@ -41,11 +43,14 @@ export async function syncBookingPayment(bookingId: string): Promise<BookingRow[
   if (!b?.stripe_payment_intent_id || !["unpaid", "failed"].includes(b.payment_status)) return b?.payment_status ?? null;
   const pi = await getStripe().paymentIntents.retrieve(b.stripe_payment_intent_id);
   if (pi.status === "requires_capture") {
-    await admin
+    const { data: changed } = await admin
       .from("bookings")
       .update({ payment_status: "authorized" })
       .eq("id", b.id)
-      .in("payment_status", ["unpaid", "failed"]);
+      .in("payment_status", ["unpaid", "failed"])
+      .select("id");
+    // The request only reaches the mechanic once the card hold is in place.
+    if (changed?.length) after(() => notifyBooking(b.id, "requested"));
     return "authorized";
   }
   if (pi.status === "canceled") {
@@ -412,6 +417,7 @@ async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor
   if (to === "no_show") {
     await admin.from("no_shows").insert({ booking_id: b.id, mechanic_id: b.mechanic_id, reported_by: actor.id, reason: opts.reason?.slice(0, 1000) ?? null });
   }
+  if (to !== "requested") after(() => notifyBooking(b.id, to as BookingEvent));
   await audit(actor.id, `booking.${to}`, b.id, { from: b.status, ...(opts.finalAmountCents ? { final: opts.finalAmountCents } : {}) });
   return updated;
 }
@@ -459,4 +465,5 @@ export async function checkInAtAddress(bookingId: string, mechanicId: string, la
     .eq("id", bookingId)
     .is("arrived_at", null);
   await audit(mechanicId, "booking.arrived", bookingId, { distance_m: distance ?? null });
+  after(() => notifyBooking(bookingId, "arrived"));
 }
