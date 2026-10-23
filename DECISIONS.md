@@ -2,6 +2,11 @@
 
 Newest first. One entry per decision: the date, what was decided and why.
 
+## 2026-10-23
+- **Research round** on improving the concept: waste science, market/growth and a UX audit, combined in `docs/research/IMPROVEMENTS-RANKED.md`.
+- **Honesty fix:** shopping-list photos are never sent to AI without a tap (they used to be sent automatically when the phone read too little). The privacy page now covers list photos.
+- **UX quick wins shipped:** shorter no-backend onboarding, 44px tap targets, consistent wording ("Missing:", "Membership", "AI reads"), no promises of unbuilt features, and a single "Next item ↗" button for Amazon searches.
+
 ## 2026-10-22 (afternoon)
 - **Two tiers (Wyatt):**
   - **Free:** shopping-list photo (read on the phone; handwriting gets a small monthly allowance on the cheapest AI) → Amazon links/cart, plus barcode, receipt, paste order, recipes and plans.
