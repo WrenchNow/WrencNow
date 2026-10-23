@@ -37,9 +37,9 @@ const OWN_KEY = 'add your own key in Settings → AI for unlimited use';
 const PREMIUM_MSG = {
   missing: 'Fridge, pantry and freezer photo scans are part of Premium.',
   disabled: 'Premium isn’t switched on yet.',
-  expired: 'Your Premium code has expired. Restore it in Settings → Plan.',
-  malformed: 'Your Premium code isn’t valid. Restore it in Settings → Plan.',
-  signature: 'Your Premium code isn’t valid. Restore it in Settings → Plan.',
+  expired: 'Your Premium code has expired. Restore it in Settings → Membership.',
+  malformed: 'Your Premium code isn’t valid. Restore it in Settings → Membership.',
+  signature: 'Your Premium code isn’t valid. Restore it in Settings → Membership.',
   plan: 'Your plan doesn’t include photo scans.'
 };
 
@@ -73,7 +73,7 @@ export default route(async (req, context) => {
       quota = { key: `month/${month}/list/${personKey(context)}`, limit: n, msg: `You’ve used this month’s ${n} free handwriting reads. The free reader on your phone still works, or ${OWN_KEY}.`, code: 'list_limit' }];
   } else {
     const n = envInt('FREE_DAILY_PER_USER', 8);
-    caps = [total, { key: `day/${day}/user/${personKey(context)}`, limit: n, msg: `You’ve used today’s ${n} free AI requests. Come back tomorrow, or ${OWN_KEY}.`, code: 'free_limit' }];
+    caps = [total, { key: `day/${day}/user/${personKey(context)}`, limit: n, msg: `You’ve used today’s ${n} free AI reads. Come back tomorrow, or ${OWN_KEY}.`, code: 'free_limit' }];
   }
   const limited = await takeAll(store, caps, `Free AI is busy right now. Try again in a minute, or ${OWN_KEY}.`);
   if (limited) {

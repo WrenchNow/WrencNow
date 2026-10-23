@@ -54,7 +54,7 @@ p{margin:0}
 #app{max-width:560px;margin:0 auto;min-height:100vh;padding:calc(env(safe-area-inset-top) + 18px) 16px calc(var(--nav-h) + env(safe-area-inset-bottom) + 28px)}
 .top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:16px}
 .eyebrow{font-size:13px;color:var(--muted);font-weight:500;margin-bottom:2px}
-.icon-btn{border:1px solid var(--line);background:var(--surface);border-radius:999px;min-width:42px;height:42px;padding:0 12px;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:14px;font-weight:600}
+.icon-btn{border:1px solid var(--line);background:var(--surface);border-radius:999px;min-width:44px;height:44px;padding:0 12px;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:14px;font-weight:600}
 
 /* buttons */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:14px;padding:13px 16px;font-weight:600;font-size:15px;min-height:48px;text-decoration:none;transition:transform .08s ease,filter .15s}
@@ -65,7 +65,7 @@ p{margin:0}
 .btn-soft{background:var(--brand-soft);color:var(--brand)}
 .btn-ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
 .btn-danger{background:var(--danger-soft);color:var(--danger)}
-.btn-sm{min-height:36px;padding:7px 12px;border-radius:10px;font-size:14px}
+.btn-sm{min-height:44px;padding:7px 12px;border-radius:10px;font-size:14px}
 .btn-block{width:100%}
 .row{display:flex;gap:10px;align-items:center}
 .row.wrap{flex-wrap:wrap}
@@ -74,12 +74,12 @@ p{margin:0}
 
 /* segmented + chips */
 .seg{display:flex;background:var(--surface-2);border-radius:14px;padding:4px;gap:4px;margin-bottom:14px}
-.seg button{flex:1;border:0;background:transparent;border-radius:10px;padding:9px 8px;font-weight:600;font-size:14px;color:var(--muted)}
+.seg button{min-height:44px;flex:1;border:0;background:transparent;border-radius:10px;padding:9px 8px;font-weight:600;font-size:14px;color:var(--muted)}
 .seg button.on{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chips.scroll{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px 2px}
 .chips.scroll::-webkit-scrollbar{display:none}
-.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 13px;font-size:14px;font-weight:500;white-space:nowrap;min-height:36px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 13px;font-size:14px;font-weight:500;white-space:nowrap;min-height:44px}
 .chip.on{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
 .chip.danger.on{background:var(--danger);border-color:var(--danger);color:var(--on-accent)}
 .chip .x{margin-left:6px;opacity:.7}
@@ -94,12 +94,12 @@ textarea.input{min-height:110px;resize:vertical;line-height:1.45}
 .search .input{padding-left:40px}
 .search::before{content:'⌕';position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:20px;color:var(--muted)}
 .stepper{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden}
-.stepper button{border:0;background:transparent;width:42px;height:42px;font-size:20px;font-weight:600;color:var(--brand)}
+.stepper button{border:0;background:transparent;width:44px;height:44px;font-size:20px;font-weight:600;color:var(--brand)}
 .stepper span{min-width:44px;text-align:center;font-weight:700}
 .switch{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
 .switch:last-child{border-bottom:0}
-.toggle{appearance:none;-webkit-appearance:none;width:48px;height:28px;border-radius:999px;background:var(--line);position:relative;flex:none;transition:background .15s;cursor:pointer}
-.toggle::after{content:'';position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .15s}
+.toggle{appearance:none;-webkit-appearance:none;width:48px;height:28px;padding:8px 0;box-sizing:content-box;background-clip:content-box;border-radius:999px;background:var(--line);position:relative;flex:none;transition:background .15s;cursor:pointer}
+.toggle::after{content:'';position:absolute;top:11px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .15s}
 .toggle:checked{background:var(--brand)}
 .toggle:checked::after{transform:translateX(20px)}
 
@@ -167,7 +167,7 @@ details.filters[open] summary::after{transform:rotate(180deg)}
 .thumbs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
 .thumb{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;background:var(--surface-2)}
 .thumb img{width:100%;height:100%;object-fit:cover}
-.thumb button{position:absolute;top:4px;right:4px;width:28px;height:28px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:15px}
+.thumb button{position:absolute;top:0;right:0;width:44px;height:44px;border-radius:50%;border:0;background:radial-gradient(circle,rgba(0,0,0,.6) 13.5px,transparent 14.5px);color:#fff;font-size:15px}
 .review-item{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px;margin-bottom:10px}
 .review-item.off{opacity:.45}
 .review-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
@@ -241,6 +241,7 @@ details.filters[open] summary::after{transform:rotate(180deg)}
 .ob h1{font-size:34px;text-align:center}
 .ob .lead{text-align:center;color:var(--muted);font-size:17px}
 .dots{display:flex;gap:6px;justify-content:center;margin-bottom:16px}
+.ob-foot{position:sticky;bottom:0;background:var(--bg);padding:12px 0 calc(env(safe-area-inset-bottom) + 8px);z-index:1}
 .dots i{width:8px;height:8px;border-radius:4px;background:var(--line);transition:width .2s}
 .dots i.on{width:22px;background:var(--brand)}
 .tut{display:flex;flex-direction:column;gap:10px}
@@ -272,7 +273,7 @@ details.filters[open] summary::after{transform:rotate(180deg)}
 .arrive-btns .btn{padding:7px 6px}
 .arrive.soft{display:flex;align-items:center;gap:10px;background:var(--surface-2);border-color:var(--line);padding:10px 12px}
 .arrive.soft .ic{font-size:22px}
-.arrive.soft .icon-btn{min-width:36px;height:36px;padding:0}
+.arrive.soft .icon-btn{min-width:44px;height:44px;padding:0}
 /* scan types: free ones first (2 per row, or 3 when Barcode is off), then the Premium photo types, 3 per row */
 .seg.scan-types{display:grid;grid-template-columns:repeat(6,1fr)}
 .seg.scan-types button{grid-column:span 2;padding:9px 2px;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -286,7 +287,7 @@ details.filters[open] summary::after{transform:rotate(180deg)}
 .ok-text{color:var(--ok);font-weight:600}
 .ocr-track{width:min(260px,80%);height:8px;border-radius:99px;background:var(--surface-2);overflow:hidden}
 .ocr-track span{display:block;height:100%;background:var(--brand);transition:width .3s}
-.linklike{border:0;background:none;padding:0;color:inherit;font:inherit;text-decoration:underline;cursor:pointer}
+.linklike{border:0;background:none;padding:12px 0;color:inherit;font:inherit;text-decoration:underline;cursor:pointer}
 .bc-row .input{padding:8px 10px}
 #bc-cam{position:fixed;inset:0;z-index:85;background:#000;display:flex;flex-direction:column}
 #bc-cam video{flex:1;width:100%;min-height:0;object-fit:cover}
@@ -294,6 +295,11 @@ details.filters[open] summary::after{transform:rotate(180deg)}
 #bc-cam .bc-cam-bar{position:relative;z-index:1;background:var(--surface);color:var(--ink);padding:14px 16px calc(14px + env(safe-area-inset-bottom))}
 #bc-cam #bc-cam-msg{margin-bottom:10px;font-weight:600;min-height:1.4em}
 .paste-box{min-height:170px;font-size:15px}
+/* 44px tap area around small checkboxes, without changing the row layout */
+label.hit{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;margin:-11px;flex:none;cursor:pointer}
+.premium-soon{margin:2px 0 4px}
+.cart-each summary{padding:13px 0;min-height:44px;box-sizing:border-box;cursor:pointer;color:var(--muted);font-weight:600}
+select.input{min-height:44px}
 
 </style>
 </head>
@@ -1743,7 +1749,7 @@ async function callClaude({ system, content, maxTokens = 2000, purpose = '' }) {
     if (res.status === 429 && (code === 'premium_limit' || (purpose === 'scan' && !code))) { if (quota.scan) quota.scan.left = 0; throw aiError(msg || `You’ve used all ${quota.scan?.limit || PREMIUM.scans} Premium scans this month. They reset on the 1st. Barcode, receipt and shopping-list scans still work for free.`, 'month_limit'); }
     if (res.status === 429 && (code === 'list_limit' || (purpose === 'list' && !code))) { if (quota.list) quota.list.left = 0; throw aiError(msg || 'You’ve used this month’s free handwriting reads. The free reader on your phone still works, or type the items in.', 'month_limit'); }
     if (res.status === 429 && code === 'busy') throw aiError(msg || 'Pantry Pal is busy right now. Try again in a minute.', 'api');
-    if (res.status === 429) throw aiError(msg || 'You’ve used today’s free AI requests. Add your own key in Settings for unlimited use, or try again tomorrow.', 'free_limit');
+    if (res.status === 429) throw aiError(msg || 'You’ve used today’s free AI reads. Add your own key in Settings for unlimited use, or try again tomorrow.', 'free_limit');
     if (!res.ok) throw aiError(data?.error?.message || msg || ('AI request failed (' + res.status + ')'), 'api');
     return (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n');
   }
@@ -2017,7 +2023,7 @@ function viewBarcode() {
       <div class="grow">${x.status === 'found' ? `<div class="li-title">${esc(x.name)}${x.count > 1 ? ` <span class="muted">×${x.count}</span>` : ''}</div><div class="tiny muted">${esc([x.brand, fmtAmount(x.qty, x.unit)].filter(Boolean).join(' · '))}</div>`
         : x.status === 'looking' ? `<div class="li-title muted">Looking up…</div><div class="tiny muted">${esc(x.code)}</div>`
           : `<input class="input" data-bc="${i}" value="${esc(x.name)}" placeholder="What is it?" aria-label="Name for barcode ${esc(x.code)}"><div class="tiny muted" style="margin-top:4px">${x.status === 'error' ? 'Couldn’t look it up' : 'Not in the database'} · ${esc(x.code)}</div>`}</div>
-      <button class="icon-btn" style="min-width:36px;height:36px" data-act="bcRemove" data-i="${i}" aria-label="Remove">✕</button></div>`).join('');
+      <button class="icon-btn" data-act="bcRemove" data-i="${i}" aria-label="Remove">✕</button></div>`).join('');
   const busy = bc.list.some(x => x.status === 'looking');
   return `<div class="scan-btns">
       <button class="scan-btn" data-act="bcCamera"><span class="ic">▦</span>Scan with camera</button>
@@ -2431,12 +2437,12 @@ function aiErrorHtml(msg, code) {
   return `<div class="note ${['free_limit', 'month_limit'].includes(code) ? 'warn' : 'danger'}" style="margin-bottom:14px">${esc(msg)}${cta ? '<br>' + cta : ''}</div>`;
 }
 function greeting() { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'; }
-function firstName() { return (S.household.members[0]?.name || '').split(' ')[0]; }
+function firstName() { const n = (S.household.members[0]?.name || '').split(' ')[0]; return n === 'Me' ? '' : n; }
 
 function card(e) {
   const r = e.r; const h = artHue(r.title);
   const sw = e.swaps && e.swaps.length ? ` <span class="small muted">· ${e.swaps.length} swap${e.swaps.length === 1 ? '' : 's'}</span>` : '';
-  const miss = e.missing.length ? `<p class="missing">Need: ${esc(e.missing.slice(0, 3).map(i => i.name).join(', '))}${e.missing.length > 3 ? ` +${e.missing.length - 3}` : ''}${sw}</p>` : `<p class="small" style="color:var(--ok);font-weight:600">✓ You have everything${sw}</p>`;
+  const miss = e.missing.length ? `<p class="missing">Missing: ${esc(e.missing.slice(0, 3).map(i => i.name).join(', '))}${e.missing.length > 3 ? ` +${e.missing.length - 3}` : ''}${sw}</p>` : `<p class="small" style="color:var(--ok);font-weight:600">✓ You have everything${sw}</p>`;
   const warn = e.conflicts.length ? `<span class="badge danger">⚠ ${esc(e.conflicts.map(c => c.label).join(', '))}</span>` : '';
   return `<button class="card" data-act="openRecipe" data-id="${esc(r.id)}">
     <div class="art" style="--h:${h}" aria-hidden="true">${recipeEmoji(r.title)}</div>
@@ -2475,13 +2481,13 @@ function filtersPanel() {
 
 function viewFeed() {
   const g = computeFeed();
-  const gen = `<div class="panel" style="display:flex;gap:12px;align-items:center">
-    <div class="grow"><b>Fresh ideas from your kitchen</b><p class="small muted">${S.inventory.length ? `Uses your ${S.inventory.length} pantry items and filters` : 'Scan your fridge first for better matches'}</p></div>
-    <button class="btn btn-accent btn-sm" data-act="generate" ${feed.busy ? 'disabled' : ''}>${feed.busy ? '<span class="spinner sm"></span>' : '✨ Generate'}</button></div>
+  const gen = `${aiMode() === 'none' ? '' : `<div class="panel" style="display:flex;gap:12px;align-items:center">
+    <div class="grow"><b>Fresh ideas from your kitchen</b><p class="small muted">${S.inventory.length ? `Uses your ${S.inventory.length} pantry items and filters` : 'Scan a receipt or a few barcodes first for better matches'}</p></div>
+    <button class="btn btn-accent btn-sm" data-act="generate" ${feed.busy ? 'disabled' : ''}>${feed.busy ? '<span class="spinner sm"></span>' : '✨ Generate'}</button></div>`}
     ${g.ready.length + g.near.length ? `<button class="btn btn-ghost btn-block" style="margin-bottom:14px" data-act="surprise">🎲 Surprise me with something I can make</button>` : ''}
     ${feed.busy ? `<div class="note ok" style="margin-bottom:14px">✨ Cooking up new recipes from your pantry… they’ll appear at the top in a few seconds.</div>` : ''}
     ${feed.error ? aiErrorHtml(feed.error, feed.errorCode) : ''}`;
-  const emptyInv = !S.inventory.length ? `<div class="note" style="margin-bottom:14px">📸 <b>Tip:</b> scan a receipt or your fridge and recipes you can make right now will rise to the top. <button class="btn btn-sm btn-soft" data-act="goto" data-tab="scan" style="margin-top:8px">Scan now</button></div>` : '';
+  const emptyInv = !S.inventory.length ? `<div class="note" style="margin-bottom:14px">📸 <b>Tip:</b> scan a receipt or a few barcodes and recipes you can make right now rise to the top. <button class="btn btn-sm btn-soft" data-act="goto" data-tab="scan" style="margin-top:8px">Scan now</button></div>` : '';
   const sec = (key, title, color, list) => {
     if (!list.length) return '';
     const lim = feed.expanded[key] ? list.length : 8;
@@ -2626,7 +2632,7 @@ function arriveSheet() {
   const on = rows.filter(([x]) => x.on).length;
   return `${sheetBar('Did your order arrive?')}<p class="small muted" style="margin:-6px 0 12px">Uncheck anything that didn’t come and fix the amounts, then add.</p>
     ${rows.map(([x, i, c]) => `<div class="cart-row ${x.on ? '' : 'off'}"><div class="row" style="align-items:center">
-      <input type="checkbox" ${x.on ? 'checked' : ''} data-arrck="${i}" style="width:22px;height:22px;accent-color:var(--brand)" aria-label="Include ${esc(c.name)}">
+      <label class="hit"><input type="checkbox" ${x.on ? 'checked' : ''} data-arrck="${i}" style="width:22px;height:22px;accent-color:var(--brand)" aria-label="Include ${esc(c.name)}"></label>
       <div class="grow"><div class="li-title" style="text-transform:capitalize">${esc(c.name)}</div><div class="tiny muted">Added ${fmtDate(c.added)}</div></div>
       <div class="stepper" style="flex:none"><button data-act="arriveQty" data-i="${i}" data-d="-1" aria-label="Less">−</button><span>${x.qty}</span><button data-act="arriveQty" data-i="${i}" data-d="1" aria-label="More">+</button></div></div></div>`).join('')}
     <div class="sheet-foot static"><button class="btn btn-primary btn-block" data-act="arriveAdd" ${on ? '' : 'disabled'}>Add ${on} item${on === 1 ? '' : 's'} to pantry</button></div>`;
@@ -2640,6 +2646,7 @@ function expiryBadge(iso) {
   if (d === 1) return `<span class="badge warn">Use tomorrow</span>`;
   if (d <= 3) return `<span class="badge warn">${d} days left</span>`;
   if (d <= 7) return `<span class="badge">${d} days</span>`;
+  if (d > 60) return `<span class="badge">Good till ${new Date(iso + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}</span>`;
   return `<span class="badge">${fmtDate(iso)}</span>`;
 }
 function viewPantry() {
@@ -2665,7 +2672,7 @@ function viewPantry() {
         <button class="chip ${filter === 'soon' ? 'on' : ''}" data-act="pantryFilter" data-v="soon">Expiring soon</button>
         <button class="chip ${filter === 'allergen' ? 'on' : ''}" data-act="pantryFilter" data-v="allergen">Allergen flags</button></div>
       ${groups.length ? groups.map(([c, l]) => `<section class="inv-group"><h3>${CAT_ICON[c]} ${c}</h3>${l.map(itemRow).join('')}</section>`).join('') : `<div class="empty"><p>Nothing here.</p></div>`}`
-      : `<div class="empty"><div class="big">🧺</div><h3>Your pantry is empty</h3><p style="margin-bottom:16px">Scan a receipt or snap your fridge and Pantry Pal will fill this in.</p>
+      : `<div class="empty"><div class="big">🧺</div><h3>Your pantry is empty</h3><p style="margin-bottom:16px">Scan a receipt, a barcode or a pasted order and Pantry Pal fills this in.</p>
         <div class="stack"><button class="btn btn-primary" data-act="goto" data-tab="scan">📸 Scan something</button><button class="btn btn-ghost" data-act="addItem">Add an item by hand</button></div></div>`}`;
 }
 function itemRow(i) {
@@ -2679,10 +2686,10 @@ function itemSheet() {
   const d = itemDraft;
   return `${sheetBar(d.id ? 'Edit item' : 'Add item')}
     <div class="field"><label for="it-name">Name</label><input id="it-name" class="input" data-draft="name" value="${esc(d.name)}" placeholder="e.g. spinach"></div>
-    <div class="row"><div class="field grow"><label>Quantity</label><input class="input" type="number" inputmode="decimal" min="0" step="any" data-draft="qty" value="${esc(d.qty)}"></div>
-      <div class="field grow"><label>Unit</label><input class="input" data-draft="unit" value="${esc(d.unit)}" placeholder="lb, oz, bag…"></div></div>
-    <div class="field"><label>Category</label><select class="input" data-draft="category">${CATEGORIES.map(c => `<option ${c === d.category ? 'selected' : ''}>${c}</option>`).join('')}</select></div>
-    <div class="field"><label>Use by</label><input class="input" type="date" data-draft="expires" value="${esc(d.expires || '')}"></div>
+    <div class="row"><div class="field grow"><label for="it-qty">Quantity</label><input id="it-qty" class="input" type="number" inputmode="decimal" min="0" step="any" data-draft="qty" value="${esc(d.qty)}"></div>
+      <div class="field grow"><label for="it-unit">Unit</label><input id="it-unit" class="input" data-draft="unit" value="${esc(d.unit)}" placeholder="lb, oz, bag…"></div></div>
+    <div class="field"><label for="it-cat">Category</label><select id="it-cat" class="input" data-draft="category">${CATEGORIES.map(c => `<option ${c === d.category ? 'selected' : ''}>${c}</option>`).join('')}</select></div>
+    <div class="field"><label for="it-exp">Use by</label><input id="it-exp" class="input" type="date" data-draft="expires" value="${esc(d.expires || '')}"></div>
     ${conflictsFor([d.name]).map(c => `<div class="note danger" style="margin-bottom:10px">⚠ Contains ${esc(c.label)} — ${esc(c.who.join(', '))} is allergic.</div>`).join('')}
     <div class="stack" style="margin-top:6px"><button class="btn btn-primary btn-block" data-act="saveItem">Save</button>
     ${d.id ? `<button class="btn btn-danger btn-block" data-act="deleteItem">Delete item</button>` : ''}</div>`;
@@ -2707,7 +2714,7 @@ function viewScan() {
       ${scan.partial ? `<div class="note danger" style="margin-bottom:12px">The AI reply was cut off, so some items may be missing. Add these, then scan the rest with fewer photos at a time.</div>` : ''}
       ${hasAllergies() ? allergyNote('margin:-6px 0 12px') : ''}
       ${scan.items.map((it, i) => `<div class="review-item ${it.on ? '' : 'off'}">
-        <div class="review-top"><input type="checkbox" ${it.on ? 'checked' : ''} data-scan="${i}" data-f="on" aria-label="Include"><input class="input" data-scan="${i}" data-f="name" value="${esc(it.name)}" aria-label="Name"></div>
+        <div class="review-top"><label class="hit"><input type="checkbox" ${it.on ? 'checked' : ''} data-scan="${i}" data-f="on" aria-label="Include ${esc(it.name)}"></label><input class="input" data-scan="${i}" data-f="name" value="${esc(it.name)}" aria-label="Name"></div>
         <div class="review-grid">
           <input class="input" type="number" inputmode="decimal" step="any" data-scan="${i}" data-f="qty" value="${esc(it.qty)}" aria-label="Quantity">
           <input class="input" data-scan="${i}" data-f="unit" value="${esc(it.unit)}" placeholder="unit" aria-label="Unit">
@@ -2753,7 +2760,6 @@ function viewScan() {
     ${scan.error && scan.errorCode !== 'ocr' ? `<div style="margin-top:14px">${aiErrorHtml(scan.error, scan.errorCode)}</div>` : ''}
     ${!canSeeImages() && !ocrReceipt ? `<div class="note warn" style="margin-top:14px">${loose ? 'Premium scans need a connection to Pantry Pal. Open the app from the Pantry Pal website, or add your own Anthropic key.' : 'Photo scanning needs AI. Add your own Anthropic key to turn it on — or add items by hand in Pantry.'} <button class="btn btn-sm btn-soft" data-act="goto" data-tab="settings" style="margin-top:8px">Add my key</button></div>` : ''}`;
 }
-function listLeftLine() { return quota.list && aiMode() === 'backend' ? `<p class="tiny muted" style="text-align:center;margin-top:6px">${quota.list.left} free handwriting read${quota.list.left === 1 ? '' : 's'} left this month</p>` : ''; }
 // Asked before any list photo goes to the AI: what it costs and where the photo goes. Nothing is sent until the tap.
 function listAiAsk() {
   const n = quota.list ? quota.list.left : health?.freeListPerMonth;
@@ -2761,10 +2767,12 @@ function listAiAsk() {
     : `uses 1 of your ${n ? `${n} ` : ''}free reads${quota.list ? ' left' : ''} this month; the photo is sent to our AI service`;
   return `<b>Couldn’t read much.</b> Read the handwriting with AI? (${cost})`;
 }
+function listLeftLine() { return quota.list && aiMode() === 'backend' ? `<p class="tiny muted" style="text-align:center;margin-top:6px">${quota.list.left} free handwriting read${quota.list.left === 1 ? '' : 's'} left this month</p>` : ''; }
+// No Stripe link yet: one plain line instead of a disabled buy button.
+function premiumSoon() { return `<p class="small premium-soon"><b>Premium is coming soon:</b> ${PREMIUM.scans} fridge, pantry and freezer photo scans a month, ${PREMIUM.monthly}/mo.</p>`; }
 // Free users tapping Fridge, Pantry or Freezer. Nothing is sent anywhere from here.
 function premiumCard() {
-  const get = CONFIG.STRIPE_LINK ? `<a class="btn btn-accent btn-block" href="${esc(CONFIG.STRIPE_LINK)}" target="_blank" rel="noopener">Get Premium</a>`
-    : `<button class="btn btn-accent btn-block" disabled>Get Premium · Coming soon</button>`;
+  const get = CONFIG.STRIPE_LINK ? `<a class="btn btn-accent btn-block" href="${esc(CONFIG.STRIPE_LINK)}" target="_blank" rel="noopener">Get Premium</a>` : premiumSoon();
   const ended = S.premium && !premiumLive();
   return `<section class="panel premium">
       <p class="eyebrow">🔒 Premium</p><h2>Snap your fridge, pantry or freezer</h2>
@@ -2787,11 +2795,11 @@ function viewListReview() {
     <p class="small muted" style="margin-bottom:12px">${scan.listSource === 'ai' ? 'Read with AI. ' : ''}Check the names, then send them to Amazon. Amazon shows the matching products.</p>
     ${hasAllergies() ? allergyNote('margin:-6px 0 12px') : ''}
     ${L.map((it, i) => { const r = listRow(it); return `<div class="review-item ${it.on ? '' : 'off'}">
-      <div class="review-top"><input type="checkbox" ${it.on ? 'checked' : ''} data-li="${i}" data-f="on" aria-label="Include"><input class="input" data-li="${i}" data-f="name" value="${esc(it.name)}" aria-label="Item name"></div>
+      <div class="review-top"><label class="hit"><input type="checkbox" ${it.on ? 'checked' : ''} data-li="${i}" data-f="on" aria-label="Include ${esc(it.name)}"></label><input class="input" data-li="${i}" data-f="name" value="${esc(it.name)}" aria-label="Item name"></div>
       <div class="row list-ctl"><div class="stepper"><button data-act="listQty" data-i="${i}" data-d="-1" aria-label="Fewer">−</button><span>${it.qty}</span><button data-act="listQty" data-i="${i}" data-d="1" aria-label="More">+</button></div>
         <span class="grow"></span>
         <a class="btn btn-ghost btn-sm" href="${esc(searchUrl(r.term))}" target="_blank" rel="noopener sponsored" data-act="listSearch" data-i="${i}" aria-label="Find ${esc(it.name)} on Amazon">Amazon ↗</a>
-        <button class="icon-btn" style="min-width:36px;height:36px" data-act="listRm" data-i="${i}" aria-label="Remove ${esc(it.name)}">✕</button></div>
+        <button class="icon-btn" data-act="listRm" data-i="${i}" aria-label="Remove ${esc(it.name)}">✕</button></div>
       ${r.asin || it.need ? `<p class="tiny" style="margin-top:6px">${r.asin ? '<span class="ok-text">✓ One-tap cart</span>' : ''}${r.asin && it.need ? ' · ' : ''}${it.need ? `<span class="muted">List says ${esc(it.need)}</span>` : ''}</p>` : ''}
       ${conflictsFor([it.name]).map(c => `<p class="tiny" style="color:var(--danger);margin-top:6px">⚠ ${esc(c.label)} — ${esc(c.who.join(', '))}</p>`).join('')}
     </div>`; }).join('')}
@@ -2811,15 +2819,15 @@ function viewShop() {
   const sl = S.shopping;
   const open = sl.filter(i => !i.done);
   return `<header class="top"><div><p class="eyebrow">Groceries</p><h1>Shop</h1></div></header>
-    ${S.cart.length ? `<div class="section-h"><h2>In your Amazon cart<span class="count">${S.cart.length}</span></h2></div>
+    ${S.cart.length ? `<div class="section-h"><h2>Waiting to arrive<span class="count">${S.cart.length}</span></h2></div>
       <div class="list">${S.cart.map(c => `<div class="li"><span class="ic">${CAT_ICON[c.category] || '📦'}</span><div class="grow"><div class="li-title" style="text-transform:capitalize">${esc(c.name)}</div><div class="tiny muted">Added ${fmtDate(c.added)}</div></div>
-        <button class="btn btn-soft btn-sm" data-act="boughtOne" data-id="${c.id}">Bought</button><button class="icon-btn" style="min-width:36px;height:36px" data-act="rmCart" data-id="${c.id}" aria-label="Remove">✕</button></div>`).join('')}</div>
+        <button class="btn btn-soft btn-sm" data-act="boughtOne" data-id="${c.id}">Bought</button><button class="icon-btn" data-act="rmCart" data-id="${c.id}" aria-label="Remove ${esc(c.name)}">✕</button></div>`).join('')}</div>
       <button class="btn btn-primary btn-block" data-act="boughtAll">✓ Mark all as bought</button>
       <p class="tiny muted" style="margin-top:6px">Checked out on Amazon? One tap moves these into your pantry.</p>` : ''}
     <div class="section-h"><h2>Shopping list<span class="count">${open.length}</span></h2>${sl.some(i => i.done) ? `<button class="btn btn-ghost btn-sm" data-act="slBought">Move checked to pantry</button>` : ''}</div>
     <form class="row" data-form="slAdd" style="margin-bottom:12px"><input class="input grow" name="item" placeholder="Add an item…" aria-label="New item" autocomplete="off"><button class="btn btn-primary" type="submit">Add</button></form>
     ${sl.length ? `<div class="list">${sl.map(i => `<label class="li ${i.done ? 'done' : ''}"><input type="checkbox" ${i.done ? 'checked' : ''} data-sl="${i.id}"><div class="grow"><div class="li-title">${esc(i.name)}</div>${i.need ? `<div class="tiny muted">${esc(i.need)}${i.from ? ' · ' + esc(i.from) : ''}</div>` : ''}</div>
-      <button type="button" class="btn btn-ghost btn-sm" data-act="slAmazon" data-id="${i.id}">Add</button><button type="button" class="icon-btn" style="min-width:36px;height:36px" data-act="slRm" data-id="${i.id}" aria-label="Remove">✕</button></label>`).join('')}</div>
+      <button type="button" class="btn btn-ghost btn-sm" data-act="slAmazon" data-id="${i.id}" aria-label="Find ${esc(i.name)} on Amazon">Amazon ↗</button><button type="button" class="icon-btn" data-act="slRm" data-id="${i.id}" aria-label="Remove ${esc(i.name)}">✕</button></label>`).join('')}</div>
       ${open.length ? `<button class="btn btn-accent btn-block" data-act="slToCart">🛒 Send ${open.length} item${open.length === 1 ? '' : 's'} to Amazon cart</button>` : ''}
       ${sl.some(i => i.done) ? `<button class="btn btn-ghost btn-block" style="margin-top:10px" data-act="slClearDone">Clear checked</button>` : ''}`
       : `<div class="empty"><div class="big">📝</div><p>Your list is empty. Missing ingredients from recipes land here too.</p></div>`}
@@ -2861,19 +2869,19 @@ function memberSheet() {
 }
 function viewSettings() {
   const st = S.settings; const mode = aiMode(); const admin = st.admin;
-  const free = health?.ok && health.ai ? (health.freePerDay ? `${health.freePerDay} free AI requests a day` : 'free AI included') : '';
+  const free = health?.ok && health.ai ? (health.freePerDay ? `${health.freePerDay} free AI reads a day` : 'free AI included') : '';
   const aiLabel = { own: '✓ Using your own Anthropic key', backend: `✓ AI is on${free ? ' · ' + free : ''}`, builtin: '✓ Using Claude built in (text only — photo scanning needs a key)', none: 'AI is off — add a key below to turn on scanning and custom recipes' }[mode];
   const owner = admin ? `
     <section class="panel" style="border-color:var(--accent)"><div class="row" style="justify-content:space-between"><h2>Owner settings</h2><button class="btn btn-ghost btn-sm" data-act="exitAdmin">Hide</button></div>
       <p class="small muted" style="margin-bottom:12px">Only visible on this device. For everyone else, set these in the CONFIG block at the top of pantry-pal.html.</p>
-      <div class="field"><label for="s-url">Backend URL (Cloudflare Worker)${CONFIG.BACKEND_URL ? ' · overrides CONFIG' : ''}</label><input id="s-url" class="input" type="url" inputmode="url" data-setting="backendUrl" value="${esc(st.backendUrl)}" placeholder="${esc(CONFIG.BACKEND_URL || 'https://pantry-pal.yourname.workers.dev')}" autocapitalize="off" spellcheck="false"></div>
-      <div class="field"><label for="s-tok">App token (optional)</label><input id="s-tok" class="input" data-setting="appToken" value="${esc(st.appToken)}" placeholder="Matches APP_TOKEN in your Worker" autocapitalize="off" spellcheck="false"></div>
+      <div class="field"><label for="s-url">Backend URL (Netlify site)${CONFIG.BACKEND_URL ? ' · overrides CONFIG' : ''}</label><input id="s-url" class="input" type="url" inputmode="url" data-setting="backendUrl" value="${esc(st.backendUrl)}" placeholder="${esc(CONFIG.BACKEND_URL || 'https://your-site.netlify.app')}" autocapitalize="off" spellcheck="false"></div>
+      <div class="field"><label for="s-tok">App token (optional)</label><input id="s-tok" class="input" data-setting="appToken" value="${esc(st.appToken)}" placeholder="Matches APP_TOKEN in Netlify env vars" autocapitalize="off" spellcheck="false"></div>
       <button class="btn btn-soft btn-block" data-act="testBackend" ${backend() ? '' : 'disabled'}>Test connection</button>
       ${health ? `<div class="note ${health.ok ? 'ok' : 'danger'}" style="margin-top:10px">${health.ok ? `Backend OK · AI ${health.ai ? '✓' : '✗ missing API key'} · Free/day per user ${health.freePerDay || 'unlimited'} · Product picker ${health.amazon ? '✓' : 'off'} · Web recipes ${health.online ? '✓' : 'off'} · Community ${health.community ? '✓' : 'local only'}` : esc(health.error || 'Couldn’t reach backend')}</div>` : ''}
       <div class="field" style="margin-top:14px"><label for="s-tag">Amazon tag: test override (this device only)</label><input id="s-tag" class="input" data-setting="tag" value="${esc(st.tag)}" placeholder="${esc(CONFIG.AMAZON_TAG || 'yourtag-20')}" autocapitalize="off" spellcheck="false"></div>
       ${!CONFIG.AMAZON_TAG ? `<p class="small" style="color:var(--warn);margin-bottom:10px">CONFIG.AMAZON_TAG is empty, so everyone else’s Amazon links earn nothing. Set it in src/app.js and rebuild.</p>` : ''}
       ${!tagParam() ? `<p class="small" style="color:var(--warn);margin-bottom:10px">No tag set — Amazon links won’t earn commission.</p>` : `<p class="small muted" style="margin-bottom:10px">Links on this device are tagged <b>${esc(tagParam())}</b>${st.tag ? ' (test override)' : ''}</p>`}
-      <div class="switch"><div><b>Product picker</b><p class="small muted">Top 3 Amazon products for unmapped items (needs Amazon API keys on the Worker)</p></div><input type="checkbox" class="toggle" data-setting-bool="picker" ${st.picker ? 'checked' : ''} aria-label="Product picker"></div>
+      <div class="switch"><div><b>Product picker</b><p class="small muted">Top 3 Amazon products for unmapped items (needs Amazon API keys in Netlify env vars)</p></div><input type="checkbox" class="toggle" data-setting-bool="picker" ${st.picker ? 'checked' : ''} aria-label="Product picker"></div>
       <button class="btn btn-ghost btn-block" data-act="goto" data-tab="catalog" style="margin-top:10px">Edit staples catalog (${S.catalog.filter(cartAsin).length}/${S.catalog.length} mapped)</button>
     </section>` : '';
   return `<header class="top"><div><p class="eyebrow">Preferences</p><h1>Settings</h1></div>${backBtn()}</header>
@@ -2906,8 +2914,8 @@ function tierPanel() {
       <p class="small muted" style="margin-top:4px">${quota.scan ? `${quota.scan.left} of ${quota.scan.limit} scans left this month` : `${PREMIUM.scans} fridge, pantry and freezer scans a month`}</p>`
     : p ? `<p class="small" style="color:var(--warn);font-weight:600">Premium ended on ${esc(until)}. You’re on the free plan.</p>`
       : `<p class="small" style="font-weight:600">Free plan</p><p class="small muted" style="margin-top:4px">Shopping list, barcode, receipt and order scans are free. Fridge, pantry and freezer photo scans are Premium: ${PREMIUM.monthly}/mo or ${PREMIUM.yearly}/yr (${PREMIUM.yearlyPerMonth}/mo, save 50%), ${PREMIUM.scans} scans a month.</p>`;
-  const get = live ? '' : CONFIG.STRIPE_LINK ? `<a class="btn btn-accent btn-block" href="${esc(CONFIG.STRIPE_LINK)}" target="_blank" rel="noopener">Get Premium</a>` : `<button class="btn btn-accent btn-block" disabled>Get Premium · Coming soon</button>`;
-  return `<section class="panel" id="plan-panel"><h2>Plan</h2>${status}
+  const get = live ? '' : CONFIG.STRIPE_LINK ? `<a class="btn btn-accent btn-block" href="${esc(CONFIG.STRIPE_LINK)}" target="_blank" rel="noopener">Get Premium</a>` : premiumSoon();
+  return `<section class="panel" id="plan-panel"><h2>Membership</h2>${status}
     ${own ? `<div class="note ok" style="margin-top:10px">You’re using your own Anthropic key, so every feature is on. You pay Anthropic for what you use.</div>` : ''}
     <div class="stack" style="margin-top:12px">${get}<button class="btn btn-soft btn-block" data-act="premiumCode">Restore Premium (enter a code)</button>
       ${p ? `<button class="btn btn-ghost btn-block" data-act="premiumRemove">Remove from this device</button>` : ''}</div></section>`;
@@ -3097,7 +3105,7 @@ function cartSheet() {
   const withAsin = on.filter(i => i.asin), searches = on.filter(i => !i.asin);
   return `${sheetBar('Add to Amazon cart')}<p class="small muted" style="margin:-8px 0 12px">For ${esc(d.title)}</p>
     ${d.items.map((it, i) => `<div class="cart-row ${it.on ? '' : 'off'}">
-      <div class="row"><input type="checkbox" ${it.on ? 'checked' : ''} data-cartck="${i}" style="width:22px;height:22px;accent-color:var(--brand);margin-top:2px" aria-label="Include ${esc(it.name)}">
+      <div class="row"><label class="hit"><input type="checkbox" ${it.on ? 'checked' : ''} data-cartck="${i}" style="width:22px;height:22px;accent-color:var(--brand)" aria-label="Include ${esc(it.name)}"></label>
         <div class="grow"><div class="li-title" style="text-transform:capitalize">${esc(it.name)}</div><div class="tiny muted">${esc(d.needLabel || 'Recipe needs')} ${esc(it.need || '—')}</div>
           <div class="small" style="margin-top:4px">${it.asin ? `<span style="color:var(--ok);font-weight:600">✓ ${esc(it.title || 'Mapped product')}</span>` : `<span class="muted">Opens Amazon search for “${esc(it.term)}”</span>`}</div></div>
         <div class="stepper" style="flex:none"><button data-act="cartQty" data-i="${i}" data-d="-1" aria-label="Less">−</button><span>${it.qty}</span><button data-act="cartQty" data-i="${i}" data-d="1" aria-label="More">+</button></div></div>
@@ -3124,10 +3132,10 @@ function renderOnboard() {
   let body = '';
   if (s === 0) body = `<div class="ob-hero">🥕</div><h1>Pantry Pal</h1><p class="lead">Know what’s in your kitchen. Cook what you have. Fill the gaps in one tap.</p>`;
   if (s === 1) body = `<h1>How it works</h1><div class="tut">
-    <div class="tut-step"><span class="n">📸</span><div><b>Scan</b><span class="small muted">Snap a grocery receipt or the inside of your fridge, pantry or freezer.</span></div></div>
-    <div class="tut-step"><span class="n">✅</span><div><b>Review</b><span class="small muted">AI lists the items with quantities and use-by dates. You approve before anything is saved.</span></div></div>
+    <div class="tut-step"><span class="n">📸</span><div><b>Scan</b><span class="small muted">Snap your shopping list or a receipt, or scan barcodes.</span></div></div>
+    <div class="tut-step"><span class="n">✅</span><div><b>Review</b><span class="small muted">Check the items before anything is saved.</span></div></div>
     <div class="tut-step"><span class="n">🍳</span><div><b>Cook</b><span class="small muted">Get recipes sorted by what you can make right now, scaled to your party size.</span></div></div>
-    <div class="tut-step"><span class="n">🛒</span><div><b>Shop</b><span class="small muted">Missing something? Send it to your Amazon cart, then tap “Mark as bought”.</span></div></div></div>`;
+    <div class="tut-step"><span class="n">🛒</span><div><b>Shop</b><span class="small muted">Send what’s missing to Amazon. When it arrives, tap “It’s here”.</span></div></div></div>`;
   if (s === 2) body = `<h1>About you</h1><p class="lead" style="font-size:15px">So recipes are safe and sized right. You can add more people later.</p>
     <div class="field"><label for="ob-name">Your name</label><input id="ob-name" class="input" data-ob="name" value="${esc(ob.name)}" placeholder="First name" autocomplete="given-name"></div>
     <span class="label">Allergies</span><div class="chips">${ALLERGENS.map(a => `<button class="chip danger ${ob.allergies.includes(a.k) ? 'on' : ''}" data-act="obAllergy" data-k="${a.k}">${a.label}</button>`).join('')}${ob.custom.map((t, i) => `<button class="chip danger on" data-act="obCustomRm" data-i="${i}">${esc(t)}<span class="x">✕</span></button>`).join('')}</div>
@@ -3135,16 +3143,13 @@ function renderOnboard() {
     ${allergyNote()}
     <span class="label">Diet</span><div class="chips">${DIETS.map(d => `<button class="chip ${ob.diets.includes(d) ? 'on' : ''}" data-act="obDiet" data-d="${d}">${d}</button>`).join('')}</div>
     <div class="row" style="justify-content:space-between"><span class="label">Usually cooking for</span><div class="stepper"><button data-act="obParty" data-d="-1" aria-label="Fewer">−</button><span>${ob.party}</span><button data-act="obParty" data-d="1" aria-label="More">+</button></div></div>`;
-  if (s === 3) body = `<div class="ob-hero">✨</div><h1>${aiMode() === 'backend' ? 'You’re all set' : 'Turn on AI'}</h1>
-    ${aiMode() === 'backend' ? `<p class="lead" style="font-size:15px">Scanning and custom recipes are ready to go${health?.freePerDay ? ` — ${health.freePerDay} free AI requests a day` : ''}. Try a photo of your shopping list first.</p>`
-      : hasClaudeBuiltin() ? `<div class="note ok">✓ You’re running inside Claude, so recipe ideas work now. Add your own key to scan photos.</div>`
-      : `<p class="lead" style="font-size:15px">Over ${LIB.length} recipes work without AI. To scan receipts and photos and get custom recipes, paste your own Anthropic API key — or skip and add it later in Settings.</p>`}
-    ${aiMode() !== 'backend' ? `<div class="field"><label for="ob-key">Anthropic API key (optional)</label><input id="ob-key" class="input" type="password" data-ob="key" value="${esc(ob.key || '')}" placeholder="sk-ant-…" autocapitalize="off" autocomplete="off" spellcheck="false"></div>
-    <p class="tiny muted">Stays on this device and is sent only to Anthropic.</p>` : ''}`;
+  if (s === 3) body = `<div class="ob-hero">✨</div><h1>${aiMode() === 'backend' ? 'You’re all set' : 'You’re ready'}</h1>
+    ${aiMode() === 'backend' ? `<p class="lead" style="font-size:15px">Scanning and custom recipes are ready to go${health?.freePerDay ? ` — ${health.freePerDay} free AI reads a day` : ''}. Try a photo of your shopping list first.</p>`
+      : `<p class="lead" style="font-size:15px">Free on this phone: shopping-list photos, barcodes, receipts, pasted orders, ${LIB.length} recipes and a weekly dinner plan.</p>`}`;
   el.innerHTML = `<div class="ob"><div class="row" style="justify-content:flex-end">${s < steps - 1 ? `<button class="btn btn-ghost btn-sm" data-act="obSkip">Skip</button>` : ''}</div>
     <div class="ob-body">${body}</div>
-    <div class="dots">${Array.from({ length: steps }, (_, i) => `<i class="${i === s ? 'on' : ''}"></i>`).join('')}</div>
-    <div class="row">${s > 0 ? `<button class="btn btn-ghost" data-act="obBack">Back</button>` : ''}<button class="btn btn-primary grow" data-act="obNext">${s === steps - 1 ? 'Start cooking' : s === 0 ? 'Get started' : 'Next'}</button></div></div>`;
+    <div class="ob-foot"><div class="dots">${Array.from({ length: steps }, (_, i) => `<i class="${i === s ? 'on' : ''}"></i>`).join('')}</div>
+    <div class="row">${s > 0 ? `<button class="btn btn-ghost" data-act="obBack">Back</button>` : ''}<button class="btn btn-primary grow" data-act="obNext">${s === steps - 1 ? 'Start cooking' : s === 0 ? 'Get started' : 'Next'}</button></div></div></div>`;
 }
 function finishOnboarding() {
   if (!S.household.members.length || ob.name || ob.allergies.length || ob.diets.length || ob.custom.length) {
@@ -3179,7 +3184,7 @@ async function checkHealth(silent) {
     health = res.ok ? Object.assign({ ok: true }, data) : { ok: false, error: String(data.error || ('Backend returned ' + res.status)) };
     if (health.ok) { health.freePerDay = Number(health.freePerDay) || 0; health.freeListPerMonth = Number(health.freeListPerMonth) || 0; }   // shown unescaped
     if (!S.onboarded) renderOnboard();
-  } catch (e) { health = { ok: false, error: 'Couldn’t reach that URL. Check it and your Worker’s CORS settings.' }; }
+  } catch (e) { health = { ok: false, error: 'Couldn’t reach that URL. Check it, and that the Netlify site is deployed and /api/health answers.' }; }
   if (!silent || S.ui.tab === 'settings') render();
 }
 

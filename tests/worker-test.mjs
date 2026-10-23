@@ -69,7 +69,7 @@ process.env.MODEL = 'claude-test-model'; await claude(good, '9.9.9.1'); assert.e
 ok('MODEL env var overrides the default model');
 
 for (let i = 1; i < 8; i++) assert.equal((await claude(good)).status, 200);
-r = await claude(good); assert.equal(r.status, 429); assert.equal(r.data.code, 'free_limit'); assert.match(r.data.error, /today’s 8 free AI requests/);
+r = await claude(good); assert.equal(r.status, 429); assert.equal(r.data.code, 'free_limit'); assert.match(r.data.error, /today’s 8 free AI reads/);
 ok('per-person cap: 8 a day, then 429 free_limit');
 
 s = fresh();

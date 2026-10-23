@@ -182,7 +182,7 @@ const noOverflow = async (page, label) => check(label + ': no horizontal overflo
   await page.click('[data-act=scanType][data-v=fridge]');
   t = await view(page);
   check('free user: locked Premium card with prices and 100 scans', await page.locator('.premium').count() === 1 && t.includes('$4.99 a month') && t.includes('$29.99 a year ($2.50/mo, save 50%)') && t.includes('100 photo scans a month'));
-  check('"Get Premium" disabled with "Coming soon" (no Stripe link yet)', await page.locator('.premium button[disabled]').innerText() === 'Get Premium · Coming soon');
+  check('no disabled "Get Premium" button without a Stripe link; one plain "coming soon" line instead', await page.locator('.premium button[disabled]').count() === 0 && !t.includes('Get Premium') && t.includes('Premium is coming soon: 100 fridge, pantry and freezer photo scans a month, $4.99/mo.'));
   check('free alternatives offered: list, barcode, receipt, paste', JSON.stringify(await page.$$eval('#view .note [data-act=scanType]', b => b.map(x => x.dataset.v))) === '["list","barcode","receipt","paste"]');
   check('no camera on the locked card', await page.locator('[data-act=pickCam]').count() === 0);
   await page.evaluate(() => ACT.analyze()); await page.waitForTimeout(300);
@@ -230,8 +230,8 @@ function setStatus(mock, purpose, code, body, headers) { mock.status[purpose] = 
   };
   t = await fridgeError(402, { error: 'Fridge, pantry and freezer photo scans are part of Premium.', code: 'premium_required' });
   check('402: "part of Premium" message + code button', t.includes('photo scans are part of Premium') && await page.locator('#view .note [data-act=premiumCode]').count() === 1);
-  t = await fridgeError(403, { error: 'Your Premium code has expired. Restore it in Settings → Plan.', code: 'premium_invalid', reason: 'expired' });
-  check('403: expired/invalid message', t.includes('Your Premium code has expired. Restore it in Settings → Plan.'));
+  t = await fridgeError(403, { error: 'Your Premium code has expired. Restore it in Settings → Membership.', code: 'premium_invalid', reason: 'expired' });
+  check('403: expired/invalid message', t.includes('Your Premium code has expired. Restore it in Settings → Membership.'));
   await page.screenshot({ path: OUT + '/tier-403.png' });
   t = await fridgeError(429, { error: 'You’ve used this month’s 100 Premium photo scans. They reset on the 1st.', code: 'premium_limit' });
   check('429: monthly cap message', t.includes('You’ve used this month’s 100 Premium photo scans. They reset on the 1st.') && t.includes('0 of 100 scans left this month'));
@@ -258,7 +258,7 @@ function setStatus(mock, purpose, code, body, headers) { mock.status[purpose] = 
   await page.click('[data-act=premiumRemove]'); await page.click('[data-act=confirmYes]'); await page.waitForTimeout(300);
   check('"Remove from this device" → free', await page.evaluate(() => S.premium === null && tier() === 'free' && !JSON.parse(localStorage.getItem('pantrypal:v2')).premium));
   t = await page.locator('#plan-panel').innerText();
-  check('Settings → Plan (free): prices, Coming soon, Restore', t.includes('Free plan') && t.includes('$4.99/mo or $29.99/yr ($2.50/mo, save 50%)') && t.includes('Get Premium · Coming soon') && t.includes('Restore Premium'));
+  check('Settings → Membership (free): prices, coming soon line, Restore', t.includes('Membership') && t.includes('Free plan') && t.includes('$4.99/mo or $29.99/yr ($2.50/mo, save 50%)') && t.includes('Premium is coming soon') && !t.includes('Get Premium') && t.includes('Restore Premium'));
   await page.locator('#plan-panel').screenshot({ path: OUT + '/tier-settings-free.png' });
 
   // a bad code: the backend's error is shown, nothing stored
