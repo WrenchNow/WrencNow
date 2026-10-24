@@ -41,4 +41,18 @@ The owner is away. Each scheduled check-in takes the **first unchecked item**, f
         what we assume in `.env.example`); Google Business Profile/LSA eligibility for mobile mechanics. Feed
         verified findings into copy or settings only when they're solid.
 - [x] 11. QA pass (qa-reviewer agent) over everything added this weekend; fix blockers.
-- [ ] 12. Final: update `docs/MORNING.md`, the PR #2 description and `docs/WEEKEND_LOG.md` summary.
+- [ ] 12. Final (done by the **Sunday-noon scheduled report**, not before): write `docs/WEEKEND_REPORT.md`, update
+        `docs/MORNING.md`, the PR #2 description and the `docs/WEEKEND_LOG.md` summary.
+
+## Round 2 (added Sat Oct 24 after items 1–11 finished; owner said "keep working")
+- [ ] 13. Admin: parts-store click summary (last 30 days by store; top searched parts), for affiliate reconciliation
+        and the pro-program pitch.
+- [ ] 14. Customer receipts by email on completion: itemized labor, parts at receipt cost, handling, total, and
+        refunds. Only sent when the email keys are set. Also a printable receipt page.
+- [ ] 15. Maintenance reminders: a daily route (`/api/cron/reminders`, protected by `CRON_SECRET`) that emails
+        opted-in customers when a car is likely due (time since last oil change). Off until email keys and the
+        schedule are set. Netlify scheduled function config.
+- [ ] 16. Prerender service pages and the static marketing pages (SEO/speed), if the auth layout allows.
+- [ ] 17. UX pass at 375px (ux-optimizer agent) on booking, job card and garage; fix the top issues.
+- [ ] 18. Mechanic earnings page: per-job breakdown (labor, parts, handling, platform fee, processing, onboarding
+        installment, payout) that matches the capture math; CSV export for taxes.
