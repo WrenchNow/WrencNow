@@ -3,6 +3,7 @@ import { LiveRefresh } from "@/components/account/live-refresh";
 import { StatusBadge } from "@/components/account/status-timeline";
 import { JobActions } from "@/components/mechanic/forms";
 import { PartsPanel, type PartRow } from "@/components/mechanic/parts-panel";
+import { JobPhotosPanel } from "@/components/job-photos";
 import { EmptyState } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/layout";
 import { requireRole } from "@/lib/auth";
@@ -11,6 +12,7 @@ import { customerNoShowFeeCents, partsHandlingBps, platformFeeBps, processingFee
 import { mechanicDeductionsCents } from "@/lib/fees";
 import { dateTime, money } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
+import { MAX_PHOTOS_PER_KIND, photosFor } from "@/lib/job-photos";
 
 export const metadata: Metadata = { title: "Jobs" };
 
@@ -43,6 +45,7 @@ export default async function MechanicJobsPage() {
   const partsBy = new Map<string, PartRow[]>();
   for (const p of partRows ?? []) partsBy.set(p.booking_id, [...(partsBy.get(p.booking_id) ?? []), p as PartRow]);
   const handlingBps = partsHandlingBps();
+  const photosBy = await photosFor(active.filter((j) => j.status !== "requested").map((j) => j.id));
 
   // Contact details are only fetched for jobs the mechanic has accepted.
   const acceptedCustomerIds = [...new Set(active.filter((j) => j.status !== "requested").map((j) => j.customer_id))];
@@ -138,6 +141,11 @@ export default async function MechanicJobsPage() {
                       handlingBps={handlingBps}
                       hint={j.parts_estimate_cents ? { cents: j.parts_estimate_cents, basis: "booking" } : null}
                     />
+                  </div>
+                )}
+                {j.status !== "requested" && (
+                  <div className="mt-5">
+                    <JobPhotosPanel bookingId={j.id} mechanicId={viewer.id} photos={photosBy.get(j.id) ?? []} max={MAX_PHOTOS_PER_KIND} />
                   </div>
                 )}
                 <div className="mt-5">

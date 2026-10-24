@@ -73,3 +73,16 @@ Each entry: what was done, test results, commits, and any questions for the owne
   plus `bookings.odometer`. The existing owner-only rules on vehicles cover them, and a test checks that.
 - **Results:** lint ✓, build ✓, vitest 117/117 ✓, Playwright 121 passed / 1 skipped ✓. Vitest still passes after
   Playwright, because the e2e tests clean up after themselves.
+
+### Sat Oct 24, early — item 6 done
+- **Before/after photos:**
+  - On an accepted or active job, the mechanic gets a Photos panel with Before and After sections.
+  - It takes up to 6 photos each, can use the phone camera, and photos can be removed until the job is finished.
+  - Photos go to a new private `job-photos` storage bucket. The customer sees a "Job photos" gallery on their
+    booking through short-lived links.
+  - The copy tells mechanics the photos protect both sides if there's a dispute.
+- **Database:** migration `0011_job_photos` adds the `booking_photos` table. Only the job's customer and mechanic
+  (and admins) can read it, and only the server can write it. Mechanics can only upload to their own storage folder.
+- **Not tested:** the actual upload, because the local test setup has no storage server. Upload uses the same
+  pattern as the part receipts upload. **Try one photo upload once the real Supabase project is connected.**
+- **Results:** lint ✓, build ✓, vitest 118/118 ✓, Playwright 123 passed / 1 skipped ✓.

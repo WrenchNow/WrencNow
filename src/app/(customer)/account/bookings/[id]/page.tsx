@@ -21,6 +21,8 @@ import { dateTime, money, timeOnly, warrantyLabel } from "@/lib/format";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { mechanicNames } from "@/lib/public-data";
 import { createClient } from "@/lib/supabase/server";
+import { photosFor } from "@/lib/job-photos";
+import { PhotoGallery } from "@/components/job-photos";
 import { effectiveWarrantyDays, inWarranty, warrantyEndsAt } from "@/lib/warranty";
 
 export const metadata: Metadata = { title: "Booking" };
@@ -68,6 +70,7 @@ export default async function BookingDetailPage({ params, searchParams }: PagePr
       ? effectiveWarrantyDays((await createAdminClient().from("mechanics").select("warranty_days").eq("id", b.mechanic_id).maybeSingle()).data?.warranty_days, minWarrantyDays())
       : null;
   const covered = warranty !== null && inWarranty(b.completed_at, warranty);
+  const photos = (await photosFor([b.id])).get(b.id) ?? [];
   const { data: claims } = b.status === "completed" ? await supabase.from("warranty_claims").select("id, status, description, resolution, created_at").eq("booking_id", b.id).order("created_at", { ascending: false }) : { data: null };
   const openClaim = (claims ?? []).some((c) => c.status === "open" || c.status === "mechanic_contacted");
   // RLS: only the customer can read the arrival code. Mechanic identity comes from the booking's own mechanic.
@@ -231,6 +234,13 @@ export default async function BookingDetailPage({ params, searchParams }: PagePr
           </div>
         </Card>
       </div>
+
+      {photos.length > 0 && (
+        <Card className="mt-6">
+          <h2 className="mb-4 text-2xl font-bold uppercase">Job photos</h2>
+          <PhotoGallery photos={photos} />
+        </Card>
+      )}
 
       {b.status === "completed" && (covered || (claims && claims.length > 0)) && (
         <Card className="mt-6">

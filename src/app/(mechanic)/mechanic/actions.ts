@@ -12,6 +12,7 @@ import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { startCheckIfReady } from "@/lib/onboarding";
+import { recordJobPhoto, removeJobPhoto } from "@/lib/job-photos";
 
 export type FormState = { ok?: boolean; error?: string; message?: string };
 
@@ -371,4 +372,26 @@ export async function saveTypicalPartsPrices(_: FormState, formData: FormData): 
   }
   revalidatePath("/mechanic", "layout");
   return { ok: true, message: "Typical parts prices saved." };
+}
+
+export async function recordJobPhotoAction(bookingId: string, kind: "before" | "after", path: string): Promise<FormState> {
+  const viewer = await requireRole(["mechanic"], "/mechanic/jobs");
+  try {
+    await recordJobPhoto(z.uuid().parse(bookingId), viewer.id, z.enum(["before", "after"]).parse(kind), z.string().max(300).parse(path));
+  } catch (e) {
+    return { error: e instanceof BookingError ? e.message : "Couldn't save that photo. Please try again." };
+  }
+  revalidatePath("/mechanic/jobs");
+  return { ok: true };
+}
+
+export async function removeJobPhotoAction(bookingId: string, photoId: string): Promise<FormState> {
+  const viewer = await requireRole(["mechanic"], "/mechanic/jobs");
+  try {
+    await removeJobPhoto(z.uuid().parse(bookingId), viewer.id, z.uuid().parse(photoId));
+  } catch (e) {
+    return { error: e instanceof BookingError ? e.message : "Couldn't remove that photo." };
+  }
+  revalidatePath("/mechanic/jobs");
+  return { ok: true };
 }

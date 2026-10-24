@@ -75,6 +75,42 @@ export type Database = {
           },
         ];
       };
+      booking_photos: {
+        Row: {
+          booking_id: string;
+          created_at: string;
+          id: string;
+          kind: string;
+          mechanic_id: string;
+          path: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          booking_id: string;
+          created_at?: string;
+          id?: string;
+          kind: string;
+          mechanic_id: string;
+          path: string;
+        };
+        Update: {
+          booking_id?: string;
+          created_at?: string;
+          id?: string;
+          kind?: string;
+          mechanic_id?: string;
+          path?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "booking_photos_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       booking_parts: {
         Row: {
           booking_id: string;

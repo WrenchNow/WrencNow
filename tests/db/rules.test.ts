@@ -695,3 +695,24 @@ run("vehicle history", () => {
     });
   });
 });
+
+run("job photos", () => {
+  it("are server-only to write, visible only to the job's customer and mechanic", async () => {
+    await tx(async (q) => {
+      const id = await insertBooking(q, ids["mechanic.basic"], "oil-change", future(4));
+      await q("insert into public.booking_photos (booking_id, mechanic_id, kind, path) values ($1, $2, 'before', $3)", [id, ids["mechanic.basic"], `${ids["mechanic.basic"]}/${id}/before-1.jpg`]);
+      await q("savepoint s");
+      await expect(q("insert into public.booking_photos (booking_id, mechanic_id, kind, path) values ($1, $2, 'during', 'x')", [id, ids["mechanic.basic"]])).rejects.toThrow(/check constraint/);
+      await q("rollback to savepoint s");
+      for (const [who, n] of [["customer", 1], ["mechanic.basic", 1], ["mechanic.certified", 0]] as const) {
+        await q("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: ids[who], role: "authenticated" })]);
+        await q("set local role authenticated");
+        expect((await q("select count(*)::int as n from public.booking_photos")).rows[0].n).toBe(n);
+        await q("reset role");
+      }
+    });
+    await expect(
+      tx((q) => q("insert into public.booking_photos (booking_id, mechanic_id, kind, path) select id, mechanic_id, 'after', 'p' from public.bookings limit 1"), asUser(ids["mechanic.basic"])),
+    ).rejects.toThrow(/permission denied/);
+  });
+});
