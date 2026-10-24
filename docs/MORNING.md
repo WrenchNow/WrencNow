@@ -2,6 +2,14 @@
 
 Branch: `claude/wrenchnow-bootstrap` (not merged to `main`, nothing deployed).
 
+## ⚠️ Urgent: revoke the old Resend API key
+A real Resend API key (starts `re_QnMP…`) was in the old prototype's `index.html`. This repo is public, so treat the
+key as leaked. Removing it from the files doesn't help, because it's still in git history.
+1. Resend dashboard → **API Keys** → delete that key.
+2. Create a new key and put it **only** in Netlify → Site configuration → Environment variables as `RESEND_API_KEY`.
+   Never put it in code or chat.
+It has been removed from `legacy/index.html` on this branch, and PR #4 removes it from `main`.
+
 ## What you need to do (I couldn't do these without your accounts)
 
 1. **Supabase** — create a project at supabase.com. Turn on PostGIS under Database → Extensions.
