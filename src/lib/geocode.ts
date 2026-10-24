@@ -1,8 +1,9 @@
 import "server-only";
+import { CONTACT_EMAIL } from "@/lib/contact";
 
 export type Point = { lat: number; lng: number; label: string };
 
-const UA = "WrenchNow/1.0 (hello@getwrenchnow.com)";
+const UA = `WrenchNow/1.0 (${CONTACT_EMAIL})`;
 
 /** "39.74,-104.99" → point. Used by the "use my location" button. */
 export function parseLatLng(input: string): Point | null {

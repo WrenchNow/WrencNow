@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Logo } from "./logo";
+import { CONTACT_MAILTO } from "@/lib/contact";
 
 const COLUMNS = [
   {
@@ -9,6 +10,7 @@ const COLUMNS = [
       { href: "/how-it-works", label: "How it works" },
       { href: "/pricing", label: "Pricing" },
       { href: "/faq", label: "FAQ" },
+      { href: "/guarantee", label: "Our guarantee" },
       { href: "/payment-protection", label: "Payment protection" },
     ],
   },
@@ -25,7 +27,7 @@ const COLUMNS = [
     links: [
       { href: "/terms", label: "Terms of Service" },
       { href: "/privacy", label: "Privacy Policy" },
-      { href: "mailto:hello@getwrenchnow.com", label: "Contact" },
+      { href: CONTACT_MAILTO, label: "Contact" },
     ],
   },
 ];

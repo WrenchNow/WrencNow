@@ -31,6 +31,12 @@ export default async function MechanicDashboardPage({ searchParams }: PageProps<
     .eq("payment_status", "authorized")
     .order("scheduled_start")
     .limit(10);
+  const { data: claims } = await supabase
+    .from("warranty_claims")
+    .select("id, description, status, created_at, bookings(services(name), vehicle_desc)")
+    .eq("mechanic_id", viewer.id)
+    .in("status", ["open", "mechanic_contacted"])
+    .order("created_at");
 
   const featured = m.featured_until && new Date(m.featured_until) > new Date();
   const insuranceDaysLeft = insuranceDaysRemaining(m.insurance_expires_on);
@@ -53,6 +59,26 @@ export default async function MechanicDashboardPage({ searchParams }: PageProps<
       )}
       {sp.featured === "success" && <div className="mb-6"><Notice tone="ok" title="You're sponsored">You&apos;ll show in the Sponsored row for matching searches. It can take a minute to show up.</Notice></div>}
       {sp.featured === "not-live" && <div className="mb-6"><Notice tone="warn">Finish your go-live checklist before adding sponsored placement.</Notice></div>}
+
+      {claims && claims.length > 0 && (
+        <div className="mb-6">
+          <Notice tone="warn" title={`${claims.length} warranty claim${claims.length === 1 ? "" : "s"} open`}>
+            <ul className="mt-2 space-y-2">
+              {claims.map((c) => (
+                <li key={c.id}>
+                  <span className="font-semibold text-cream">
+                    {c.bookings?.services?.name ?? "Job"}
+                    {c.bookings?.vehicle_desc ? ` · ${c.bookings.vehicle_desc}` : ""}
+                  </span>{" "}
+                  <span className="text-muted">({dateTime(c.created_at)})</span>
+                  <span className="block">&ldquo;{c.description}&rdquo;</span>
+                </li>
+              ))}
+            </ul>
+            <span className="mt-2 block">WrenchNow support will contact you to arrange a fix. Warranty repairs are part of the job you were paid for.</span>
+          </Notice>
+        </div>
+      )}
 
       {!m.is_live ? (
         <div className="grid gap-6 lg:grid-cols-[1fr_340px]">

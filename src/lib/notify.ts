@@ -1,4 +1,5 @@
 import "server-only";
+import { CONTACT_EMAIL } from "@/lib/contact";
 import { siteUrl } from "@/lib/env";
 import { dateTime, money, timeOnly } from "@/lib/format";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -180,7 +181,7 @@ export async function notifyBooking(bookingId: string, event: BookingEvent) {
 
 /** Email the owner/admin (ADMIN_EMAIL). */
 export async function notifyAdmin(key: string, subject: string, text: string) {
-  const to = process.env.ADMIN_EMAIL;
+  const to = process.env.ADMIN_EMAIL || CONTACT_EMAIL;
   if (!to) return;
   try {
     await deliver(`admin:${key}`, { email: to }, "admin", { subject, text });
@@ -226,5 +227,15 @@ export async function notifyBookingParts(bookingId: string, event: "quoted" | "a
     });
   } catch (e) {
     console.error("notifyBookingParts failed", bookingId, event, e);
+  }
+}
+
+/** Send a one-off message to a user by id (email/SMS per configured channels). */
+export async function notifyUser(key: string, userId: string, msg: { subject: string; text: string; sms?: string }) {
+  if (!emailConfigured() && !smsConfigured()) return;
+  try {
+    await deliver(key, await contactFor(userId), "direct", msg);
+  } catch (e) {
+    console.error("notifyUser failed", key, e);
   }
 }

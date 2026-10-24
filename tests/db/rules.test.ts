@@ -650,3 +650,34 @@ run("open requests (match by hand)", () => {
   });
 });
 
+
+run("warranty claims", () => {
+  it("are server-only to write, visible to the parties, and one open claim per job", async () => {
+    await tx(async (q) => {
+      const id = await insertBooking(q, ids["mechanic.basic"], "oil-change", future(3));
+      const ins = (desc: string) =>
+        q("insert into public.warranty_claims (booking_id, customer_id, mechanic_id, description) values ($1, $2, $3, $4)", [id, ids["customer"], ids["mechanic.basic"], desc]);
+      await ins("Oil light came back on after two days.");
+      await q("savepoint dup");
+      await expect(ins("Still leaking from the drain plug.")).rejects.toThrow(/warranty_claims_one_open/);
+      await q("rollback to savepoint dup");
+      await q("savepoint s");
+      await q("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: ids["customer"], role: "authenticated" })]);
+      await q("set local role authenticated");
+      expect((await q("select count(*)::int as n from public.warranty_claims")).rows[0].n).toBe(1);
+      await expect(q("update public.warranty_claims set status = 'resolved'")).rejects.toThrow(/permission denied/);
+      await q("rollback to savepoint s");
+      await q("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: ids["mechanic.basic"], role: "authenticated" })]);
+      await q("set local role authenticated");
+      expect((await q("select count(*)::int as n from public.warranty_claims")).rows[0].n).toBe(1);
+      await q("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: ids["mechanic.certified"], role: "authenticated" })]);
+      expect((await q("select count(*)::int as n from public.warranty_claims")).rows[0].n).toBe(0);
+    });
+  });
+
+  it("customers can't file claims directly", async () => {
+    await expect(
+      tx((q) => q("insert into public.warranty_claims (booking_id, customer_id, mechanic_id, description) select id, customer_id, mechanic_id, 'Something is wrong here.' from public.bookings limit 1"), asUser(ids["customer"])),
+    ).rejects.toThrow(/permission denied/);
+  });
+});

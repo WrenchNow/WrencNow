@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { addVehicle, customerTransition, reportOffPlatformPayment, submitReview, updateProfile, type FormState } from "@/app/(customer)/account/actions";
+import { addVehicle, customerTransition, fileWarrantyClaim, reportOffPlatformPayment, submitReview, updateProfile, type FormState } from "@/app/(customer)/account/actions";
 import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/feedback";
 import { Field, Input, Textarea } from "@/components/ui/form";
@@ -175,5 +175,22 @@ export function OffPlatformReport({ bookingId }: { bookingId: string }) {
         </form>
       )}
     </div>
+  );
+}
+
+export function WarrantyClaimForm({ bookingId }: { bookingId: string }) {
+  const [state, action, pending] = useActionState(fileWarrantyClaim, {});
+  if (state.ok) return <StateNotice state={state} />;
+  return (
+    <form action={action} className="flex flex-col gap-3">
+      <StateNotice state={state} />
+      <input type="hidden" name="bookingId" value={bookingId} />
+      <Field label="What's wrong?" htmlFor="claim_description" hint="e.g. the squeal came back after a week, or a light is back on.">
+        <Textarea id="claim_description" name="description" rows={3} required minLength={10} maxLength={2000} />
+      </Field>
+      <Button type="submit" variant="subtle" disabled={pending} className="self-start">
+        {pending ? "Sending…" : "Report a problem"}
+      </Button>
+    </form>
   );
 }

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { OpenRequestActions, ResolveReportForm } from "@/components/admin-forms";
+import { OpenRequestActions, ResolveReportForm, WarrantyClaimForm } from "@/components/admin-forms";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/layout";
 import { dateTime } from "@/lib/format";
@@ -13,7 +13,7 @@ export default async function AdminPage() {
   await requireAdmin();
   const admin = createAdminClient();
   const count = async (q: PromiseLike<{ count: number | null }>) => (await q).count ?? 0;
-  const [awaitingReview, live, activeBookings, disputed, { data: log }, { data: reports }, { data: requests }] = await Promise.all([
+  const [awaitingReview, live, activeBookings, disputed, { data: log }, { data: reports }, { data: requests }, { data: claims }] = await Promise.all([
     count(
       admin
         .from("mechanics")
@@ -31,6 +31,12 @@ export default async function AdminPage() {
       .order("created_at", { ascending: false })
       .limit(50),
     admin.from("open_requests").select("*").eq("status", "open").order("created_at", { ascending: false }).limit(100),
+    admin
+      .from("warranty_claims")
+      .select("*, mechanics(display_name), profiles!warranty_claims_customer_id_fkey(full_name, phone), bookings(completed_at, services(name))")
+      .in("status", ["open", "mechanic_contacted"])
+      .order("created_at")
+      .limit(100),
   ]);
 
   const tiles = [
@@ -39,12 +45,13 @@ export default async function AdminPage() {
     { label: "Active bookings", value: activeBookings, href: "/admin/bookings?filter=active" },
     { label: "Disputes", value: disputed, href: "/admin/bookings?filter=disputed" },
     { label: "Requests to match", value: requests?.length ?? 0, href: "/admin#requests" },
+    { label: "Warranty claims", value: claims?.length ?? 0, href: "/admin#claims" },
   ];
 
   return (
     <>
       <PageHeader eyebrow="Admin" title="Overview" />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {tiles.map((t) => (
           <Link key={t.label} href={t.href}>
             <Card className="hover:border-ore/50">
@@ -86,6 +93,41 @@ export default async function AdminPage() {
         </ul>
       ) : (
         <p className="text-sm text-muted">No open requests.</p>
+      )}
+
+      <h2 id="claims" className="mt-10 mb-3 scroll-mt-24 text-2xl font-bold uppercase">Warranty claims</h2>
+      {claims && claims.length > 0 ? (
+        <ul className="space-y-2">
+          {claims.map((c) => (
+            <li key={c.id} className="rounded-[var(--radius-card)] border border-warn/30 bg-surface p-4 text-sm">
+              <p className="font-semibold text-cream">
+                {c.profiles?.full_name ?? "Customer"} · {c.bookings?.services?.name ?? "Job"} by {c.mechanics?.display_name ?? "mechanic"}
+                {c.status === "mechanic_contacted" && <span className="ml-2 text-xs text-warn">mechanic contacted</span>}
+              </p>
+              <p className="mt-1 whitespace-pre-line text-ink">{c.description}</p>
+              <p className="mt-1 text-xs text-muted">
+                Filed {dateTime(c.created_at)}
+                {c.bookings?.completed_at ? ` · job completed ${dateTime(c.bookings.completed_at)}` : ""} ·{" "}
+                <Link href={`/admin/bookings?q=${c.booking_id}`} className="text-ore hover:underline">
+                  booking {c.booking_id.slice(0, 8)}
+                </Link>
+                {c.profiles?.phone && (
+                  <>
+                    {" · "}
+                    <a href={`tel:${c.profiles.phone}`} className="text-ore hover:underline">
+                      {c.profiles.phone}
+                    </a>
+                  </>
+                )}
+              </p>
+              <div className="mt-2">
+                <WarrantyClaimForm id={c.id} />
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-muted">No open warranty claims.</p>
       )}
 
       <h2 className="mt-10 mb-3 text-2xl font-bold uppercase">Off-platform payment reports</h2>

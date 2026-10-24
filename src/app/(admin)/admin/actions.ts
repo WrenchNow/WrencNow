@@ -144,3 +144,29 @@ export async function setOpenRequestStatus(_: FormState, formData: FormData): Pr
   revalidatePath("/admin");
   return { ok: true, message: status === "open" ? "Reopened." : `Marked ${status}.` };
 }
+
+export async function updateWarrantyClaim(_: FormState, formData: FormData): Promise<FormState> {
+  const viewer = await requireAdmin();
+  const parsed = z
+    .object({ id: z.uuid(), status: z.enum(["mechanic_contacted", "resolved", "denied"]), resolution: z.string().trim().max(2000).optional() })
+    .safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "Invalid input." };
+  const admin = createAdminClient();
+  const { data: c } = await admin
+    .from("warranty_claims")
+    .update({ status: parsed.data.status, resolution: parsed.data.resolution || null, updated_at: new Date().toISOString() })
+    .eq("id", parsed.data.id)
+    .select("id, customer_id")
+    .single();
+  if (!c) return { error: "Claim not found." };
+  await admin.from("audit_log").insert({ actor_id: viewer.id, action: `warranty.${parsed.data.status}`, entity: "warranty_claim", entity_id: c.id, data: { resolution: parsed.data.resolution } });
+  if (parsed.data.status !== "mechanic_contacted") {
+    const { notifyUser } = await import("@/lib/notify");
+    await notifyUser(`warranty:${c.id}:${parsed.data.status}`, c.customer_id, {
+      subject: parsed.data.status === "resolved" ? "Your warranty claim is resolved" : "Update on your warranty claim",
+      text: parsed.data.resolution || (parsed.data.status === "resolved" ? "Your warranty claim has been resolved." : "We reviewed your claim. Reply to this email if you have questions."),
+    });
+  }
+  revalidatePath("/admin");
+  return { ok: true, message: "Claim updated." };
+}

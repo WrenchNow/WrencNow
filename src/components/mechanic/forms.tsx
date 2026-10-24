@@ -7,6 +7,7 @@ import { Notice } from "@/components/ui/feedback";
 import { Checkbox, Field, Input, Select, Textarea } from "@/components/ui/form";
 import { WARRANTY_OPTIONS, warrantyLabel } from "@/lib/format";
 import { createClient } from "@/lib/supabase/client";
+import { CONTACT_EMAIL, CONTACT_MAILTO } from "@/lib/contact";
 
 function StateNotice({ state }: { state: FormState }) {
   if (state.error) return <Notice tone="danger">{state.error}</Notice>;
@@ -29,7 +30,7 @@ export type ProfileDefaults = {
   has_transport: boolean;
 };
 
-export function MechanicProfileForm({ d }: { d: ProfileDefaults }) {
+export function MechanicProfileForm({ d, minWarrantyDays = 0 }: { d: ProfileDefaults; minWarrantyDays?: number }) {
   const [state, action, pending] = useActionState(saveMechanicProfile, {});
   return (
     <form action={action} className="grid gap-4 sm:grid-cols-2">
@@ -65,9 +66,9 @@ export function MechanicProfileForm({ d }: { d: ProfileDefaults }) {
       <Field label="How far will you travel? (miles)" htmlFor="service_radius_miles">
         <Input id="service_radius_miles" name="service_radius_miles" type="number" min={1} max={100} defaultValue={d.service_radius_miles} required />
       </Field>
-      <Field label="Warranty on your work" htmlFor="warranty_days" hint="Shown on your profile and on customers' receipts.">
-        <Select id="warranty_days" name="warranty_days" defaultValue={String(d.warranty_days)}>
-          {WARRANTY_OPTIONS.map((w) => (
+      <Field label="Warranty on your work" htmlFor="warranty_days" hint={`Shown on your profile and on customers' receipts. Every WrenchNow job carries at least ${minWarrantyDays} days.`}>
+        <Select id="warranty_days" name="warranty_days" defaultValue={String(Math.max(d.warranty_days, minWarrantyDays))}>
+          {WARRANTY_OPTIONS.filter((w) => w >= minWarrantyDays).map((w) => (
             <option key={w} value={w}>
               {warrantyLabel(w)}
             </option>
@@ -263,8 +264,8 @@ export function JobActions({
           </form>
           <p className="text-xs text-muted">
             You&apos;ve committed to this job. Emergency? Email{" "}
-            <a href="mailto:hello@getwrenchnow.com" className="text-ore hover:underline">
-              hello@getwrenchnow.com
+            <a href={CONTACT_MAILTO} className="text-ore hover:underline">
+              {CONTACT_EMAIL}
             </a>
             .
           </p>

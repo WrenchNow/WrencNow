@@ -19,7 +19,7 @@ The owner is away. Each scheduled check-in takes the **first unchecked item**, f
 ## Backlog (in order)
 - [x] 1. Admin refunds cover the parts top-up hold. Admin list of open requests (match by hand) with
        resolve/matched actions. Tests for notifications (unit, with mocked fetch) and open requests.
-- [ ] 2. WrenchNow guarantee: a platform minimum warranty (`MIN_WARRANTY_DAYS`, default 90) that mechanics can't go
+- [x] 2. WrenchNow guarantee: a platform minimum warranty (`MIN_WARRANTY_DAYS`, default 90) that mechanics can't go
        below, a fair-price promise page plus a booking badge, and a "Report a problem with this repair" warranty
        claim flow (customer → admin queue → mechanic notified).
 - [ ] 3. Service pages: `/services` hub and the 12 `/services/[slug]` pages from `src/content/services.json`, with

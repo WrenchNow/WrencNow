@@ -6,7 +6,7 @@ import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { BookingError, checkInAtAddress, transitionBooking } from "@/lib/bookings";
 import { recordPartReceipt, removePart, sendPartsQuote } from "@/lib/parts";
-import { featuredPriceCents, onboardingFeeTotalCents, siteUrl, stripeConfigured } from "@/lib/env";
+import { featuredPriceCents, minWarrantyDays, onboardingFeeTotalCents, siteUrl, stripeConfigured } from "@/lib/env";
 import { geocode } from "@/lib/geocode";
 import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -64,7 +64,8 @@ export async function saveMechanicProfile(_: FormState, formData: FormData): Pro
         specialties: d.specialties,
         hourly_rate_cents: Math.round(d.hourly_rate * 100),
         service_radius_miles: d.service_radius_miles,
-        warranty_days: d.warranty_days,
+        // WrenchNow guarantee: never below the platform minimum.
+        warranty_days: Math.max(d.warranty_days, minWarrantyDays()) as 0 | 30 | 90 | 180 | 365,
         location: `SRID=4326;POINT(${point.lng} ${point.lat})`,
         city: /^\d/.test(city ?? "") ? null : city,
         has_tools: true,

@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { siteUrl } from "@/lib/env";
 
-const PUBLIC_ROUTES = ["/", "/how-it-works", "/for-mechanics", "/pricing", "/faq", "/payment-protection", "/search", "/terms", "/privacy", "/mechanic-agreement", "/login", "/signup"];
+const PUBLIC_ROUTES = ["/", "/how-it-works", "/for-mechanics", "/pricing", "/faq", "/payment-protection", "/guarantee", "/search", "/terms", "/privacy", "/mechanic-agreement", "/login", "/signup"];
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = siteUrl();

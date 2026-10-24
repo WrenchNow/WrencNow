@@ -7,6 +7,7 @@ import { BookingError, createBooking, transitionBooking } from "@/lib/bookings";
 import { stripeConfigured } from "@/lib/env";
 import { publicName } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
+import { CONTACT_EMAIL } from "@/lib/contact";
 
 export type FormState = { ok?: boolean; error?: string; message?: string };
 
@@ -179,7 +180,7 @@ export async function reportOffPlatformPayment(_: FormState, formData: FormData)
     .insert({ booking_id: booking.id, reporter_id: viewer.id, mechanic_id: booking.mechanic_id, method: parsed.data.method, details: parsed.data.details })
     .select("id")
     .single();
-  if (error || !report) return { error: "Couldn't send your report. Please email hello@getwrenchnow.com." };
+  if (error || !report) return { error: `Couldn't send your report. Please email ${CONTACT_EMAIL}.` };
   await admin.from("audit_log").insert({ actor_id: viewer.id, action: "payment.off_platform_reported", entity: "booking", entity_id: booking.id, data: { report: report.id } });
   return { ok: true, message: "Thanks — we've got your report and will look into it. Don't pay outside the app; your card on the booking covers everything." };
 }
@@ -234,4 +235,39 @@ export async function estimateAction(mechanicId: string, serviceSlug: string, ve
     sample: parts.sample,
     total: estimateMaxCents(m.hourly_rate_cents, svc.est_minutes_max) + partsCharge,
   };
+}
+
+/** "Problem with this repair?" — a warranty claim on a completed job, inside its warranty window. */
+export async function fileWarrantyClaim(_: FormState, formData: FormData): Promise<FormState> {
+  const viewer = await requireViewer("/account/bookings");
+  const parsed = z
+    .object({ bookingId: z.uuid(), description: z.string().trim().min(10, "Tell us what's wrong (at least a sentence).").max(2000) })
+    .safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: parsed.error.issues[0]!.message };
+  const supabase = await createClient();
+  const { data: b } = await supabase.from("bookings").select("id, customer_id, mechanic_id, status, completed_at").eq("id", parsed.data.bookingId).maybeSingle();
+  if (!b || b.customer_id !== viewer.id) return { error: "Booking not found." };
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const { effectiveWarrantyDays, inWarranty } = await import("@/lib/warranty");
+  const { minWarrantyDays, siteUrl } = await import("@/lib/env");
+  const admin = createAdminClient();
+  const { data: m } = await admin.from("mechanics").select("warranty_days").eq("id", b.mechanic_id).single();
+  const days = effectiveWarrantyDays(m?.warranty_days, minWarrantyDays());
+  if (b.status !== "completed" || !inWarranty(b.completed_at, days)) return { error: `This job is outside its warranty period. Email ${CONTACT_EMAIL} and we'll still take a look.` };
+  const { data: claim, error } = await admin
+    .from("warranty_claims")
+    .insert({ booking_id: b.id, customer_id: viewer.id, mechanic_id: b.mechanic_id, description: parsed.data.description })
+    .select("id")
+    .single();
+  if (error || !claim) return { error: error?.code === "23505" ? "You already have an open claim on this job — we're on it." : "Couldn't send your claim. Please try again." };
+  await admin.from("audit_log").insert({ actor_id: viewer.id, action: "warranty.claim_filed", entity: "booking", entity_id: b.id, data: { claim: claim.id } });
+  const { notifyAdmin, notifyUser } = await import("@/lib/notify");
+  await notifyAdmin(`warranty:${claim.id}`, "Warranty claim filed", `A customer reported a problem with a completed job.\n\n${parsed.data.description}\n\nReview: ${siteUrl()}/admin#claims`);
+  await notifyUser(`warranty:${claim.id}:mechanic`, b.mechanic_id, {
+    subject: "A customer reported a problem with your work",
+    text: `A customer reported a problem with a job you completed. WrenchNow will be in touch, and you can contact the customer from your jobs page.\n\n"${parsed.data.description}"\n\n${siteUrl()}/mechanic/dashboard`,
+    sms: "A customer reported a problem with a job you completed. Check your WrenchNow dashboard.",
+  });
+  revalidatePath(`/account/bookings/${b.id}`);
+  return { ok: true, message: "Claim sent. We've told your mechanic and WrenchNow support will follow up within one business day." };
 }

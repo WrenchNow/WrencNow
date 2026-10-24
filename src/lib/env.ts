@@ -80,3 +80,9 @@ export function partsHandlingBps(): number {
   return Number.isInteger(n) && n >= 0 && n <= 3000 ? n : 500;
 }
 
+/** WrenchNow guarantee: every completed job carries at least this warranty, whatever the mechanic offers. */
+export function minWarrantyDays(): number {
+  const n = Number(process.env.MIN_WARRANTY_DAYS ?? 90);
+  return Number.isInteger(n) && n >= 0 && n <= 730 ? n : 90;
+}
+

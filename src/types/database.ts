@@ -987,6 +987,65 @@ export type Database = {
           },
         ];
       };
+      warranty_claims: {
+        Row: {
+          booking_id: string;
+          created_at: string;
+          customer_id: string;
+          description: string;
+          id: string;
+          mechanic_id: string;
+          resolution: string | null;
+          status: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          booking_id: string;
+          created_at?: string;
+          customer_id: string;
+          description: string;
+          id?: string;
+          mechanic_id: string;
+          resolution?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          booking_id?: string;
+          created_at?: string;
+          customer_id?: string;
+          description?: string;
+          id?: string;
+          mechanic_id?: string;
+          resolution?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "warranty_claims_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "warranty_claims_customer_id_fkey";
+            columns: ["customer_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "warranty_claims_mechanic_id_fkey";
+            columns: ["mechanic_id"];
+            isOneToOne: false;
+            referencedRelation: "mechanics";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       webhook_events: {
         Row: {
           event_id: string;

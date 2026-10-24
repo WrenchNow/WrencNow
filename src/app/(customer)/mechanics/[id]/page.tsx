@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ReviewList, Stars } from "@/components/review-list";
@@ -9,6 +10,8 @@ import { Container } from "@/components/ui/layout";
 import { estimateMaxCents, estimateMinCents } from "@/lib/fees";
 import { dealerLaborRateCents } from "@/lib/env";
 import { money, shortDate, warrantyLabel } from "@/lib/format";
+import { minWarrantyDays } from "@/lib/env";
+import { effectiveWarrantyDays } from "@/lib/warranty";
 import { getPublicMechanic } from "@/lib/public-data";
 import { TIER_LABEL } from "@/lib/tiers";
 
@@ -42,7 +45,9 @@ export default async function MechanicProfilePage({ params, searchParams }: Page
                 {m.check_clear && <Badge tone="ok">✓ Background checked</Badge>}
                 {m.featured && <Badge tone="warn">Sponsored</Badge>}
                 {m.online && <Badge tone="ok">● Online now</Badge>}
-                {m.warranty_days > 0 && <Badge tone="info">🛡 {warrantyLabel(m.warranty_days)}</Badge>}
+                <Link href="/guarantee">
+                  <Badge tone="info">🛡 {warrantyLabel(effectiveWarrantyDays(m.warranty_days, minWarrantyDays()))} · WrenchNow guarantee</Badge>
+                </Link>
               </div>
             </div>
           </div>

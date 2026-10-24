@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ButtonLink } from "@/components/ui/button";
 import { Container, PageHeader } from "@/components/ui/layout";
+import { CONTACT_EMAIL, CONTACT_MAILTO } from "@/lib/contact";
 
 export const metadata: Metadata = {
   title: "Payment protection",
@@ -66,8 +67,8 @@ export default function PaymentProtectionPage() {
           </li>
           <li>
             If you already paid outside the app, report it anyway and email{" "}
-            <a href="mailto:hello@getwrenchnow.com" className="text-ore hover:underline">
-              hello@getwrenchnow.com
+            <a href={CONTACT_MAILTO} className="text-ore hover:underline">
+              {CONTACT_EMAIL}
             </a>
             . We can&apos;t refund money sent outside WrenchNow, but we can act on the mechanic&apos;s account.
           </li>

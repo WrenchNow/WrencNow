@@ -5,6 +5,7 @@ import { getViewer } from "@/lib/auth";
 import { siteUrl } from "@/lib/env";
 import { notifyAdmin, notifyEmail } from "@/lib/notify";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { CONTACT_EMAIL } from "@/lib/contact";
 
 export type RequestState = { ok?: boolean; error?: string };
 
@@ -37,7 +38,7 @@ export async function createOpenRequest(_: RequestState, formData: FormData): Pr
     .insert({ ...d, customer_id: viewer?.id ?? null })
     .select("id")
     .single();
-  if (error || !req) return { error: "Couldn't send your request. Please email hello@getwrenchnow.com." };
+  if (error || !req) return { error: `Couldn't send your request. Please email ${CONTACT_EMAIL}.` };
 
   await notifyAdmin(
     `open_request:${req.id}`,

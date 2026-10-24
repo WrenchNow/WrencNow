@@ -28,8 +28,8 @@ Branch: `claude/wrenchnow-bootstrap` (not merged to `main`, nothing deployed).
 
 ## Questions for you
 
-- **Legal entity:** the legal pages say "WrenchNow Inc." Is that the registered name and state? I also changed the
-  contact emails to `@getwrenchnow.com`. Please have a lawyer review the Terms, Privacy Policy and Mechanic Agreement.
+- **Legal entity:** the legal pages say "WrenchNow Inc." Is that the registered name and state? Contact emails now go
+  to **getwrenchnow11@gmail.com** everywhere (site, legal pages, admin alerts). Change it in `src/lib/contact.ts`. Please have a lawyer review the Terms, Privacy Policy and Mechanic Agreement.
 - **Prototype stats I removed:** "4.9 average rating", "3 hrs vs 45 min", "$3,800+/month" and the demo bookings
   dashboard. None of them could be verified.
 - **Geocoding:** addresses are looked up with the free US Census and OpenStreetMap services. Do you want Mapbox or
