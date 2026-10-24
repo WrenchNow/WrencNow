@@ -198,3 +198,22 @@ rule, so it needs your OK), or multiple logins per business? None of these are b
 - **Please click-test:** I couldn't reach the store websites from here. Click each store link once to confirm its
   search page opens (the search URLs can be changed in settings).
 - **Results:** lint ✓, build ✓, vitest 126/126 ✓, Playwright 129 passed ✓.
+
+### Sat Oct 24 — item 10 done (research)
+- `docs/research/2026-10-24-costs-and-listings.md`, with sources:
+  - **Stripe fees:** 2.9% + 30¢ per card payment, plus Connect $2 per active mechanic per month and 0.25% + 25¢
+    per payout. Our 3.2% + 55¢ processing pass-through covers the per-job costs but not the $2/month.
+  - **Checkr:** Basic about $30, Essential about $55–60. Our $50 onboarding fee covers Basic only.
+  - **Insurance:** general liability is about $650/yr; garagekeepers is what covers the customer's car.
+  - **Shop labor rates:** the national average is $132/hr. No solid Denver number, so the dealer comparison stays
+    hidden.
+  - **Google Business Profile:** mechanics qualify as service-area businesses. WrenchNow itself is a weaker fit.
+- **Questions for you:**
+  - Absorb Stripe's $2 per mechanic per month, or raise `PROCESSING_FEE_CENTS`?
+  - Which Checkr package will you use? It sets whether $50 is enough.
+  - Require garagekeepers insurance?
+- No settings or copy were changed from this research. Nothing was solid enough to change without you.
+- **Also found:** Pantry Pal has no code in the WrenchNow app, but its work lives on a branch (`claude/pantry-pal-setup`)
+  in this **public** WrenchNow repo. That branch also carries the old `index.html` with the leaked key. Your other
+  session has moved Pantry Pal to its own private repo. Once you've confirmed everything is there, deleting that
+  branch from WrenchNow keeps the two separate. I didn't delete it.

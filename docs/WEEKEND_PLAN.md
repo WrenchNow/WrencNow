@@ -36,7 +36,7 @@ The owner is away. Each scheduled check-in takes the **first unchecked item**, f
        to the business, and a monthly statement page. Research small-fleet needs first.
 - [x] 9. Refresh the sample nightly PR #3 onto the current branch, or close it and open a new
        `nightly/2026-10-25` with a fresh research run.
-- [ ] 10. Research (write `docs/research/2026-10-2X-*.md`, sourced): Denver mobile mechanic price ranges for top
+- [x] 10. Research (write `docs/research/2026-10-2X-*.md`, sourced): Denver mobile mechanic price ranges for top
         services; Colorado insurance norms for mobile mechanics; Checkr package pricing; Stripe Connect fees (verify
         what we assume in `.env.example`); Google Business Profile/LSA eligibility for mobile mechanics. Feed
         verified findings into copy or settings only when they're solid.
