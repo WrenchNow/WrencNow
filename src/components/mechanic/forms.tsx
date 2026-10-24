@@ -215,7 +215,6 @@ export function JobActions({
 }) {
   const [state, action, pending] = useActionState(mechanicTransition, {});
   const [confirmDecline, setConfirmDecline] = useState(false);
-  if (state.ok) return <StateNotice state={state} />;
 
   const hidden = <input type="hidden" name="id" value={id} />;
   return (

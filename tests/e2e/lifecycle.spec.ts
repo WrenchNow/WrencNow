@@ -123,9 +123,38 @@ test("customer sees the receipt and leaves a review; admin refunds part of it", 
   await expect(page.getByText("Lifecycle test review — on time and clear.")).toBeVisible();
 
   await asUser(page, USERS.admin, `/admin/bookings?q=${bookingId}`);
-  const row = page.locator("li, tr, div").filter({ hasText: bookingId.slice(0, 8) }).filter({ has: page.getByRole("button", { name: /refund/i }) }).last();
-  await row.getByRole("textbox").or(row.getByRole("spinbutton")).first().fill("10");
+  const row = page.locator(`[id="${bookingId}"]`);
+  await expect(row.getByText("Payment: captured")).toBeVisible();
+  await row.locator('input[name="amount"]').fill("10");
   await row.getByRole("button", { name: /refund/i }).click();
   await waitFor(async () => (await booking(bookingId)).payment_status === "partially_refunded", "refund webhook");
   expect((await booking(bookingId)).refunded_cents).toBe(1000);
+});
+
+test("customer cancels before the mechanic heads out — the card hold is released, nothing charged", async ({ page }) => {
+  // A second, authorized booking for the same customer.
+  const [c] = await q<{ id: string }>("select id from auth.users where email = $1", [USERS.customer]);
+  const [m] = await q<{ id: string }>("select id from auth.users where email = $1", [USERS.mechanic]);
+  const [s] = await q<{ id: number }>("select id from public.services where slug = 'oil-change'");
+  const start = new Date(Date.now() + 5 * 86_400_000);
+  start.setUTCHours(21, 0, 0, 0);
+  const [b] = await q<{ id: string }>(
+    `insert into public.bookings (customer_id, mechanic_id, service_id, vehicle_desc, address, scheduled_start, scheduled_end, hourly_rate_cents, estimated_max_cents)
+     values ($1, $2, $3, '2015 Testmake Testmodel', '1 Test St', $4, $4::timestamptz + interval '1 hour', 6500, 6500) returning id`,
+    [c!.id, m!.id, s!.id, start.toISOString()],
+  );
+  const pi = await (
+    await fetch(`${FAKE}/v1/payment_intents`, { method: "POST", body: new URLSearchParams({ amount: "6500", currency: "usd", capture_method: "manual", "metadata[booking_id]": b!.id }) })
+  ).json();
+  await q("update public.bookings set stripe_payment_intent_id = $2 where id = $1", [b!.id, pi.id]);
+  await fetch(`${FAKE}/__test/authorize/${pi.id}`, { method: "POST" });
+  await waitFor(async () => (await booking(b!.id)).payment_status === "authorized", "hold authorized via webhook");
+
+  await asUser(page, USERS.customer, `/account/bookings/${b!.id}`);
+  await page.getByRole("button", { name: "Cancel booking" }).click();
+  await page.getByRole("button", { name: "Yes, cancel booking" }).click();
+  await waitFor(async () => (await booking(b!.id)).status === "cancelled", "booking cancelled");
+  const state = await (await fetch(`${FAKE}/__test/state`)).json();
+  expect(state.payment_intents.find((p: { id: string }) => p.id === pi.id).status).toBe("canceled");
+  await waitFor(async () => (await booking(b!.id)).payment_status === "canceled", "hold released");
 });

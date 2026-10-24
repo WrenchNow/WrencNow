@@ -19,7 +19,9 @@ const FILTERS = [
 
 export default async function AdminBookingsPage({ searchParams }: PageProps<"/admin/bookings">) {
   const sp = await searchParams;
-  const filter = FILTERS.some((f) => f.key === sp.filter) ? (sp.filter as string) : "active";
+  // ?q=<booking id> (linked from the admin overview) shows that booking whatever its status.
+  const bookingQuery = typeof sp.q === "string" && /^[0-9a-f-]{36}$/i.test(sp.q) ? sp.q : null;
+  const filter = bookingQuery ? "all" : FILTERS.some((f) => f.key === sp.filter) ? (sp.filter as string) : "active";
   await requireAdmin();
   const admin = createAdminClient();
   let q = admin
@@ -27,6 +29,7 @@ export default async function AdminBookingsPage({ searchParams }: PageProps<"/ad
     .select("*, services(name), mechanics(display_name), profiles!bookings_customer_id_fkey(full_name)")
     .order("scheduled_start", { ascending: false })
     .limit(200);
+  if (bookingQuery) q = q.eq("id", bookingQuery);
   if (filter === "active") q = q.in("status", ["requested", "accepted", "en_route", "in_progress"]).neq("payment_status", "unpaid");
   if (filter === "completed") q = q.eq("status", "completed");
   if (filter === "disputed") q = q.eq("payment_status", "disputed");
@@ -45,14 +48,14 @@ export default async function AdminBookingsPage({ searchParams }: PageProps<"/ad
       {bookings && bookings.length > 0 ? (
         <ul className="space-y-3">
           {bookings.map((b) => (
-            <li key={b.id} className="rounded-[var(--radius-card)] border border-line bg-surface p-4">
+            <li key={b.id} id={b.id} className="rounded-[var(--radius-card)] border border-line bg-surface p-4">
               <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <p className="font-semibold text-cream">
                     {b.services?.name} · {b.vehicle_desc}
                   </p>
                   <p className="text-sm text-muted">
-                    {dateTime(b.scheduled_start)} · {b.profiles?.full_name ?? "Customer"} → {b.mechanics?.display_name ?? "Mechanic"}
+                    {dateTime(b.scheduled_start)} · {b.profiles?.full_name ?? "Customer"} → {b.mechanics?.display_name ?? "Mechanic"} · #{b.id.slice(0, 8)}
                   </p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <StatusBadge status={b.status} />

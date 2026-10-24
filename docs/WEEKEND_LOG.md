@@ -140,3 +140,38 @@ rule, so it needs your OK), or multiple logins per business? None of these are b
   mediates; nothing is promised.
 - **Results:** lint ✓, build ✓, vitest 122/122 ✓, Playwright 125 passed / 1 skipped ✓. I also made the garage e2e test
   safe to run in parallel.
+
+### Sat Oct 24 — full booking-to-payment test, and two real bugs fixed
+- **Owner asked:** "go through the whole process on the customer side and the mechanic side, start to payments, and
+  check the backend."
+- **The problem:** this sandbox can't reach Stripe. So I wrote a small **fake Stripe server**
+  (`scripts/fake-stripe/server.mjs`). It keeps real state (hold → capture/cancel → refund) and sends **properly
+  signed webhooks** back to the app, so WrenchNow's real payment code and webhook handler run unchanged. It's only
+  used when `STRIPE_API_BASE` is set and the key starts with `sk_test_`; it can never be used with live keys.
+- **`npm run test:lifecycle` now passes, all four steps:**
+  1. **Booking and card hold:** the customer searches, books (service, car, mileage, driveway, phone, time) and
+     approves the estimate and terms. A Stripe PaymentIntent is created with the 5% fee. The card authorization
+     goes through a signed webhook, and the booking shows "Card hold placed".
+  2. **Doing the job:** the mechanic accepts and taps "I'm on my way". The customer sees the 4-digit code. A wrong
+     code is rejected and the right code starts the job. The mechanic completes with $50 labor, and Stripe captures
+     $50.
+     - **Platform fee:** exactly $2.50 (5% of labor).
+     - **Application fee:** the platform fee plus card processing plus the onboarding installment, all from the
+       mechanic's side.
+     - **Ledger:** the charge is written from the webhook.
+  3. **Receipt, review and refund:** the customer sees "Paid" and the receipt and leaves a review. The admin
+     refunds $10, the refund webhook arrives, and the booking shows "partially refunded" with $10.00 refunded.
+  4. **Cancelling:** the customer cancels before the mechanic heads out. The Stripe hold is canceled and nothing is
+     charged.
+- **Bugs this caught (fixed):**
+  - **Stuck job card:** after any job action (Accept, On my way…), the mechanic's card showed only the success
+    message and hid the next button until they reloaded. A mechanic who accepted a job couldn't tap "I'm on my way"
+    without refreshing.
+  - **Broken admin link:** the admin "booking #…" link from problem reports didn't filter anything. Admin bookings
+    now supports `?q=<booking id>`.
+- **Launch note:** `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` is baked in when the site is built. It must be set in Netlify
+  before the deploy builds; changing it later needs a redeploy.
+- **Not covered by this test:** card entry in Stripe's own form (it needs the real Stripe), and parts receipt
+  uploads (no file storage locally). Both need one manual run in Stripe test mode once keys are connected.
+- **Results:** lint ✓, build ✓, vitest 122/122 ✓, Playwright 125 passed (lifecycle tests skip in the normal run) ✓,
+  lifecycle 4/4 ✓.
