@@ -237,7 +237,7 @@ for (const r of LIB) {
   fs.writeFileSync(path.join(out, 'recipes', s + '.html'), head(`${r.title} — Pantry Pal`, desc, url, `<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\\u003c')}</script>`, 'article', { url: og.url, w: 1200, h: 630, alt: `${r.title} title card: ${fmtTime(r.time)} ${r.meal.toLowerCase()}` }) + `
 <h1>${esc(r.title)}</h1>
 <div class="meta"><span>${cuisineTag}</span><span>${esc(r.meal)}</span><span>${r.time} min</span><span>Serves ${r.servings}</span><span>${r.nutrition.kcal} cal</span><span>${r.nutrition.protein}g protein</span><span>${r.nutrition.carbs}g carbs</span></div>
-<div class="box"><b>Have some of these already?</b> Pantry Pal scans your fridge and tells you exactly what you can cook tonight — and scales this recipe to any party size. <a href="${SITE}/app/">Try it free →</a></div>
+<div class="box"><b>Have some of these already?</b> Pantry Pal keeps track of what's in your kitchen and shows what you can cook tonight — and scales this recipe to any party size. <a href="${SITE}/app/">Try it free →</a></div>
 <h2>Ingredients</h2><ul class="ing">${r.ingredients.map(i => `<li><b>${esc(amt(i))}</b> ${esc(i.name)}</li>`).join('')}</ul>
 <h2>Steps</h2><ol class="steps">${r.steps.map(t => `<li>${esc(t)}</li>`).join('')}</ol>
 <h2>More like this</h2><ul class="grid">${related.map(x => `<li><a href="${SITE}/recipes/${slug(x.title)}.html">${esc(x.title)}<small>${x.time} min · ${esc(x.cuisine)}</small></a></li>`).join('')}</ul>${(PAIRS_OF.get(r) || []).length ? `
@@ -245,9 +245,9 @@ for (const r of LIB) {
 }
 
 const meals = ['Breakfast', 'Lunch', 'Dinner', 'Side', 'Snack', 'Dessert'];
-fs.writeFileSync(path.join(out, 'index.html'), head('Pantry Pal — cook what you already have', `Scan your fridge or grocery receipt and get recipes you can make right now. ${LIB.length} free recipes.`, `${SITE}/`) + `
+fs.writeFileSync(path.join(out, 'index.html'), head('Pantry Pal — cook what you already have', `Snap your shopping list or a grocery receipt, scan barcodes free on your phone and get recipes you can make right now. ${LIB.length} free recipes.`, `${SITE}/`) + `
 <section class="hero"><h1>Cook what you already have.</h1>
-<p class="muted">Snap your fridge or a grocery receipt. Pantry Pal lists what you’ve got, flags what’s about to expire, and shows recipes you can make tonight — scaled for your crew, with allergy flags to help you choose (always check labels yourself).</p>
+<p class="muted">Snap your shopping list or a grocery receipt, or scan barcodes, all read free on your phone. Pantry Pal lists what you’ve got, flags what’s about to expire, and shows recipes you can make tonight — scaled for your crew, with allergy flags to help you choose (always check labels yourself).</p>
 <p><a class="cta" href="${SITE}/app/">Open Pantry Pal — free</a></p><p style="margin:0"><a href="${SITE}/start/">New here? See how Pantry Pal works →</a></p></section>
 <h2>Browse by cuisine</h2><div class="meta">${CUISINES.map(c => `<span><a href="${cuisineUrl(c)}">${esc(c)}</a> ${LIB.filter(r => r.cuisine === c).length}</span>`).join('')}</div>
 <h2>Cook with what you have</h2><p class="muted" style="margin-top:0">Got two things in the fridge? Pick them and see every recipe that uses both.</p>
@@ -282,7 +282,7 @@ fs.writeFileSync(path.join(out, 'cuisine', 'index.html'), head('Recipes by Cuisi
   const crumbLd = items => ({ '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: items.map(([t, u], i) => ({ '@type': 'ListItem', position: i + 1, name: t, item: u })) });
   const ldTag = o => `<script type="application/ld+json">${JSON.stringify(o).replace(/</g, '\\u003c')}</script>`;
   const WITH = `${SITE}/with/`;
-  const appBox = (lead) => `<div class="box"><b>${lead}</b> Open Pantry Pal and see what else you can make. It checks your fridge, pantry and freezer and shows what you can cook tonight, plus the one or two things you're missing.<br><a class="cta" href="${SITE}/app/">Open Pantry Pal, it's free</a></div>`;
+  const appBox = (lead) => `<div class="box"><b>${lead}</b> Open Pantry Pal and see what else you can make. It checks what you've got at home and shows what you can cook tonight, plus the one or two things you're missing.<br><a class="cta" href="${SITE}/app/">Open Pantry Pal, it's free</a></div>`;
   for (const p of PAIRS) {
     const l = p.list, n = l.length, Name = cap(p.name); urls.push(p.url);
     const quick = l[0], slow = l[n - 1];
@@ -328,7 +328,7 @@ const PH = t => `<span class="ph">[PLACEHOLDER: ${t}]</span>`;
 urls.push(`${SITE}/about.html`, `${SITE}/privacy.html`);
 fs.writeFileSync(path.join(out, 'about.html'), head('About Pantry Pal', 'Who makes Pantry Pal, why it exists and how to get in touch.', `${SITE}/about.html`) + `
 <h1>About Pantry Pal</h1>
-<p>Pantry Pal is a free web app that helps you cook with what you already have. Scan a grocery receipt or snap a photo of your fridge, pantry or freezer, and Pantry Pal keeps track of your food and its expiration dates and suggests recipes that fit your diet, allergies and party size.</p>
+<p>Pantry Pal is a free web app that helps you cook with what you already have. Snap your shopping list or a grocery receipt, or scan barcodes (all read free on your phone), and Pantry Pal keeps track of your food and its expiration dates and suggests recipes that fit your diet, allergies and party size.</p>
 <p>Pantry Pal is built by Wyatt, a frontend developer and restaurant server in Denver. ${PH('a few sentences in your own words: why you built Pantry Pal and how you cook at home')}</p>
 <h2>Our recipes</h2>
 <p>This site has ${LIB.length} original recipes across ${CUISINES.length} cuisines, each with ingredients, step-by-step instructions and nutrition estimates per serving. Nutrition numbers are estimates. Allergy flags in the app are a helper, not a safety guarantee, so always check ingredient labels yourself.</p>
@@ -345,7 +345,7 @@ fs.writeFileSync(path.join(out, 'privacy.html'), head('Privacy Policy — Pantry
 <h2>Amazon affiliate links and cookies</h2>
 <p>Pantry Pal is a participant in the Amazon Services LLC Associates Program, an affiliate advertising program designed to provide a means for sites to earn advertising fees by advertising and linking to Amazon.com. When you click an Amazon link, Amazon may place cookies in your browser so it can credit us for qualifying purchases. Amazon's use of that data is covered by Amazon's own privacy notice.</p>
 <h2>The Pantry Pal app</h2>
-<p>Your pantry list, settings and saved recipes are stored in your own browser on your device. When you scan a photo of your fridge, pantry or freezer, the image is sent to an AI service (Anthropic's Claude) to read the food items, either through the Pantry Pal server or directly with your own API key if you add one. Shopping-list photos are read on your phone; only if you tap “Read with AI” is the photo sent to the AI service. Barcode photos are read on your phone and never uploaded. Receipt photos are read on your phone first; only if that doesn’t work and you tap “Try the AI scan” is the receipt photo sent to the AI service. When you scan a barcode, only the barcode number is sent to Open Food Facts, a free public food database, to look up the product name. The first time you use barcode or receipt scanning, the app downloads free reading tools from jsDelivr (a public code CDN). Barcode lookups go to Open Food Facts, which sees your IP address like any website. If you share a recipe to the community feed, what you post is stored on the Pantry Pal server and visible to other users. ${PH('confirm how long server data is kept and how users can ask for it to be deleted')}</p>
+<p>Your pantry list, settings and saved recipes are stored in your own browser on your device. Fridge, pantry and freezer photo scans are a Premium feature: when you use one, the photo is sent to an AI service (Anthropic's Claude) to read the food items, either through the Pantry Pal server or directly with your own API key if you add one. Shopping-list photos are read on your phone; only if you tap “Read with AI” is the photo sent to the AI service. Barcode photos are read on your phone and never uploaded. Receipt photos are read on your phone first; only if that doesn’t work and you tap “Try the AI scan” is the receipt photo sent to the AI service. When you scan a barcode, only the barcode number is sent to Open Food Facts, a free public food database, to look up the product name. The first time you use barcode or receipt scanning, the app downloads free reading tools from jsDelivr (a public code CDN). Barcode lookups go to Open Food Facts, which sees your IP address like any website. If you share a recipe to the community feed, what you post is stored on the Pantry Pal server and visible to other users. ${PH('confirm how long server data is kept and how users can ask for it to be deleted')}</p>
 <h2>Children</h2>
 <p>Pantry Pal is not aimed at children under 13 and does not knowingly collect their information. ${PH('confirm this matches your intended audience')}</p>
 <h2>Contact</h2>
@@ -366,12 +366,13 @@ section{margin:0 0 34px}h2{font-size:28px}
 .who{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px}
 details{border-bottom:1px solid var(--line);padding:12px 0}summary{font-weight:600;cursor:pointer;list-style-position:inside}details p{margin:8px 0 0}
 .final{background:var(--brand);color:#fff;border-radius:20px;padding:26px 20px;text-align:center}.final h2{color:#fff}.final .big{background:#FAF6EF;color:#2E6A4E}
-@media (min-width:700px){.ben{grid-template-columns:repeat(3,1fr)}.lhero h1{font-size:52px}.big{display:inline-block}.trust{text-align:left}}`;
-  // Small brand glyphs for the three benefit blocks (no external images).
+@media (min-width:700px){.ben{grid-template-columns:repeat(2,1fr)}.lhero h1{font-size:52px}.big{display:inline-block}.trust{text-align:left}}`;
+  // Small brand glyphs for the four benefit blocks (no external images).
   const g = (inner) => `<svg width="44" height="44" viewBox="0 0 48 48" aria-hidden="true">${inner}</svg>`;
   const gClock = g(`<circle cx="24" cy="24" r="20" fill="#D9572F"/><path d="M24 12v13l8 5" fill="none" stroke="#FAF6EF" stroke-width="4" stroke-linecap="round"/>`);
   const gPlate = g(`<circle cx="24" cy="24" r="20" fill="#2E6A4E"/><circle cx="24" cy="24" r="11" fill="#FAF6EF"/><circle cx="24" cy="24" r="5" fill="#D9572F"/>`);
   const gBag = g(`<rect x="6" y="16" width="36" height="28" rx="6" fill="#2E6A4E"/><path d="M16 18v-4a8 8 0 0 1 16 0v4" fill="none" stroke="#D9572F" stroke-width="4" stroke-linecap="round"/><path d="M17 30l5 5 9-10" fill="none" stroke="#FAF6EF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`);
+  const gPair = g(`<circle cx="17" cy="24" r="12" fill="#2E6A4E"/><circle cx="31" cy="24" r="12" fill="#D9572F" fill-opacity=".9"/><path d="M24 14.5a12 12 0 0 1 0 19a12 12 0 0 1 0-19z" fill="#FAF6EF"/>`);
   // Pass the ad's utm_* parameters through to the app link (analytics can read them; the app ignores them).
   const UTM_JS = `<script>(function(){var p=new URLSearchParams(location.search),k=new URLSearchParams();p.forEach(function(v,n){if(/^utm_/.test(n))k.set(n,v)});var q=k.toString();if(!q)return;document.querySelectorAll('a[data-app]').forEach(function(a){a.href=a.href.split('?')[0]+'?'+q})})();</script>`;
   const PIXEL = `
@@ -381,13 +382,14 @@ details{border-bottom:1px solid var(--line);padding:12px 0}summary{font-weight:6
      Before turning it on: add "This page uses the Meta pixel to measure our ads." to the FAQ privacy answer below,
      and replace the [PLACEHOLDER] line about the pixel on /privacy.html with the final wording. -->
 `;
-  fs.writeFileSync(path.join(out, 'start', 'index.html'), head('Pantry Pal: use what you have before it goes bad', 'Snap your fridge or a receipt. Pantry Pal tracks what you have, tells you what to use first and shows what you can cook tonight. Free, no sign-up.', url, `<style>${LCSS}</style>${PIXEL}`, 'website', SITE_IMG, { nav: false }) + `
+  fs.writeFileSync(path.join(out, 'start', 'index.html'), head('Pantry Pal: use what you have before it goes bad', 'Snap your shopping list and send it to Amazon. Scan receipts and barcodes free on your phone, then see what you can cook with what you have. Free, no sign-up.', url, `<style>${LCSS}</style>${PIXEL}`, 'website', SITE_IMG, { nav: false }) + `
 <section class="lhero">
 <h1>Use what you have before it goes bad.</h1>
-<p>Snap your fridge or a grocery receipt. Pantry Pal keeps track of what you've got, tells you what to use first and shows what you can cook tonight.</p>
+<p>Snap your shopping list and send it to Amazon. Scan receipts and barcodes right on your phone, for free. Pantry Pal keeps track of what you've got and shows what you can cook tonight.</p>
 ${appBtn()}
-<p class="trust">Free · No sign-up · Works in your phone's browser</p>
-<!-- HERO IMAGE (to add): a real screenshot of the Cook tab "Ready now" section next to a real plate of food. No mockups with made-up recipes. -->
+<p class="trust">Free · No sign-up · Scans run on your phone</p>
+<p class="trust"><small>${DISCLOSURE}</small></p>
+<!-- HERO IMAGE (to add): a real screenshot of the Scan tab with "Shopping list" selected (or the "Shopping list → Amazon" review screen), next to a real handwritten list. No mockups. -->
 </section>
 
 <div class="stat"><p>US households waste about <b>31.9%</b> of the food they buy.<sup>1</sup> Mostly not on purpose. The spinach just hides behind the milk.</p>
@@ -395,14 +397,15 @@ ${appBtn()}
 
 <section class="ben">
 <div class="box">${gClock}<h3>Use it before you lose it</h3><p>Pantry Pal remembers what's in your kitchen and when it goes bad. It shows what to use in the next 3 days and finds recipes that use it, so less food ends up in the trash and fewer groceries get bought twice.</p></div>
-<div class="box">${gPlate}<h3>Dinner, decided</h3><p>Tap <b>"What's for dinner tonight?"</b> and get picks built from what's already home. Or tap <b>"Plan my week"</b> for a week of dinners that uses what you have first. There are ${LIB.length} recipes built in, and you can add everyone you cook for and their diets.</p></div>
-<div class="box">${gBag}<h3>Only buy what's missing</h3><p>Every recipe shows what you already have and what you don't. Missing a couple of things? They go on one shopping list, and you can order them on Amazon from there. When the groceries come, paste your order email and add it all to your pantry in one go.</p><small>${DISCLOSURE}</small></div>
+<div class="box">${gPlate}<h3>Dinner, decided</h3><p>Tap <b>"What's for dinner tonight?"</b> and get picks built from what's already home. Or tap <b>"Plan my week"</b> for a week of dinners that uses what you have first, with one combined list for everything you're missing. There are ${LIB.length} recipes built in, and you can add everyone you cook for and their diets.</p></div>
+<div class="box">${gBag}<h3>Only buy what's missing</h3><p>Snap a photo of your shopping list, printed or handwritten. Your phone reads it, you check the names, then send the items to Amazon. Every recipe also shows what you already have and what you don't, so missing ingredients go on the same list. When the groceries come, Pantry Pal asks <b>"Did your order arrive?"</b> and adds it all to your pantry in one go. You can also paste an order email.</p><small>${DISCLOSURE}</small></div>
+<div class="box">${gPair}<h3>Got two things? That's dinner.</h3><p>Pick two things you already have, like eggs and spinach or tortillas and salsa, and see every Pantry Pal recipe that uses both. There are ${PAIRS.length} pairs so far.</p><p style="margin:0"><a href="${SITE}/with/">Cook with what you have →</a></p></div>
 </section>
 
 <section><h2>How it works</h2>
-<!-- SCREENSHOTS (to add): the Scan tab, the Cook tab "Ready now" section and the shopping list. Crop the Amazon button out of the shopping list shot, or keep the disclosure next to it. -->
+<!-- SCREENSHOTS (to add): the Scan tab (Shopping list / Barcode / Receipt; don't show the Fridge/Pantry/Freezer photo types in the free steps), the Cook tab "Ready now" section and the shopping list. Crop the Amazon button out of the shopping list shot, or keep the disclosure next to it. -->
 <ol class="steps3">
-<li><b>Snap.</b> Take a photo of your fridge, pantry, freezer or a grocery receipt. Pantry Pal lists the food it sees and guesses how long each thing lasts. Fix anything it got wrong.</li>
+<li><b>Snap.</b> Take a photo of your shopping list or a grocery receipt, or scan barcodes. It's all read on your phone, for free, and the photo isn't uploaded. Check the list and fix anything it got wrong.</li>
 <li><b>Cook.</b> See what you can make right now, what's missing only 1 or 2 things, and what to use up first.</li>
 <li><b>Fill the gaps.</b> Put what's missing on one list, then shop for it. When your order arrives, add it to your pantry without typing.</li>
 </ol>
@@ -413,16 +416,16 @@ ${appBtn()}</section>
 <p style="margin:0">— Wyatt</p></section>
 
 <section><h2>Questions</h2>
-<details><summary>Is it free?</summary><p>Yes. Pantry Pal is free to use, with no sign-up. Photo scanning uses AI, so free scans have a fair-use limit. We plan to add an optional paid plan later for people who scan a lot. Your recipes, pantry and shopping list stay free.</p></details>
-<details><summary>Do I have to download anything?</summary><p>No. It runs in your phone's browser. If you like it, you can add it to your home screen so it opens like an app.</p></details>
-<details><summary>Is my data private?</summary><p>Your pantry, household and settings are saved in the browser on your own device. There's no account. When you scan a photo of your fridge, pantry or freezer, the image is sent to an AI service (Anthropic's Claude) to read the food items. Barcode photos are read on your phone. Receipts are read on your phone too, unless you choose “Try the AI scan”. If you paste an order email, it's read on your phone. Clearing your browser data erases your pantry, so use <b>Settings → Export backup</b> to keep a copy. Full details are in our <a href="${SITE}/privacy.html">Privacy Policy</a>.</p></details>
+<details><summary>Is it free?</summary><p>Yes. Pantry Pal is free to use, with no sign-up. Reading shopping lists, receipts and barcodes on your phone is free. If your phone can't read a handwritten list, the "Read with AI" button has a small free monthly allowance. We plan to add an optional paid plan later for people who want more AI scanning. Your recipes, pantry and shopping list stay free.</p></details>
+<details><summary>Do I have to download anything?</summary><p>No. It runs in your phone's browser. If you like it, you can add it to your home screen so it opens like an app. The first time you scan, your phone downloads a small free reader (about 5 MB).</p></details>
+<details><summary>Is my data private?</summary><p>Your pantry, household and settings are saved in the browser on your own device. There's no account. Shopping lists, receipts and barcodes are read on your phone, and the photo isn't uploaded. When you scan a barcode, only the number is sent to Open Food Facts, a free open food database, to look up the product. A photo goes to an AI service (Anthropic's Claude) only if you tap "Read with AI" or "Try the AI scan". If you paste an order email, it's read on your phone. Clearing your browser data erases your pantry, so use <b>Settings → Export backup</b> to keep a copy. Full details are in our <a href="${SITE}/privacy.html">Privacy Policy</a>.</p></details>
 <details><summary>Can it filter for allergies?</summary><p>You can add the allergies of everyone you cook for, and Pantry Pal will flag or hide recipes and pantry items with matching ingredients. <b>It's a helper, not a safety guarantee.</b> It only knows what you tell it and what's in its ingredient lists, and it can miss things. Always read labels and ingredients yourself, and follow your doctor's advice for serious allergies.</p></details>
-<details><summary>How does it know when food goes bad?</summary><p>When you scan, it estimates how many days each item lasts. Otherwise it uses a typical shelf life for that kind of food. These are guesses, so you can change any date.</p></details>
+<details><summary>How does it know when food goes bad?</summary><p>It uses a typical shelf life for each kind of food. These are estimates, so you can change any date. Past a date? Look, smell and taste before you decide.</p></details>
 <details><summary>Which stores does it work with?</summary><p>You can scan a receipt from any store. You can paste order emails or order pages from Amazon, Instacart and Walmart. Shopping links currently go to Amazon.</p></details>
 <details><summary>Who makes it?</summary><p>Wyatt, a restaurant server and frontend developer in Denver. Pantry Pal is independent and isn't made by or endorsed by Amazon or any store.</p></details>
 </section>
 
-<section class="final"><h2>Your fridge already has dinner in it.</h2><p>Snap it and see.</p>${appBtn()}</section>
+<section class="final"><h2>Your kitchen already has dinner in it.</h2><p>Pick two things you have and see.</p><a class="cta big" href="${SITE}/with/">See what I can make</a><p style="margin:0"><a data-app href="${SITE}/app/" style="color:#fff">Open Pantry Pal, it's free</a></p></section>
 <p class="muted" style="text-align:center">Just browsing? <a href="${SITE}/">See all ${LIB.length} free recipes</a> or <a href="${SITE}/cuisine/">browse by cuisine</a>.</p>
 ${UTM_JS}` + foot('<br>Allergy flags are a helper, not a safety guarantee. Always read labels.'));
 }
