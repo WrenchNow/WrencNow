@@ -219,6 +219,11 @@ export default async function BookingDetailPage({ params, searchParams }: PagePr
             {b.refunded_cents > 0 && <Detail label="Refunded" value={money(b.refunded_cents)} />}
             <Detail label="Status" value={PAYMENT_LABEL[b.payment_status] ?? b.payment_status} />
           </dl>
+          {b.status === "completed" && (
+            <Link href={`/account/bookings/${b.id}/receipt`} className="mt-4 inline-block text-sm font-semibold text-ore hover:underline">
+              View / print itemized receipt →
+            </Link>
+          )}
           <div className="mt-6">
             <CustomerBookingActions id={b.id} canCancel={canCancel} canNoShow={canNoShow} />
           </div>

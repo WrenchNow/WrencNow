@@ -1,7 +1,7 @@
 import "server-only";
 import { CONTACT_EMAIL } from "@/lib/contact";
 import { siteUrl } from "@/lib/env";
-import { dateTime, money, timeOnly } from "@/lib/format";
+import { dateTime, money, timeOnly, warrantyLabel } from "@/lib/format";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
@@ -142,11 +142,14 @@ export async function notifyBooking(bookingId: string, event: BookingEvent) {
           `Address: ${b.address}`,
           `Completed: ${b.completed_at ? dateTime(b.completed_at) : when}`,
           b.labor_cents !== null ? `Labor: ${money(b.labor_cents)}` : null,
-          b.parts_cents !== null ? `Parts: ${money(b.parts_cents)}` : null,
+          b.parts_cents ? `Parts (receipt price): ${money(b.parts_cents)}` : null,
+          b.parts_handling_cents ? `Parts handling: ${money(b.parts_handling_cents)}` : null,
           `Total charged: ${money(b.final_amount_cents)}`,
           b.return_old_parts ? "Old parts: returned to you" : null,
+          b.warranty_days ? `${warrantyLabel(b.warranty_days)} offered by your mechanic (not WrenchNow)` : null,
           `Reference: ${b.id.slice(0, 8)}`,
           "",
+          `Itemized receipt: ${customerLink}/receipt`,
           `Leave a review: ${customerLink}`,
         ].filter((l) => l !== null);
         return toCustomer({ subject: `Your WrenchNow receipt — ${money(b.final_amount_cents)}`, text: lines.join("\n") });
@@ -237,5 +240,23 @@ export async function notifyUser(key: string, userId: string, msg: { subject: st
     await deliver(key, await contactFor(userId), "direct", msg);
   } catch (e) {
     console.error("notifyUser failed", key, e);
+  }
+}
+
+/** Tell the customer a refund was issued (once per refund total). */
+export async function notifyRefund(bookingId: string, refundedCents: number) {
+  if (!emailConfigured() && !smsConfigured()) return;
+  try {
+    const admin = createAdminClient();
+    const { data: b } = await admin.from("bookings").select("id, customer_id, final_amount_cents, services(name)").eq("id", bookingId).single();
+    if (!b) return;
+    const link = `${siteUrl()}/account/bookings/${b.id}/receipt`;
+    await deliver(`booking:${b.id}:refund:${refundedCents}`, await contactFor(b.customer_id), "refund", {
+      subject: `Refund issued — ${money(refundedCents)}`,
+      text: `We refunded ${money(refundedCents)} of your ${money(b.final_amount_cents)} payment for ${b.services?.name ?? "your service"}. It usually shows on your card in 5–10 business days.\n\nUpdated receipt: ${link}`,
+      sms: `WrenchNow refunded ${money(refundedCents)} to your card. Receipt: ${link}`,
+    });
+  } catch (e) {
+    console.error("notifyRefund failed", bookingId, e);
   }
 }

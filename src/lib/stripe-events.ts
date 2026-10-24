@@ -1,7 +1,7 @@
 import "server-only";
 import type Stripe from "stripe";
 import { cancelOpenBookingsForMechanic } from "@/lib/bookings";
-import { notifyBooking } from "@/lib/notify";
+import { notifyBooking, notifyRefund } from "@/lib/notify";
 import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -118,6 +118,7 @@ async function onCharge(admin: Admin, event: Stripe.Event) {
       .eq("id", b.id);
     // A fully refunded job doesn't count toward the mechanic's onboarding fee.
     if (full) await admin.rpc("release_onboarding_fee", { p_booking_id: b.id });
+    if (refunded > 0) await notifyRefund(b.id, refunded);
   }
 }
 

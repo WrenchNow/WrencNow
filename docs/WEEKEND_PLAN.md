@@ -47,7 +47,7 @@ The owner is away. Each scheduled check-in takes the **first unchecked item**, f
 ## Round 2 (added Sat Oct 24 after items 1–11 finished; owner said "keep working")
 - [x] 13. Admin: parts-store click summary (last 30 days by store; top searched parts), for affiliate reconciliation
         and the pro-program pitch.
-- [ ] 14. Customer receipts by email on completion: itemized labor, parts at receipt cost, handling, total, and
+- [x] 14. Customer receipts by email on completion: itemized labor, parts at receipt cost, handling, total, and
         refunds. Only sent when the email keys are set. Also a printable receipt page.
 - [ ] 15. Maintenance reminders: a daily route (`/api/cron/reminders`, protected by `CRON_SECRET`) that emails
         opted-in customers when a car is likely due (time since last oil change). Off until email keys and the

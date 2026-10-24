@@ -253,3 +253,17 @@ Zoho) before launch?
   store (AutoZone, O'Reilly, Advance, NAPA) and the most-searched parts. Use it to check affiliate reports, and as
   evidence when pitching a store's commercial team.
 - **Results:** lint ✓, build ✓, vitest 128/128 ✓, Playwright 131 passed ✓.
+
+### Sat Oct 24 — item 14 done
+- **Printable itemized receipt** (`/account/bookings/<id>/receipt`), linked from each completed booking:
+  - What's done: service, mechanic (labeled independent contractor), vehicle and mileage, address, completion time.
+  - Approval times: when the estimate was approved (with its cap) and when the parts were approved in the app.
+  - Line items: labor, each part at receipt price with part number, parts handling, any no-show fee, total, and any
+    refund with net paid.
+  - Has "Print / save PDF". This matches Colorado's itemized-invoice expectations.
+- **Receipt email:** now also lists parts handling, the mechanic's own warranty (if any, labeled "not WrenchNow"), and
+  a link to the itemized receipt.
+- **New refund email:** sent to the customer when a refund lands ("Refund issued — $X", with the updated receipt
+  link). Like all emails, it only sends once the email keys are set.
+- **Results:** lint ✓, build ✓, vitest 128/128 ✓, Playwright 131 passed ✓, lifecycle 5/5 ✓ (now also checks the
+  receipt after a refund: Refunded $10.00, Net paid $40.00).

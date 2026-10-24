@@ -129,6 +129,14 @@ test("customer sees the receipt and leaves a review; admin refunds part of it", 
   await row.getByRole("button", { name: /refund/i }).click();
   await waitFor(async () => (await booking(bookingId)).payment_status === "partially_refunded", "refund webhook");
   expect((await booking(bookingId)).refunded_cents).toBe(1000);
+
+  // The itemized receipt reflects the refund.
+  await asUser(page, USERS.customer, `/account/bookings/${bookingId}`);
+  await page.getByRole("link", { name: /itemized receipt/ }).click();
+  await expect(page.getByRole("cell", { name: "Labor" })).toBeVisible();
+  await expect(page.getByRole("row", { name: /Refunded/ })).toContainText("$10.00");
+  await expect(page.getByRole("row", { name: /Net paid/ })).toContainText("$40.00");
+  await expect(page.getByText(/independent contractor/)).toBeVisible();
 });
 
 test("customer cancels before the mechanic heads out — the card hold is released, nothing charged", async ({ page }) => {
