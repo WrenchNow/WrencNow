@@ -26,7 +26,7 @@ The owner is away. Each scheduled check-in takes the **first unchecked item**, f
        metadata and Service/FAQ JSON-LD. Add them to the sitemap, header and footer. Port the About page from
        `site-v12`.
 - [x] 4. Installable app: `app/manifest.ts` plus PNG icons (192, 512, maskable, apple-touch) made from `icon.svg`.
-- [ ] 5. Vehicle service history: each garage vehicle shows completed jobs, receipts and warranty end dates.
+- [x] 5. Vehicle service history: each garage vehicle shows completed jobs, receipts and warranty end dates.
        Optional mileage. Maintenance reminder opt-in (stored only; sending needs email keys).
 - [ ] 6. Before/after photos: the mechanic uploads photos at start and finish (private bucket); the customer
        sees them on the booking.

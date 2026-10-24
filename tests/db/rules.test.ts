@@ -681,3 +681,17 @@ run("warranty claims", () => {
     ).rejects.toThrow(/permission denied/);
   });
 });
+
+run("vehicle history", () => {
+  it("owners can record mileage and reminder opt-in; others can't touch it; mileage is bounded", async () => {
+    await tx(async (q) => {
+      const v = (await q("insert into public.vehicles (owner_id, year, make, model) values ($1, 2016, 'Testmake', 'Hist') returning id", [ids["customer"]])).rows[0].id;
+      await q("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: ids["mechanic.basic"], role: "authenticated" })]);
+      await q("set local role authenticated");
+      expect((await q("update public.vehicles set mileage = 1 where id = $1", [v])).rowCount).toBe(0);
+      await q("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: ids["customer"], role: "authenticated" })]);
+      expect((await q("update public.vehicles set mileage = 84500, reminders_opt_in = true where id = $1", [v])).rowCount).toBe(1);
+      await expect(q("update public.vehicles set mileage = -5 where id = $1", [v])).rejects.toThrow(/check constraint/);
+    });
+  });
+});

@@ -176,7 +176,7 @@ export default async function BookingDetailPage({ params, searchParams }: PagePr
         <Card>
           <h2 className="mb-4 text-2xl font-bold uppercase">Details</h2>
           <dl className="grid gap-4 text-sm sm:grid-cols-2">
-            <Detail label="Vehicle" value={b.vehicle_desc} />
+            <Detail label="Vehicle" value={b.odometer !== null ? `${b.vehicle_desc} · ${b.odometer.toLocaleString("en-US")} mi` : b.vehicle_desc} />
             <Detail label="Where" value={b.address} />
             <Detail label="When" value={dateTime(b.scheduled_start)} />
             <Detail label="Rate" value={`${money(b.hourly_rate_cents)}/hr`} />

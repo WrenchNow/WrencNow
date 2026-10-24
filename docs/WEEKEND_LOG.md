@@ -60,3 +60,16 @@ Each entry: what was done, test results, commits, and any questions for the owne
   brand mark by `node scripts/make-icons.mjs`. Customers can use "Add to Home Screen" on iPhone or "Install app" on
   Android/Chrome to get an app-like icon.
 - **Results:** lint ✓, build ✓, vitest 116/116 ✓, Playwright 119 passed / 1 skipped ✓ (new manifest/icon check).
+
+### Sat Oct 24, early — item 5 done
+- **Service history in the garage:** each vehicle now lists its completed WrenchNow jobs: date, service, mechanic,
+  mileage, number of part receipts, total paid, and the warranty end date (green while it's still covered). Each job
+  links to its booking, where the receipts are.
+- **Mileage:** optional field in the booking form. It's saved on the booking and updates the car's mileage, but only
+  forward. Customers can also edit mileage in the garage. Mechanics see the mileage on the job card.
+- **Maintenance reminders opt-in:** a checkbox per car, saved with a timestamp. Nothing is sent yet; the copy says
+  so. Sending needs the email keys and a schedule (future item).
+- **Database:** migration `0010_vehicle_history` adds vehicle `mileage`, `reminders_opt_in` and their timestamps,
+  plus `bookings.odometer`. The existing owner-only rules on vehicles cover them, and a test checks that.
+- **Results:** lint ✓, build ✓, vitest 117/117 ✓, Playwright 121 passed / 1 skipped ✓. Vitest still passes after
+  Playwright, because the e2e tests clean up after themselves.

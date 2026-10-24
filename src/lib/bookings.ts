@@ -105,6 +105,7 @@ export type CreateBookingInput = {
   urgency: Database["public"]["Enums"]["urgency"];
   start: string;
   returnOldParts: boolean;
+  odometer?: number | null;
 };
 
 /**
@@ -118,7 +119,7 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
   const [{ data: mechanic }, { data: service }, { data: vehicle }] = await Promise.all([
     admin.from("mechanics").select("id, is_live, insurance_expires_on, hourly_rate_cents, stripe_account_id, display_name").eq("id", input.mechanicId).maybeSingle(),
     admin.from("services").select("*").eq("slug", input.serviceSlug).eq("active", true).maybeSingle(),
-    admin.from("vehicles").select("id, owner_id, year, make, model, trim").eq("id", input.vehicleId).maybeSingle(),
+    admin.from("vehicles").select("id, owner_id, year, make, model, trim, mileage").eq("id", input.vehicleId).maybeSingle(),
   ]);
   if (!mechanic?.is_live || !insuranceCurrent(mechanic.insurance_expires_on) || !mechanic.stripe_account_id || !mechanic.hourly_rate_cents) {
     throw new BookingError("This mechanic isn't taking bookings right now.");
@@ -176,6 +177,7 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
       // Colorado Motor Vehicle Repair Act: record the customer's consent to the written estimate.
       estimate_approved_at: new Date().toISOString(),
       return_old_parts: input.returnOldParts,
+      odometer: input.odometer ?? null,
     })
     .select("id")
     .single();
@@ -183,6 +185,10 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
     if (error?.message.includes("bookings_no_overlap")) throw new BookingError("That time was just taken. Please pick another slot.");
     if (error?.message.includes("tier")) throw new BookingError("This mechanic isn't qualified for that service.");
     throw new BookingError("We couldn't create that booking. Please try again.");
+  }
+  // Odometer at booking keeps the garage's mileage current (only ever moves forward).
+  if (input.odometer != null && input.odometer > (vehicle.mileage ?? -1)) {
+    await admin.from("vehicles").update({ mileage: input.odometer, mileage_updated_at: new Date().toISOString() }).eq("id", vehicle.id);
   }
 
   let piId: string | null = null;

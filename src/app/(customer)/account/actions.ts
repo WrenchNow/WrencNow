@@ -75,6 +75,7 @@ const bookingSchema = z.object({
   terms: z.literal(true, { error: "Please accept the service terms" }),
   estimateApproved: z.literal(true, { error: "Please approve the estimate" }),
   returnOldParts: z.boolean().default(false),
+  odometer: z.coerce.number().int().min(0).max(2_000_000).nullable().optional(),
 });
 
 export type CreateBookingResult = { error?: string; bookingId?: string; clientSecret?: string };
@@ -101,6 +102,7 @@ export async function createBookingAction(input: z.input<typeof bookingSchema>):
       urgency: d.urgency,
       start: d.start,
       returnOldParts: d.returnOldParts,
+      odometer: d.odometer ?? null,
     });
   } catch (e) {
     if (e instanceof BookingError) return { error: e.message };
@@ -270,4 +272,37 @@ export async function fileWarrantyClaim(_: FormState, formData: FormData): Promi
   });
   revalidatePath(`/account/bookings/${b.id}`);
   return { ok: true, message: "Claim sent. We've told your mechanic and WrenchNow support will follow up within one business day." };
+}
+
+export async function updateVehicleCare(_: FormState, formData: FormData): Promise<FormState> {
+  const viewer = await requireRole(["customer"], "/account/garage");
+  const parsed = z
+    .object({
+      id: z.uuid(),
+      mileage: z
+        .string()
+        .trim()
+        .transform((v) => (v === "" ? null : Number(v.replace(/[,\s]/g, ""))))
+        .pipe(z.number({ error: "Enter the mileage as a number" }).int().min(0).max(2_000_000).nullable()),
+      reminders: z.literal("on").optional(),
+    })
+    .safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: parsed.error.issues[0]!.message };
+  const supabase = await createClient();
+  const { data: v } = await supabase.from("vehicles").select("mileage, reminders_opt_in").eq("id", parsed.data.id).eq("owner_id", viewer.id).maybeSingle();
+  if (!v) return { error: "Vehicle not found." };
+  const now = new Date().toISOString();
+  const optIn = parsed.data.reminders === "on";
+  const { error } = await supabase
+    .from("vehicles")
+    .update({
+      mileage: parsed.data.mileage,
+      ...(parsed.data.mileage !== v.mileage ? { mileage_updated_at: parsed.data.mileage === null ? null : now } : {}),
+      reminders_opt_in: optIn,
+      ...(optIn !== v.reminders_opt_in ? { reminders_opt_in_at: optIn ? now : null } : {}),
+    })
+    .eq("id", parsed.data.id);
+  if (error) return { error: "Couldn't save. Please try again." };
+  revalidatePath("/account/garage");
+  return { ok: true, message: "Saved." };
 }

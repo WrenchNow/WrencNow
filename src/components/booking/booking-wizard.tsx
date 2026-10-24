@@ -57,6 +57,7 @@ export function BookingWizard({
   const [addingVehicle, setAddingVehicle] = useState(vehicles.length === 0);
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState(initialPhone);
+  const [odometer, setOdometer] = useState("");
   const [start, setStart] = useState("");
   const [dayIdx, setDayIdx] = useState(0);
   const [terms, setTerms] = useState(false);
@@ -116,6 +117,7 @@ export function BookingWizard({
         terms: true,
         estimateApproved: true,
         returnOldParts,
+        odometer: odometer.trim() ? Number(odometer.replace(/[,\s]/g, "")) : null,
       });
       if (res.error || !res.clientSecret || !res.bookingId) {
         setError(res.error ?? "Something went wrong. Please try again.");
@@ -214,6 +216,9 @@ export function BookingWizard({
                 </button>
               )}
             </fieldset>
+            <Field label="Current mileage (optional)" htmlFor="odometer" hint="Helps your mechanic and keeps your service history complete.">
+              <Input id="odometer" inputMode="numeric" value={odometer} onChange={(e) => setOdometer(e.target.value)} maxLength={9} placeholder="e.g. 84,500" />
+            </Field>
             <Field label="Where will the car be?" htmlFor="address" hint="Street address, plus any notes like “level 2 of the garage”.">
               <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} autoComplete="street-address" maxLength={300} placeholder="1234 Main St, Denver, CO 80205" />
             </Field>

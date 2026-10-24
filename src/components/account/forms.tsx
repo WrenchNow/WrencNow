@@ -1,10 +1,10 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { addVehicle, customerTransition, fileWarrantyClaim, reportOffPlatformPayment, submitReview, updateProfile, type FormState } from "@/app/(customer)/account/actions";
+import { addVehicle, customerTransition, fileWarrantyClaim, updateVehicleCare, reportOffPlatformPayment, submitReview, updateProfile, type FormState } from "@/app/(customer)/account/actions";
 import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/feedback";
-import { Field, Input, Textarea } from "@/components/ui/form";
+import { Checkbox, Field, Input, Textarea } from "@/components/ui/form";
 
 export function StateNotice({ state }: { state: FormState }) {
   if (state.error) return <Notice tone="danger">{state.error}</Notice>;
@@ -190,6 +190,29 @@ export function WarrantyClaimForm({ bookingId }: { bookingId: string }) {
       </Field>
       <Button type="submit" variant="subtle" disabled={pending} className="self-start">
         {pending ? "Sending…" : "Report a problem"}
+      </Button>
+    </form>
+  );
+}
+
+export function VehicleCareForm({ id, mileage, reminders, label }: { id: string; mileage: number | null; reminders: boolean; label: string }) {
+  const [state, action, pending] = useActionState(updateVehicleCare, {});
+  return (
+    <form action={action} className="flex flex-col gap-3">
+      <StateNotice state={state} />
+      <input type="hidden" name="id" value={id} />
+      <Field label="Mileage" htmlFor={`mileage-${id}`} hint="Optional. Updated automatically when you add it at booking.">
+        <Input id={`mileage-${id}`} name="mileage" inputMode="numeric" defaultValue={mileage ?? ""} maxLength={9} placeholder="e.g. 84,500" />
+      </Field>
+      <Checkbox
+        id={`reminders-${id}`}
+        name="reminders"
+        defaultChecked={reminders}
+        aria-label={`Maintenance reminders for ${label}`}
+        label="Email me maintenance reminders for this car. We'll save your choice now and start sending when reminders launch."
+      />
+      <Button type="submit" size="sm" variant="subtle" disabled={pending} className="self-start">
+        {pending ? "Saving…" : "Save"}
       </Button>
     </form>
   );

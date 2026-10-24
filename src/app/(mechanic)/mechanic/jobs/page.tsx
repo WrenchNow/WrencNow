@@ -75,6 +75,7 @@ export default async function MechanicJobsPage() {
                     </h3>
                     <p className="text-sm text-muted">
                       {dateTime(j.scheduled_start)} · {j.vehicle_desc}
+                      {j.odometer !== null && ` · ${j.odometer.toLocaleString("en-US")} mi`}
                     </p>
                   </div>
                   <StatusBadge status={j.status} />

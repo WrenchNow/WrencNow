@@ -141,6 +141,7 @@ export type Database = {
       };
       bookings: {
         Row: {
+          odometer: number | null;
           accepted_at: string | null;
           address: string;
           admin_override: boolean;
@@ -197,6 +198,7 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
+          odometer?: number | null;
           accepted_at?: string | null;
           address: string;
           admin_override?: boolean;
@@ -252,6 +254,7 @@ export type Database = {
           vehicle_model?: string | null;
         };
         Update: {
+          odometer?: number | null;
           accepted_at?: string | null;
           address?: string;
           admin_override?: boolean;
@@ -950,9 +953,13 @@ export type Database = {
           created_at: string;
           id: string;
           make: string;
+          mileage: number | null;
+          mileage_updated_at: string | null;
           model: string;
           nickname: string | null;
           owner_id: string;
+          reminders_opt_in: boolean;
+          reminders_opt_in_at: string | null;
           trim: string | null;
           year: number;
         };
@@ -962,7 +969,11 @@ export type Database = {
           id?: string;
           make: string;
           model: string;
+          mileage?: number | null;
+          mileage_updated_at?: string | null;
           nickname?: string | null;
+          reminders_opt_in?: boolean;
+          reminders_opt_in_at?: string | null;
           owner_id: string;
           trim?: string | null;
           year: number;
@@ -972,7 +983,11 @@ export type Database = {
           id?: string;
           make?: string;
           model?: string;
+          mileage?: number | null;
+          mileage_updated_at?: string | null;
           nickname?: string | null;
+          reminders_opt_in?: boolean;
+          reminders_opt_in_at?: string | null;
           owner_id?: string;
           trim?: string | null;
           year?: number;
