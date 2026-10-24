@@ -50,3 +50,6 @@ Each entry: what was done, test results, commits, and any questions for the owne
 - **Nav:** "Services" is now in the header and footer, and "About" is in the footer.
 - **Results:** lint ✓, build ✓, vitest 116/116 ✓, Playwright 117 passed / 1 skipped ✓. Checked at 375px, 768px and
   1024px with no horizontal scroll.
+- **Follow-up fix:** the new warranty e2e test left completed jobs in the local DB. That made the DB tests fail
+  when they ran after Playwright on the same database. The test now cleans up after itself, and both orders pass
+  (Playwright 117 ✓, then vitest 116/116 ✓).

@@ -35,6 +35,19 @@ test.beforeAll(async () => {
   await c.end();
 });
 
+// Leave the shared local DB as seeded (the DB tests count completed jobs).
+test.afterAll(async () => {
+  if (!bookingId) return;
+  const c = new pg.Client({ connectionString: DB_URL, connectionTimeoutMillis: 2000 });
+  await c.connect();
+  for (const t of ["warranty_claims", "booking_codes", "notifications", "audit_log"]) {
+    const col = t === "audit_log" ? "entity_id" : "booking_id";
+    await c.query(`delete from public.${t} where ${col} = $1`, [bookingId]).catch(() => undefined);
+  }
+  await c.query("delete from public.bookings where id = $1", [bookingId]);
+  await c.end();
+});
+
 test.beforeEach(async ({ page }) => {
   test.skip(!bookingId || !(await hasSeedData(page)), "no seeded local database");
 });
