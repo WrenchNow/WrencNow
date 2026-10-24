@@ -3,8 +3,6 @@
 Each entry: what was done, test results, commits, and any questions for the owner.
 
 ## Questions for you
-- The guarantee promises a minimum **90-day** warranty on every job (`MIN_WARRANTY_DAYS`). Mechanics who chose less
-  are bumped up to 90. Is 90 days right, and should the guarantee wording go to your lawyer with the Terms?
 - Parts handling charge is 5% (to the mechanic) and the platform fee applies to labor only. Change via PARTS_HANDLING_BPS.
 
 ## Entries
@@ -127,3 +125,18 @@ rule, so it needs your OK), or multiple logins per business? None of these are b
   prototype. My branch had the same file in `legacy/`, and the key is now removed there. **It's still in git history,
   so please revoke it in Resend and make a new one** (steps at the top of `docs/MORNING.md`). I also scanned the
   branch for other secrets. Only the standard Supabase local-demo keys turned up, and those are public on purpose.
+
+### Sat Oct 24 — owner direction: no WrenchNow warranty
+- **Owner:** "I don't want to claim any warranty on any mechanics; they're independent contractors." This also
+  matches the Terms, which already say WrenchNow offers no warranty. The guarantee page I built contradicted that.
+- **Removed:** the 90-day platform minimum (`MIN_WARRANTY_DAYS`), the "WrenchNow guarantee" page and badges, and
+  every "covered by WrenchNow" line. Mechanics can still list their own optional warranty. It's always labeled as the
+  mechanic's, "offered by your mechanic (not WrenchNow)", and hidden when they offer none.
+- **`/guarantee` is now `/booking-protection`.** It lists only what the platform enforces: never above the approved
+  estimate, payment held until the job is done, the arrival code, and vetted, insured mechanics. It states plainly
+  that mechanics are independent contractors.
+- **"Warranty claims" are now "Report a problem"** (table renamed to `job_issues`, migration 0014). Customers can
+  report for 30 days after a job (`ISSUE_REPORT_DAYS`), or longer if the mechanic's own warranty runs longer. Support
+  mediates; nothing is promised.
+- **Results:** lint ✓, build ✓, vitest 122/122 ✓, Playwright 125 passed / 1 skipped ✓. I also made the garage e2e test
+  safe to run in parallel.

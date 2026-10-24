@@ -40,7 +40,7 @@ test.afterAll(async () => {
   if (!bookingId) return;
   const c = new pg.Client({ connectionString: DB_URL, connectionTimeoutMillis: 2000 });
   await c.connect();
-  for (const t of ["warranty_claims", "booking_codes", "notifications", "audit_log"]) {
+  for (const t of ["job_issues", "booking_codes", "notifications", "audit_log"]) {
     const col = t === "audit_log" ? "entity_id" : "booking_id";
     await c.query(`delete from public.${t} where ${col} = $1`, [bookingId]).catch(() => undefined);
   }
@@ -52,27 +52,28 @@ test.beforeEach(async ({ page }) => {
   test.skip(!bookingId || !(await hasSeedData(page)), "no seeded local database");
 });
 
-test("customer reports a problem with a completed repair", async ({ page }) => {
+test("customer reports a problem with a completed job", async ({ page }) => {
   await login(page, USERS.customer, `/account/bookings/${bookingId}`);
-  await expect(page.getByRole("heading", { name: "Problem with this repair?" })).toBeVisible();
-  await expect(page.getByText(/90-day warranty — covered through/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Problem with this job?" })).toBeVisible();
+  // WrenchNow makes no warranty claim; the seed mechanic offers none of their own either.
+  await expect(page.getByText(/warranty/i)).toHaveCount(0);
   await page.getByLabel("What's wrong?").fill(desc);
   await page.getByRole("button", { name: "Report a problem" }).click();
-  await expect(page.getByText("We've got your claim.", { exact: false })).toBeVisible();
+  await expect(page.getByText("We've got your report.", { exact: false })).toBeVisible();
   await page.reload();
   await expect(page.getByText(desc)).toBeVisible();
   await expect(page.getByRole("button", { name: "Report a problem" })).toHaveCount(0);
 });
 
-test("admin sees the claim and resolves it", async ({ page }) => {
+test("admin sees the report and resolves it", async ({ page }) => {
   await login(page, USERS.admin, "/admin");
   const item = page.locator("li", { hasText: desc });
   await expect(item).toBeVisible();
   await item.getByLabel("Resolution note").fill("Mechanic came back and replaced the pads.");
   await item.getByRole("button", { name: "Resolved" }).click();
-  // Resolved claims leave the queue.
+  // Resolved reports leave the queue.
   await expect(page.locator("li", { hasText: desc })).toHaveCount(0);
   await page.reload();
   await expect(page.locator("li", { hasText: desc })).toHaveCount(0);
-  await expect(page.getByText("warranty.resolved").first()).toBeVisible();
+  await expect(page.getByText("issue.resolved").first()).toBeVisible();
 });

@@ -11,7 +11,7 @@ const COLUMNS = [
       { href: "/how-it-works", label: "How it works" },
       { href: "/pricing", label: "Pricing" },
       { href: "/faq", label: "FAQ" },
-      { href: "/guarantee", label: "Our guarantee" },
+      { href: "/booking-protection", label: "Booking protection" },
       { href: "/payment-protection", label: "Payment protection" },
     ],
   },

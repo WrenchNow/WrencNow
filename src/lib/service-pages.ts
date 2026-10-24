@@ -23,7 +23,7 @@ export function servicePage(slug: string): ServicePage | undefined {
 }
 
 /** Questions shared by every service page; shown on the page and mirrored in FAQ JSON-LD. */
-export function serviceFaq(s: ServicePage, minWarrantyDays: number) {
+export function serviceFaq(s: ServicePage) {
   const thing = s.name.charAt(0).toLowerCase() + s.name.slice(1);
   return [
     {
@@ -35,8 +35,8 @@ export function serviceFaq(s: ServicePage, minWarrantyDays: number) {
       a: "Independent mechanics who have passed a background check and shown current proof of insurance. Mechanics can only take jobs their skill tier covers.",
     },
     {
-      q: "Is the work guaranteed?",
-      a: `Yes. Every repair booked and paid through WrenchNow carries a warranty of at least ${minWarrantyDays} days. If the problem comes back, report it from your booking.`,
+      q: "What if something goes wrong?",
+      a: "Report it from your booking and WrenchNow support will contact your mechanic and help sort it out. Mechanics are independent contractors; some offer their own warranty on their work, shown on their profile.",
     },
     {
       q: "How do I pay?",

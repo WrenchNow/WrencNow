@@ -43,7 +43,6 @@ export function BookingWizard({
   publishableKey,
   initialPhone,
   noShowFeeLabel,
-  minWarrantyDays,
   businessName,
 }: {
   mechanic: { id: string; name: string; rateCents: number };
@@ -54,7 +53,6 @@ export function BookingWizard({
   publishableKey: string | null;
   initialPhone: string;
   noShowFeeLabel: string;
-  minWarrantyDays: number;
   businessName: string | null;
 }) {
   const router = useRouter();
@@ -342,11 +340,11 @@ export function BookingWizard({
                 <li>Parts are billed at the receipt price plus a small handling charge. Before buying, your mechanic sends an itemized parts list for you to approve in the app, and you&apos;ll see every receipt.</li>
                 <li>Cancel free any time before your mechanic heads out and the full hold is released.</li>
                 <li>
-                  Covered by the{" "}
-                  <Link href="/guarantee" target="_blank" className="text-ore hover:underline">
-                    WrenchNow guarantee
+                  Something wrong afterwards? Report it from your booking and we&apos;ll help sort it out —{" "}
+                  <Link href="/booking-protection" target="_blank" className="text-ore hover:underline">
+                    booking protection
                   </Link>
-                  , including a warranty of at least {minWarrantyDays} days on the work.
+                  .
                 </li>
                 <li>
                   If your mechanic checks in at the address and you don&apos;t respond within 15 minutes, a {noShowFeeLabel} no-show fee is charged instead of the job.

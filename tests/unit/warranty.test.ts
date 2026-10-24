@@ -1,19 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { effectiveWarrantyDays, inWarranty, warrantyEndsAt } from "@/lib/warranty";
+import { reportWindowDays, windowEndsAt, withinDays } from "@/lib/warranty";
 
-describe("WrenchNow guarantee warranty", () => {
-  it("never drops below the platform minimum", () => {
-    expect(effectiveWarrantyDays(0, 90)).toBe(90);
-    expect(effectiveWarrantyDays(30, 90)).toBe(90);
-    expect(effectiveWarrantyDays(365, 90)).toBe(365);
-    expect(effectiveWarrantyDays(null, 90)).toBe(90);
+describe("problem-report window", () => {
+  it("is the longer of the report window and the mechanic's own warranty", () => {
+    expect(reportWindowDays(null, 30)).toBe(30);
+    expect(reportWindowDays(0, 30)).toBe(30);
+    expect(reportWindowDays(90, 30)).toBe(90);
   });
-  it("covers the job until the end date", () => {
-    const done = "2026-10-01T12:00:00Z";
-    expect(warrantyEndsAt(done, 90).toISOString()).toBe("2026-12-30T12:00:00.000Z");
-    expect(inWarranty(done, 90, Date.parse("2026-12-30T11:00:00Z"))).toBe(true);
-    expect(inWarranty(done, 90, Date.parse("2026-12-31T00:00:00Z"))).toBe(false);
-    expect(inWarranty(null, 90)).toBe(false);
-    expect(inWarranty(done, 0)).toBe(false);
+
+  it("counts days from completion", () => {
+    const done = "2026-10-01T18:00:00.000Z";
+    expect(windowEndsAt(done, 30).toISOString()).toBe("2026-10-31T18:00:00.000Z");
+    expect(withinDays(done, 30, Date.parse("2026-10-31T17:59:00Z"))).toBe(true);
+    expect(withinDays(done, 30, Date.parse("2026-11-01T00:00:00Z"))).toBe(false);
+    expect(withinDays(null, 30)).toBe(false);
+    expect(withinDays(done, 0)).toBe(false);
   });
 });

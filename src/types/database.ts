@@ -1075,7 +1075,7 @@ export type Database = {
           },
         ];
       };
-      warranty_claims: {
+      job_issues: {
         Row: {
           booking_id: string;
           created_at: string;
@@ -1112,21 +1112,21 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "warranty_claims_booking_id_fkey";
+            foreignKeyName: "job_issues_booking_id_fkey";
             columns: ["booking_id"];
             isOneToOne: false;
             referencedRelation: "bookings";
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "warranty_claims_customer_id_fkey";
+            foreignKeyName: "job_issues_customer_id_fkey";
             columns: ["customer_id"];
             isOneToOne: false;
             referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "warranty_claims_mechanic_id_fkey";
+            foreignKeyName: "job_issues_mechanic_id_fkey";
             columns: ["mechanic_id"];
             isOneToOne: false;
             referencedRelation: "mechanics";

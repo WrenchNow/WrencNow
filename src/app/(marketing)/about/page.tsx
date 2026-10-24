@@ -47,9 +47,9 @@ export default function AboutPage() {
         <h2 className="text-2xl font-bold uppercase">How we&apos;re different</h2>
         <p className="mt-3 text-ink">
           WrenchNow isn&apos;t a shop and doesn&apos;t employ mechanics. Mechanics on WrenchNow are independent professionals. We vet them, hold every payment
-          until the job is done, and back the work with the{" "}
-          <Link href="/guarantee" className="text-ore hover:underline">
-            WrenchNow guarantee
+          until the job is done, and help sort things out if something goes wrong. See{" "}
+          <Link href="/booking-protection" className="text-ore hover:underline">
+            booking protection
           </Link>
           .
         </p>

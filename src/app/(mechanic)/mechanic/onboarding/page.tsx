@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Notice } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/layout";
 import { requireRole } from "@/lib/auth";
-import { minWarrantyDays, onboardingFeePerJobCents, stripeConfigured } from "@/lib/env";
+import { onboardingFeePerJobCents, stripeConfigured } from "@/lib/env";
 import { onboardingJobsRemaining } from "@/lib/fees";
 import { money } from "@/lib/format";
 import { getMyMechanic, readiness } from "@/lib/mechanic";
@@ -54,7 +54,6 @@ export default async function MechanicOnboardingPage({ searchParams }: PageProps
               <PhotoUpload userId={viewer.id} current={m.photo_url} />
             </div>
             <MechanicProfileForm
-              minWarrantyDays={minWarrantyDays()}
               d={{
                 display_name: m.display_name ?? viewer.profile.full_name ?? "",
                 phone: viewer.profile.phone ?? "",

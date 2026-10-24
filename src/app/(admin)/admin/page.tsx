@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { OpenRequestActions, ResolveReportForm, WarrantyClaimForm } from "@/components/admin-forms";
+import { JobIssueForm, OpenRequestActions, ResolveReportForm } from "@/components/admin-forms";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/layout";
 import { dateTime } from "@/lib/format";
@@ -32,8 +32,8 @@ export default async function AdminPage() {
       .limit(50),
     admin.from("open_requests").select("*").eq("status", "open").order("created_at", { ascending: false }).limit(100),
     admin
-      .from("warranty_claims")
-      .select("*, mechanics(display_name), profiles!warranty_claims_customer_id_fkey(full_name, phone), bookings(completed_at, services(name))")
+      .from("job_issues")
+      .select("*, mechanics(display_name), profiles!job_issues_customer_id_fkey(full_name, phone), bookings(completed_at, services(name))")
       .in("status", ["open", "mechanic_contacted"])
       .order("created_at")
       .limit(100),
@@ -45,7 +45,7 @@ export default async function AdminPage() {
     { label: "Active bookings", value: activeBookings, href: "/admin/bookings?filter=active" },
     { label: "Disputes", value: disputed, href: "/admin/bookings?filter=disputed" },
     { label: "Requests to match", value: requests?.length ?? 0, href: "/admin#requests" },
-    { label: "Warranty claims", value: claims?.length ?? 0, href: "/admin#claims" },
+    { label: "Problem reports", value: claims?.length ?? 0, href: "/admin#issues" },
   ];
 
   return (
@@ -95,7 +95,7 @@ export default async function AdminPage() {
         <p className="text-sm text-muted">No open requests.</p>
       )}
 
-      <h2 id="claims" className="mt-10 mb-3 scroll-mt-24 text-2xl font-bold uppercase">Warranty claims</h2>
+      <h2 id="issues" className="mt-10 mb-3 scroll-mt-24 text-2xl font-bold uppercase">Problem reports</h2>
       {claims && claims.length > 0 ? (
         <ul className="space-y-2">
           {claims.map((c) => (
@@ -121,13 +121,13 @@ export default async function AdminPage() {
                 )}
               </p>
               <div className="mt-2">
-                <WarrantyClaimForm id={c.id} />
+                <JobIssueForm id={c.id} />
               </div>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="text-sm text-muted">No open warranty claims.</p>
+        <p className="text-sm text-muted">No open problem reports.</p>
       )}
 
       <h2 className="mt-10 mb-3 text-2xl font-bold uppercase">Off-platform payment reports</h2>

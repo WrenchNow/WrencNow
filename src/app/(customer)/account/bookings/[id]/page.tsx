@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CustomerBookingActions, OffPlatformReport, ReviewForm, WarrantyClaimForm } from "@/components/account/forms";
+import { CustomerBookingActions, OffPlatformReport, ProblemReportForm, ReviewForm } from "@/components/account/forms";
 import { PartsQuote, type CustomerPart } from "@/components/account/parts-quote";
 import { LiveRefresh } from "@/components/account/live-refresh";
 import { StatusTimeline } from "@/components/account/status-timeline";
@@ -14,7 +14,7 @@ import { PageHeader } from "@/components/ui/layout";
 import { requireRole } from "@/lib/auth";
 import { customerNoShowAt, noShowReportable } from "@/lib/booking-status";
 import { syncBookingPayment } from "@/lib/bookings";
-import { customerNoShowFeeCents, minWarrantyDays, partsHandlingBps, stripeConfigured } from "@/lib/env";
+import { customerNoShowFeeCents, issueReportDays, partsHandlingBps, stripeConfigured } from "@/lib/env";
 import { receiptLinks, syncTopup } from "@/lib/parts";
 import { partsChargeCents } from "@/lib/parts-math";
 import { dateTime, money, timeOnly, warrantyLabel } from "@/lib/format";
@@ -23,7 +23,7 @@ import { mechanicNames } from "@/lib/public-data";
 import { createClient } from "@/lib/supabase/server";
 import { photosFor } from "@/lib/job-photos";
 import { PhotoGallery } from "@/components/job-photos";
-import { effectiveWarrantyDays, inWarranty, warrantyEndsAt } from "@/lib/warranty";
+import { reportWindowDays, windowEndsAt, withinDays } from "@/lib/warranty";
 
 export const metadata: Metadata = { title: "Booking" };
 
@@ -65,13 +65,12 @@ export default async function BookingDetailPage({ params, searchParams }: PagePr
   const boughtCost = parts.filter((p) => p.status === "purchased").reduce((s2, p) => s2 + (p.receipt_cents ?? 0), 0);
   const laborMax = b.labor_max_cents ?? b.estimated_max_cents;
   const quoteNewMax = laborMax + partsChargeCents(quotedCost + boughtCost, handlingBps);
+  // The mechanic's own warranty, if they offer one (WrenchNow offers none).
   const warranty =
-    b.status === "completed"
-      ? effectiveWarrantyDays((await createAdminClient().from("mechanics").select("warranty_days").eq("id", b.mechanic_id).maybeSingle()).data?.warranty_days, minWarrantyDays())
-      : null;
-  const covered = warranty !== null && inWarranty(b.completed_at, warranty);
+    b.status === "completed" ? ((await createAdminClient().from("mechanics").select("warranty_days").eq("id", b.mechanic_id).maybeSingle()).data?.warranty_days ?? 0) : null;
+  const covered = warranty !== null && withinDays(b.completed_at, reportWindowDays(warranty, issueReportDays()));
   const photos = (await photosFor([b.id])).get(b.id) ?? [];
-  const { data: claims } = b.status === "completed" ? await supabase.from("warranty_claims").select("id, status, description, resolution, created_at").eq("booking_id", b.id).order("created_at", { ascending: false }) : { data: null };
+  const { data: claims } = b.status === "completed" ? await supabase.from("job_issues").select("id, status, description, resolution, created_at").eq("booking_id", b.id).order("created_at", { ascending: false }) : { data: null };
   const openClaim = (claims ?? []).some((c) => c.status === "open" || c.status === "mechanic_contacted");
   // RLS: only the customer can read the arrival code. Mechanic identity comes from the booking's own mechanic.
   const [{ data: code }, mech] = showArrival
@@ -212,10 +211,10 @@ export default async function BookingDetailPage({ params, searchParams }: PagePr
               )
             )}
             {b.return_old_parts && <Detail label="Old parts" value="Returned to you" />}
-            {b.status === "completed" && warranty !== null && (
+            {b.status === "completed" && warranty !== null && warranty > 0 && (
               <Detail
-                label="Warranty"
-                value={b.completed_at ? `${warrantyLabel(warranty)} — covered through ${dateTime(warrantyEndsAt(b.completed_at, warranty).toISOString())}` : warrantyLabel(warranty)}
+                label="Mechanic's warranty"
+                value={`${warrantyLabel(warranty)}${b.completed_at ? ` through ${dateTime(windowEndsAt(b.completed_at, warranty).toISOString())}` : ""}, offered by your mechanic (not WrenchNow)`}
               />
             )}
             {b.refunded_cents > 0 && <Detail label="Refunded" value={money(b.refunded_cents)} />}
@@ -245,13 +244,12 @@ export default async function BookingDetailPage({ params, searchParams }: PagePr
 
       {b.status === "completed" && (covered || (claims && claims.length > 0)) && (
         <Card className="mt-6">
-          <h2 className="text-2xl font-bold uppercase">Problem with this repair?</h2>
+          <h2 className="text-2xl font-bold uppercase">Problem with this job?</h2>
           <p className="mt-1 mb-4 text-sm text-ink">
-            This work is covered by the{" "}
-            <Link href="/guarantee" className="text-ore hover:underline">
-              WrenchNow guarantee
+            Tell us what&apos;s wrong. We&apos;ll let your mechanic know, follow up within one business day, and help you sort it out.{" "}
+            <Link href="/booking-protection" className="text-ore hover:underline">
+              How this works
             </Link>
-            . Tell us what&apos;s wrong — we&apos;ll contact your mechanic and follow up within one business day.
           </p>
           {claims && claims.length > 0 && (
             <ul className="mb-4 space-y-2">
@@ -265,9 +263,9 @@ export default async function BookingDetailPage({ params, searchParams }: PagePr
             </ul>
           )}
           {openClaim ? (
-            <Notice tone="ok">We&apos;ve got your claim. Your mechanic has been told, and WrenchNow support will follow up within one business day.</Notice>
+            <Notice tone="ok">We&apos;ve got your report. Your mechanic has been told, and WrenchNow support will follow up within one business day.</Notice>
           ) : (
-            covered && <WarrantyClaimForm bookingId={b.id} />
+            covered && <ProblemReportForm bookingId={b.id} />
           )}
         </Card>
       )}

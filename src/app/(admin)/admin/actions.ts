@@ -145,7 +145,7 @@ export async function setOpenRequestStatus(_: FormState, formData: FormData): Pr
   return { ok: true, message: status === "open" ? "Reopened." : `Marked ${status}.` };
 }
 
-export async function updateWarrantyClaim(_: FormState, formData: FormData): Promise<FormState> {
+export async function updateJobIssue(_: FormState, formData: FormData): Promise<FormState> {
   const viewer = await requireAdmin();
   const parsed = z
     .object({ id: z.uuid(), status: z.enum(["mechanic_contacted", "resolved", "denied"]), resolution: z.string().trim().max(2000).optional() })
@@ -153,20 +153,20 @@ export async function updateWarrantyClaim(_: FormState, formData: FormData): Pro
   if (!parsed.success) return { error: "Invalid input." };
   const admin = createAdminClient();
   const { data: c } = await admin
-    .from("warranty_claims")
+    .from("job_issues")
     .update({ status: parsed.data.status, resolution: parsed.data.resolution || null, updated_at: new Date().toISOString() })
     .eq("id", parsed.data.id)
     .select("id, customer_id")
     .single();
-  if (!c) return { error: "Claim not found." };
-  await admin.from("audit_log").insert({ actor_id: viewer.id, action: `warranty.${parsed.data.status}`, entity: "warranty_claim", entity_id: c.id, data: { resolution: parsed.data.resolution } });
+  if (!c) return { error: "Report not found." };
+  await admin.from("audit_log").insert({ actor_id: viewer.id, action: `issue.${parsed.data.status}`, entity: "job_issue", entity_id: c.id, data: { resolution: parsed.data.resolution } });
   if (parsed.data.status !== "mechanic_contacted") {
     const { notifyUser } = await import("@/lib/notify");
-    await notifyUser(`warranty:${c.id}:${parsed.data.status}`, c.customer_id, {
-      subject: parsed.data.status === "resolved" ? "Your warranty claim is resolved" : "Update on your warranty claim",
-      text: parsed.data.resolution || (parsed.data.status === "resolved" ? "Your warranty claim has been resolved." : "We reviewed your claim. Reply to this email if you have questions."),
+    await notifyUser(`issue:${c.id}:${parsed.data.status}`, c.customer_id, {
+      subject: parsed.data.status === "resolved" ? "Your problem report is resolved" : "Update on your problem report",
+      text: parsed.data.resolution || (parsed.data.status === "resolved" ? "Your problem report has been resolved." : "We reviewed your claim. Reply to this email if you have questions."),
     });
   }
   revalidatePath("/admin");
-  return { ok: true, message: "Claim updated." };
+  return { ok: true, message: "Report updated." };
 }

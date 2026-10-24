@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ButtonLink } from "@/components/ui/button";
 import { Container } from "@/components/ui/layout";
-import { minWarrantyDays, siteUrl } from "@/lib/env";
+import { siteUrl } from "@/lib/env";
 import { SERVICE_PAGES, serviceFaq, servicePage } from "@/lib/service-pages";
 
 export function generateStaticParams() {
@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: PageProps<"/services/[slug]">
 export default async function ServiceDetailPage({ params }: PageProps<"/services/[slug]">) {
   const s = servicePage((await params).slug);
   if (!s) notFound();
-  const faq = serviceFaq(s, minWarrantyDays());
+  const faq = serviceFaq(s);
   const related = s.related.map(servicePage).filter((r) => r !== undefined);
   const url = `${siteUrl()}/services/${s.slug}`;
   const jsonLd = [
@@ -107,8 +107,8 @@ export default async function ServiceDetailPage({ params }: PageProps<"/services
         </dl>
         <p className="mt-4 text-sm text-muted">
           See the{" "}
-          <Link href="/guarantee" className="text-ore hover:underline">
-            WrenchNow guarantee
+          <Link href="/booking-protection" className="text-ore hover:underline">
+            booking protection
           </Link>{" "}
           and{" "}
           <Link href="/pricing" className="text-ore hover:underline">

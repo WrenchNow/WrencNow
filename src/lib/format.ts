@@ -55,6 +55,7 @@ export function timeOnly(iso: string | Date): string {
 
 export const WARRANTY_OPTIONS = [0, 30, 90, 180, 365] as const;
 
+/** Label for a mechanic's OWN warranty (WrenchNow offers none). */
 export function warrantyLabel(days: number): string {
   if (days <= 0) return "No warranty";
   if (days === 180) return "6-month warranty";

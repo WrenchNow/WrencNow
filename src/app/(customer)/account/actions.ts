@@ -245,8 +245,8 @@ export async function estimateAction(mechanicId: string, serviceSlug: string, ve
   };
 }
 
-/** "Problem with this repair?" — a warranty claim on a completed job, inside its warranty window. */
-export async function fileWarrantyClaim(_: FormState, formData: FormData): Promise<FormState> {
+/** "Report a problem" on a completed job. Support mediates; WrenchNow doesn't warranty mechanics' work. */
+export async function fileProblemReport(_: FormState, formData: FormData): Promise<FormState> {
   const viewer = await requireViewer("/account/bookings");
   const parsed = z
     .object({ bookingId: z.uuid(), description: z.string().trim().min(10, "Tell us what's wrong (at least a sentence).").max(2000) })
@@ -256,28 +256,28 @@ export async function fileWarrantyClaim(_: FormState, formData: FormData): Promi
   const { data: b } = await supabase.from("bookings").select("id, customer_id, mechanic_id, status, completed_at").eq("id", parsed.data.bookingId).maybeSingle();
   if (!b || b.customer_id !== viewer.id) return { error: "Booking not found." };
   const { createAdminClient } = await import("@/lib/supabase/admin");
-  const { effectiveWarrantyDays, inWarranty } = await import("@/lib/warranty");
-  const { minWarrantyDays, siteUrl } = await import("@/lib/env");
+  const { reportWindowDays, withinDays } = await import("@/lib/warranty");
+  const { issueReportDays, siteUrl } = await import("@/lib/env");
   const admin = createAdminClient();
   const { data: m } = await admin.from("mechanics").select("warranty_days").eq("id", b.mechanic_id).single();
-  const days = effectiveWarrantyDays(m?.warranty_days, minWarrantyDays());
-  if (b.status !== "completed" || !inWarranty(b.completed_at, days)) return { error: `This job is outside its warranty period. Email ${CONTACT_EMAIL} and we'll still take a look.` };
+  const days = reportWindowDays(m?.warranty_days, issueReportDays());
+  if (b.status !== "completed" || !withinDays(b.completed_at, days)) return { error: `It's been a while since this job. Email ${CONTACT_EMAIL} and we'll take a look.` };
   const { data: claim, error } = await admin
-    .from("warranty_claims")
+    .from("job_issues")
     .insert({ booking_id: b.id, customer_id: viewer.id, mechanic_id: b.mechanic_id, description: parsed.data.description })
     .select("id")
     .single();
-  if (error || !claim) return { error: error?.code === "23505" ? "You already have an open claim on this job — we're on it." : "Couldn't send your claim. Please try again." };
-  await admin.from("audit_log").insert({ actor_id: viewer.id, action: "warranty.claim_filed", entity: "booking", entity_id: b.id, data: { claim: claim.id } });
+  if (error || !claim) return { error: error?.code === "23505" ? "You already have an open report on this job — we're on it." : "Couldn't send your report. Please try again." };
+  await admin.from("audit_log").insert({ actor_id: viewer.id, action: "issue.reported", entity: "booking", entity_id: b.id, data: { issue: claim.id } });
   const { notifyAdmin, notifyUser } = await import("@/lib/notify");
-  await notifyAdmin(`warranty:${claim.id}`, "Warranty claim filed", `A customer reported a problem with a completed job.\n\n${parsed.data.description}\n\nReview: ${siteUrl()}/admin#claims`);
-  await notifyUser(`warranty:${claim.id}:mechanic`, b.mechanic_id, {
+  await notifyAdmin(`issue:${claim.id}`, "Problem reported on a job", `A customer reported a problem with a completed job.\n\n${parsed.data.description}\n\nReview: ${siteUrl()}/admin#issues`);
+  await notifyUser(`issue:${claim.id}:mechanic`, b.mechanic_id, {
     subject: "A customer reported a problem with your work",
     text: `A customer reported a problem with a job you completed. WrenchNow will be in touch, and you can contact the customer from your jobs page.\n\n"${parsed.data.description}"\n\n${siteUrl()}/mechanic/dashboard`,
     sms: "A customer reported a problem with a job you completed. Check your WrenchNow dashboard.",
   });
   revalidatePath(`/account/bookings/${b.id}`);
-  return { ok: true, message: "Claim sent. We've told your mechanic and WrenchNow support will follow up within one business day." };
+  return { ok: true, message: "Report sent. We've told your mechanic and WrenchNow support will follow up within one business day." };
 }
 
 export async function updateVehicleCare(_: FormState, formData: FormData): Promise<FormState> {

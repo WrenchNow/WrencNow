@@ -30,7 +30,7 @@ export type ProfileDefaults = {
   has_transport: boolean;
 };
 
-export function MechanicProfileForm({ d, minWarrantyDays = 0 }: { d: ProfileDefaults; minWarrantyDays?: number }) {
+export function MechanicProfileForm({ d }: { d: ProfileDefaults }) {
   const [state, action, pending] = useActionState(saveMechanicProfile, {});
   return (
     <form action={action} className="grid gap-4 sm:grid-cols-2">
@@ -66,9 +66,9 @@ export function MechanicProfileForm({ d, minWarrantyDays = 0 }: { d: ProfileDefa
       <Field label="How far will you travel? (miles)" htmlFor="service_radius_miles">
         <Input id="service_radius_miles" name="service_radius_miles" type="number" min={1} max={100} defaultValue={d.service_radius_miles} required />
       </Field>
-      <Field label="Warranty on your work" htmlFor="warranty_days" hint={`Shown on your profile and on customers' receipts. Every WrenchNow job carries at least ${minWarrantyDays} days.`}>
-        <Select id="warranty_days" name="warranty_days" defaultValue={String(Math.max(d.warranty_days, minWarrantyDays))}>
-          {WARRANTY_OPTIONS.filter((w) => w >= minWarrantyDays).map((w) => (
+      <Field label="Your warranty on your work (optional)" htmlFor="warranty_days" hint="Optional. Your own warranty, shown on your profile and receipts. WrenchNow doesn't provide one.">
+        <Select id="warranty_days" name="warranty_days" defaultValue={String(d.warranty_days)}>
+          {WARRANTY_OPTIONS.map((w) => (
             <option key={w} value={w}>
               {warrantyLabel(w)}
             </option>

@@ -32,7 +32,7 @@ export default async function MechanicDashboardPage({ searchParams }: PageProps<
     .order("scheduled_start")
     .limit(10);
   const { data: claims } = await supabase
-    .from("warranty_claims")
+    .from("job_issues")
     .select("id, description, status, created_at, bookings(services(name), vehicle_desc)")
     .eq("mechanic_id", viewer.id)
     .in("status", ["open", "mechanic_contacted"])
@@ -62,7 +62,7 @@ export default async function MechanicDashboardPage({ searchParams }: PageProps<
 
       {claims && claims.length > 0 && (
         <div className="mb-6">
-          <Notice tone="warn" title={`${claims.length} warranty claim${claims.length === 1 ? "" : "s"} open`}>
+          <Notice tone="warn" title={`${claims.length} problem report${claims.length === 1 ? "" : "s"} from customers`}>
             <ul className="mt-2 space-y-2">
               {claims.map((c) => (
                 <li key={c.id}>
@@ -75,7 +75,7 @@ export default async function MechanicDashboardPage({ searchParams }: PageProps<
                 </li>
               ))}
             </ul>
-            <span className="mt-2 block">WrenchNow support will contact you to arrange a fix. Warranty repairs are part of the job you were paid for.</span>
+            <span className="mt-2 block">WrenchNow support will contact you to help work it out with the customer.</span>
           </Notice>
         </div>
       )}

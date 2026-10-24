@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { adminCancelBooking, refundBooking, resolvePaymentReport, reviewInsurance, updateWarrantyClaim, setOpenRequestStatus, reviewMechanic, waiveOnboardingFee, type FormState } from "@/app/(admin)/admin/actions";
+import { adminCancelBooking, refundBooking, resolvePaymentReport, reviewInsurance, updateJobIssue, setOpenRequestStatus, reviewMechanic, waiveOnboardingFee, type FormState } from "@/app/(admin)/admin/actions";
 import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/feedback";
 import { Input, Select } from "@/components/ui/form";
@@ -141,8 +141,8 @@ export function OpenRequestActions({ id }: { id: string }) {
   );
 }
 
-export function WarrantyClaimForm({ id }: { id: string }) {
-  const [s, action, pending] = useActionState(updateWarrantyClaim, {});
+export function JobIssueForm({ id }: { id: string }) {
+  const [s, action, pending] = useActionState(updateJobIssue, {});
   return (
     <form action={action} className="flex flex-col gap-2">
       <Msg s={s} />

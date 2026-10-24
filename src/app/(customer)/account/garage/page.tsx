@@ -7,12 +7,11 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/layout";
 import { requireRole } from "@/lib/auth";
-import { minWarrantyDays } from "@/lib/env";
 import { money, shortDate } from "@/lib/format";
 import { mechanicNames } from "@/lib/public-data";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { effectiveWarrantyDays, inWarranty, warrantyEndsAt } from "@/lib/warranty";
+import { windowEndsAt, withinDays } from "@/lib/warranty";
 
 export const metadata: Metadata = { title: "Your garage" };
 
@@ -31,13 +30,13 @@ export default async function GaragePage() {
   ]);
   const mechanicIds = [...new Set((jobs ?? []).map((j) => j.mechanic_id))];
   const jobIds = (jobs ?? []).map((j) => j.id);
-  // Mechanic names and warranty terms aren't readable by customers under RLS; look them up server-side.
+  // Mechanic names and their own warranty terms aren't readable by customers under RLS; look them up server-side.
   const [names, { data: terms }, { data: receipts }] = await Promise.all([
     mechanicNames(mechanicIds),
     mechanicIds.length ? createAdminClient().from("mechanics").select("id, warranty_days").in("id", mechanicIds) : Promise.resolve({ data: [] }),
     jobIds.length ? supabase.from("booking_parts").select("booking_id").in("booking_id", jobIds).eq("status", "purchased") : Promise.resolve({ data: [] }),
   ]);
-  const warrantyDays = new Map((terms ?? []).map((t) => [t.id, effectiveWarrantyDays(t.warranty_days, minWarrantyDays())]));
+  const warrantyDays = new Map((terms ?? []).map((t) => [t.id, t.warranty_days]));
   const receiptCount = new Map<string, number>();
   for (const r of receipts ?? []) receiptCount.set(r.booking_id, (receiptCount.get(r.booking_id) ?? 0) + 1);
 
@@ -74,8 +73,8 @@ export default async function GaragePage() {
                   {history.length > 0 ? (
                     <ul className="mt-2 divide-y divide-line rounded-[var(--radius-control)] border border-line">
                       {history.map((j) => {
-                        const days = warrantyDays.get(j.mechanic_id) ?? minWarrantyDays();
-                        const covered = inWarranty(j.completed_at, days);
+                        const days = warrantyDays.get(j.mechanic_id) ?? 0;
+                        const covered = withinDays(j.completed_at, days);
                         const parts = receiptCount.get(j.id) ?? 0;
                         return (
                           <li key={j.id}>
@@ -91,9 +90,9 @@ export default async function GaragePage() {
                               </span>
                               <span className="text-left sm:text-right">
                                 {j.final_amount_cents !== null && <span className="block text-cream">{money(j.final_amount_cents)}</span>}
-                                {j.completed_at && (
+                                {j.completed_at && days > 0 && (
                                   <span className={`block text-xs ${covered ? "text-ok" : "text-muted"}`}>
-                                    {covered ? "Warranty until" : "Warranty ended"} {shortDate(warrantyEndsAt(j.completed_at, days).toISOString())}
+                                    {covered ? "Mechanic's warranty until" : "Mechanic's warranty ended"} {shortDate(windowEndsAt(j.completed_at, days).toISOString())}
                                   </span>
                                 )}
                               </span>

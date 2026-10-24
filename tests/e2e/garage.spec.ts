@@ -52,12 +52,13 @@ test.beforeEach(async ({ page }) => {
   test.skip(!bookingId || !(await hasSeedData(page)), "no seeded local database");
 });
 
-test("garage shows each car's service history, warranty, and saves mileage + reminders", async ({ page }) => {
+test("garage shows each car's service history and saves mileage + reminders", async ({ page }) => {
   await login(page, USERS.customer, "/account/garage");
   const card = page.locator("section > div").filter({ has: page.getByRole("heading", { name: new RegExp(tag) }) });
   await expect(card.getByText("Oil change")).toBeVisible();
   await expect(card.getByText(/84,500 mi/)).toBeVisible();
-  await expect(card.getByText(/Warranty until/)).toBeVisible();
+  // No WrenchNow warranty claim; this mechanic offers none of their own.
+  await expect(card.getByText(/warranty/i)).toHaveCount(0);
   await expect(card.getByText("$60.00")).toBeVisible();
 
   await card.getByText("Mileage & reminders").click();
@@ -66,10 +67,10 @@ test("garage shows each car's service history, warranty, and saves mileage + rem
   await card.getByRole("button", { name: "Save" }).click();
   await expect(card.getByText("Saved.")).toBeVisible();
   await page.reload();
-  await expect(page.getByText(/90,000 miles as of/)).toBeVisible();
-  await page.getByText("Mileage & reminders").last().click();
-  await expect(page.getByLabel(new RegExp(`Maintenance reminders for .*${tag}`))).toBeChecked();
+  await expect(card.getByText(/90,000 miles as of/)).toBeVisible();
+  await card.getByText("Mileage & reminders").click();
+  await expect(card.getByLabel(new RegExp(`Maintenance reminders for .*${tag}`))).toBeChecked();
 
-  await page.getByRole("link", { name: /Oil change/ }).first().click();
+  await card.getByRole("link", { name: /Oil change/ }).click();
   await expect(page).toHaveURL(new RegExp(`/account/bookings/${bookingId}`));
 });

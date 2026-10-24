@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { BookingWizard } from "@/components/booking/booking-wizard";
 import { Container, PageHeader } from "@/components/ui/layout";
 import { requireRole } from "@/lib/auth";
-import { customerNoShowFeeCents, minWarrantyDays, platformFeeBps, stripeConfigured } from "@/lib/env";
+import { customerNoShowFeeCents, platformFeeBps, stripeConfigured } from "@/lib/env";
 import { money } from "@/lib/format";
 import { getPublicMechanic } from "@/lib/public-data";
 import { BOOKING_WINDOW_DAYS } from "@/lib/slots";
@@ -44,7 +44,6 @@ export default async function BookPage({ params, searchParams }: PageProps<"/boo
         publishableKey={stripeConfigured() ? process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY! : null}
         initialPhone={viewer.profile.phone ?? ""}
         noShowFeeLabel={money(customerNoShowFeeCents(), { whole: true })}
-        minWarrantyDays={minWarrantyDays()}
         businessName={business?.company_name ?? null}
       />
     </Container>
