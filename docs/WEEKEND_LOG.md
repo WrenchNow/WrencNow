@@ -37,3 +37,16 @@ Each entry: what was done, test results, commits, and any questions for the owne
   - There's one open claim per job, and claims can only be written server-side.
 - **Results:** lint ✓, build ✓, vitest 116/116 ✓, Playwright 97 passed / 1 skipped (by design) ✓. That includes
   the new end-to-end test where a customer files a claim and an admin resolves it.
+
+### Sat Oct 24, early — item 3 done
+- **Service pages:** a `/services` hub and 12 service pages (oil change, brakes, battery, check-engine diagnostic, starter/alternator,
+  pre-purchase inspection, cooling, suspension, AC/heat, tires, serpentine belt, tune-up). Each page covers the warning
+  signs, what the mechanic does on site, a tip, common questions, related services, and a button that opens search
+  filtered to that service.
+- **SEO:** each page has its own title, description and canonical URL, plus Service, FAQPage and Breadcrumb
+  structured data. The FAQ structured data matches the visible questions exactly. All pages are in the sitemap.
+- **About page** (`/about`), written from the existing site copy, with no stats or claims we can't back up.
+  The old prototype had no separate About page to port.
+- **Nav:** "Services" is now in the header and footer, and "About" is in the footer.
+- **Results:** lint ✓, build ✓, vitest 116/116 ✓, Playwright 117 passed / 1 skipped ✓. Checked at 375px, 768px and
+  1024px with no horizontal scroll.

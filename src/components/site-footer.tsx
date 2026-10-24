@@ -7,6 +7,7 @@ const COLUMNS = [
     title: "For customers",
     links: [
       { href: "/search", label: "Find a mechanic" },
+      { href: "/services", label: "Services" },
       { href: "/how-it-works", label: "How it works" },
       { href: "/pricing", label: "Pricing" },
       { href: "/faq", label: "FAQ" },
@@ -25,6 +26,7 @@ const COLUMNS = [
   {
     title: "Company",
     links: [
+      { href: "/about", label: "About" },
       { href: "/terms", label: "Terms of Service" },
       { href: "/privacy", label: "Privacy Policy" },
       { href: CONTACT_MAILTO, label: "Contact" },

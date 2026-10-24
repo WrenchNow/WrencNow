@@ -8,7 +8,7 @@ export const USERS = {
   admin: "test.admin@example.test",
 };
 
-export const PUBLIC_ROUTES = ["/", "/how-it-works", "/for-mechanics", "/pricing", "/faq", "/payment-protection", "/guarantee", "/terms", "/privacy", "/mechanic-agreement", "/login", "/signup", "/search", "/search?loc=39.7392,-104.9903"];
+export const PUBLIC_ROUTES = ["/", "/how-it-works", "/for-mechanics", "/pricing", "/faq", "/payment-protection", "/guarantee", "/services", "/services/mobile-oil-change", "/services/check-engine-light-diagnostic", "/about", "/terms", "/privacy", "/mechanic-agreement", "/login", "/signup", "/search", "/search?loc=39.7392,-104.9903"];
 
 export async function login(page: Page, email: string, next?: string) {
   await page.goto(next ? `/login?next=${encodeURIComponent(next)}` : "/login");

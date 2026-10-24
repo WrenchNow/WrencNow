@@ -71,3 +71,18 @@ test("webhooks reject unsigned requests", async ({ request }) => {
   const checkr = await request.post("/api/checks/webhook", { data: "{}" });
   expect(checkr.status()).toBe(401);
 });
+
+test("service pages have structured data and send customers to search for that service", async ({ page }) => {
+  await page.goto("/services");
+  await page.getByRole("link", { name: /Mobile brake repair/ }).click();
+  await expect(page).toHaveURL(/\/services\/mobile-brake-repair$/);
+  const ld = JSON.parse((await page.locator('script[type="application/ld+json"]').textContent()) ?? "[]");
+  expect(ld.map((x: { "@type": string }) => x["@type"])).toEqual(["Service", "FAQPage", "BreadcrumbList"]);
+  await page.getByRole("link", { name: "Find a mechanic for this" }).click();
+  await expect(page).toHaveURL(/\/search\?service=brakes/);
+});
+
+test("unknown service pages 404", async ({ page }) => {
+  const res = await page.goto("/services/not-a-real-service");
+  expect(res?.status()).toBe(404);
+});

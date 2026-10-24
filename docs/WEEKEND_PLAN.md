@@ -22,7 +22,7 @@ The owner is away. Each scheduled check-in takes the **first unchecked item**, f
 - [x] 2. WrenchNow guarantee: a platform minimum warranty (`MIN_WARRANTY_DAYS`, default 90) that mechanics can't go
        below, a fair-price promise page plus a booking badge, and a "Report a problem with this repair" warranty
        claim flow (customer → admin queue → mechanic notified).
-- [ ] 3. Service pages: `/services` hub and the 12 `/services/[slug]` pages from `src/content/services.json`, with
+- [x] 3. Service pages: `/services` hub and the 12 `/services/[slug]` pages from `src/content/services.json`, with
        metadata and Service/FAQ JSON-LD. Add them to the sitemap, header and footer. Port the About page from
        `site-v12`.
 - [ ] 4. Installable app: `app/manifest.ts` plus PNG icons (192, 512, maskable, apple-touch) made from `icon.svg`.
