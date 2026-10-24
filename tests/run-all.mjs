@@ -27,6 +27,7 @@ const SUITES = [
   ['ui-test.mjs', 'Main screens smoke test: onboarding, allergy note, cart links, no XSS'],
   ['shots.mjs', 'Icons, colours and key screens in light and dark mode'],
   ['barcode-test.mjs', 'Free barcode scan: Open Food Facts lookup, camera/photo/typed codes, no photo upload'],
+  ['waste-test.mjs', 'Waste cutting: Used/Froze/Tossed log and Undo, past-date wording, date explainer, Eat first, freeze nudge, safe import'],
   ['receipt-ocr-test.mjs', 'Free receipt reading on the phone: OCR text to pantry items, AI fallback rules'],
 ].filter(([f]) => fs.existsSync(path.join(HERE, f)));
 
