@@ -150,6 +150,7 @@ export default async function MechanicJobsPage() {
                       parts={partsBy.get(j.id) ?? []}
                       handlingBps={handlingBps}
                       hint={j.parts_estimate_cents ? { cents: j.parts_estimate_cents, basis: "booking" } : null}
+                      vehicle={[j.vehicle_make, j.vehicle_model].filter(Boolean).join(" ") || j.vehicle_desc}
                     />
                   </div>
                 )}

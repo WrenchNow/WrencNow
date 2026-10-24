@@ -182,3 +182,19 @@ rule, so it needs your OK), or multiple logins per business? None of these are b
   - A signed Stripe `account.updated` (payouts enabled) makes the mechanic live, and they show up in search.
   - A later Checkr "consider" takes them off the platform and out of search immediately.
   - Lifecycle now passes **5/5**.
+
+### Sat Oct 24 — parts-store referral links (owner request)
+- **Research:** `docs/research/2026-10-24-parts-store-partnerships.md` covers AutoZone, O'Reilly, Advance and NAPA
+  affiliate programs (reported 1.6–5%, all to be verified), the catches, and the bigger opportunity: a "WrenchNow pro
+  program" with each chain's commercial team, which would pay on counter purchases.
+- **Built:**
+  - **Price-check links:** every part on a mechanic's quote (and the part being typed) shows "Price check: AutoZone ·
+    O'Reilly · Advance · NAPA", searching that part for the customer's car.
+  - **Click logging:** links go through `/go/parts/<store>`, which logs the click (`parts_link_clicks`, migration
+    0015) and redirects. Mechanics must be logged in, and the route is blocked from search engines.
+  - **Affiliate switch:** setting `PARTS_AFFILIATE_<STORE>` adds a store's affiliate tracking with no code change.
+    `PARTS_SEARCH_<STORE>` overrides the search URL.
+  - **Disclosure:** mechanics see it on the links, and customers see it in the new "How are parts priced?" FAQ.
+- **Please click-test:** I couldn't reach the store websites from here. Click each store link once to confirm its
+  search page opens (the search URLs can be changed in settings).
+- **Results:** lint ✓, build ✓, vitest 126/126 ✓, Playwright 129 passed ✓.

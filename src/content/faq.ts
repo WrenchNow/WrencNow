@@ -18,6 +18,10 @@ export const CUSTOMER_FAQ: Faq[] = [
     a: "When you book, we place a hold on your card for the estimated maximum. You're only charged when the job is marked complete, for the final amount — which can't exceed the estimate. If you cancel before your mechanic heads out, the hold is released.",
   },
   {
+    q: "How are parts priced?",
+    a: "Before buying anything, your mechanic sends an itemized parts list for you to approve in the app. You're charged the price on the store receipt (never more than you approved) plus a small, disclosed handling charge, and you can see every receipt. WrenchNow may earn a referral fee from parts stores when mechanics shop through our links; that never changes what you pay.",
+  },
+  {
     q: "Can I pay the mechanic directly?",
     a: "No — never. All payments go through WrenchNow so your booking is protected, you're never charged more than your estimate, and we can help if anything goes wrong. If a mechanic asks for cash, Venmo, Zelle, or anything else, don't pay and report it from your booking. See our Payment protection page for details.",
   },

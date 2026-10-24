@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge, Notice } from "@/components/ui/feedback";
 import { Input } from "@/components/ui/form";
 import { createClient } from "@/lib/supabase/client";
+import { PARTS_RETAILERS, partsQuery } from "@/lib/parts-retailers";
 
 export type PartRow = {
   id: string;
@@ -36,12 +37,14 @@ export function PartsPanel({
   parts,
   handlingBps,
   hint,
+  vehicle,
 }: {
   bookingId: string;
   mechanicId: string;
   parts: PartRow[];
   handlingBps: number;
   hint: { cents: number; basis: string } | null;
+  vehicle?: string | null;
 }) {
   const [state, setState] = useState<FormState>({});
   const [pending, start] = useTransition();
@@ -109,6 +112,7 @@ export function PartsPanel({
                   <Badge tone={STATUS[p.status].tone}>{STATUS[p.status].label}</Badge>
                 </span>
               </div>
+              {(p.status === "quoted" || p.status === "approved") && <PriceCheck bookingId={bookingId} query={partsQuery(p.name, vehicle)} />}
               {p.status === "approved" && <ReceiptUpload bookingId={bookingId} mechanicId={mechanicId} part={p} onDone={setState} />}
             </li>
           ))}
@@ -129,6 +133,7 @@ export function PartsPanel({
               <Input aria-label="Unit price in dollars" type="number" min={0} step="0.01" placeholder="$" value={d.unit_price} onChange={(e) => setDrafts(upd(drafts, i, { unit_price: e.target.value }))} className="col-span-2 sm:col-span-1" />
             </div>
           ))}
+          {drafts.some((d) => d.name.trim()) && <PriceCheck bookingId={bookingId} query={partsQuery(drafts.filter((d) => d.name.trim()).at(-1)!.name, vehicle)} />}
           <div className="flex flex-wrap items-center gap-3 text-sm">
             <button type="button" onClick={() => setDrafts([...drafts, emptyDraft()])} className="font-semibold text-ore hover:underline">
               + Add part
@@ -198,6 +203,29 @@ function ReceiptUpload({ bookingId, mechanicId, part, onDone }: { bookingId: str
       <button type="button" onClick={async () => onDone(await removePartAction(bookingId, part.id))} className="text-xs text-muted hover:text-danger">
         Didn&apos;t need it
       </button>
+    </div>
+  );
+}
+
+/** Links to parts stores' search for this part. WrenchNow may earn a referral fee; the customer still pays the receipt price. */
+function PriceCheck({ bookingId, query }: { bookingId: string; query: string }) {
+  return (
+    <div className="mt-2 text-xs text-muted">
+      <span className="mr-1">Price check:</span>
+      {PARTS_RETAILERS.map((r, i) => (
+        <span key={r.key}>
+          {i > 0 && " · "}
+          <a
+            href={`/go/parts/${r.key}?q=${encodeURIComponent(query)}&b=${bookingId}`}
+            target="_blank"
+            rel="noopener sponsored"
+            className="font-semibold text-ore hover:underline"
+          >
+            {r.name}
+          </a>
+        </span>
+      ))}
+      <span className="block">WrenchNow may earn a referral fee on purchases through these links. It doesn&apos;t change what the customer pays.</span>
     </div>
   );
 }

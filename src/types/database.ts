@@ -835,6 +835,34 @@ export type Database = {
           },
         ];
       };
+      parts_link_clicks: {
+        Row: {
+          booking_id: string | null;
+          created_at: string;
+          id: number;
+          mechanic_id: string;
+          query: string;
+          retailer: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          booking_id?: string | null;
+          created_at?: string;
+          id?: never;
+          mechanic_id: string;
+          query: string;
+          retailer: string;
+        };
+        Update: {
+          booking_id?: string | null;
+          created_at?: string;
+          id?: never;
+          mechanic_id?: string;
+          query?: string;
+          retailer?: string;
+        };
+        Relationships: [];
+      };
       payment_reports: {
         Row: {
           booking_id: string | null;
