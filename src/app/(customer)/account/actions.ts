@@ -78,6 +78,7 @@ const bookingSchema = z.object({
   odometer: z.coerce.number().int().min(0).max(2_000_000).nullable().optional(),
   carLocation: z.enum(["driveway", "street", "garage", "parking_lot"], { error: "Tell us where the car is parked" }),
   carCovered: z.boolean().default(false),
+  billToBusiness: z.boolean().default(false),
 });
 
 export type CreateBookingResult = { error?: string; bookingId?: string; clientSecret?: string };
@@ -107,6 +108,7 @@ export async function createBookingAction(input: z.input<typeof bookingSchema>):
       odometer: d.odometer ?? null,
       carLocation: d.carLocation,
       carCovered: d.carCovered,
+      billToBusiness: d.billToBusiness,
     });
   } catch (e) {
     if (e instanceof BookingError) return { error: e.message };
@@ -309,4 +311,28 @@ export async function updateVehicleCare(_: FormState, formData: FormData): Promi
   if (error) return { error: "Couldn't save. Please try again." };
   revalidatePath("/account/garage");
   return { ok: true, message: "Saved." };
+}
+
+export async function saveBusinessAccount(_: FormState, formData: FormData): Promise<FormState> {
+  const viewer = await requireRole(["customer"], "/account/business");
+  const parsed = z
+    .object({
+      company_name: z.string().trim().min(2, "Enter your company name").max(120),
+      billing_email: z
+        .string()
+        .trim()
+        .max(200)
+        .transform((v) => v || null)
+        .pipe(z.email("Enter a valid billing email").nullable()),
+    })
+    .safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: parsed.error.issues[0]!.message };
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("business_accounts")
+    .upsert({ owner_id: viewer.id, ...parsed.data, updated_at: new Date().toISOString() }, { onConflict: "owner_id" });
+  if (error) return { error: "Couldn't save your business details. Please try again." };
+  revalidatePath("/account/business");
+  revalidatePath("/book", "layout");
+  return { ok: true, message: "Business details saved." };
 }

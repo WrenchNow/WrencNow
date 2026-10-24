@@ -32,7 +32,7 @@ The owner is away. Each scheduled check-in takes the **first unchecked item**, f
        sees them on the booking.
 - [x] 7. Winter and logistics: at booking the customer marks where the car is (driveway, street, garage, parking
        lot) and whether it's covered. Services flag "needs a lift / not mobile-friendly". Weather note in the wizard.
-- [ ] 8. Fleet accounts (MVP): a business profile (company name, multiple vehicles, billing email), bookings tagged
+- [x] 8. Fleet accounts (MVP): a business profile (company name, multiple vehicles, billing email), bookings tagged
        to the business, and a monthly statement page. Research small-fleet needs first.
 - [ ] 9. Refresh the sample nightly PR #3 onto the current branch, or close it and open a new
        `nightly/2026-10-25` with a fresh research run.

@@ -175,8 +175,34 @@ export type Database = {
           },
         ];
       };
+      business_accounts: {
+        Row: {
+          billing_email: string | null;
+          company_name: string;
+          created_at: string;
+          owner_id: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          billing_email?: string | null;
+          company_name: string;
+          created_at?: string;
+          owner_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          billing_email?: string | null;
+          company_name?: string;
+          created_at?: string;
+          owner_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       bookings: {
         Row: {
+          business_name: string | null;
           car_covered: boolean;
           car_location: string | null;
           odometer: number | null;
@@ -236,6 +262,7 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
+          business_name?: string | null;
           car_covered?: boolean;
           car_location?: string | null;
           odometer?: number | null;
@@ -294,6 +321,7 @@ export type Database = {
           vehicle_model?: string | null;
         };
         Update: {
+          business_name?: string | null;
           car_covered?: boolean;
           car_location?: string | null;
           odometer?: number | null;

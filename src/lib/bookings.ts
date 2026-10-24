@@ -108,6 +108,7 @@ export type CreateBookingInput = {
   odometer?: number | null;
   carLocation?: "driveway" | "street" | "garage" | "parking_lot" | null;
   carCovered?: boolean;
+  billToBusiness?: boolean;
 };
 
 /**
@@ -153,6 +154,9 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
   const deductions = feesFor(estimate);
   const fee = deductions.platform;
   const vehicleDesc = [vehicle.year, vehicle.make, vehicle.model, vehicle.trim].filter(Boolean).join(" ");
+  const businessName = input.billToBusiness
+    ? ((await admin.from("business_accounts").select("company_name").eq("owner_id", input.customerId).maybeSingle()).data?.company_name ?? null)
+    : null;
 
   const { data: booking, error } = await admin
     .from("bookings")
@@ -182,6 +186,7 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
       odometer: input.odometer ?? null,
       car_location: input.carLocation ?? null,
       car_covered: input.carCovered ?? false,
+      business_name: businessName,
     })
     .select("id")
     .single();

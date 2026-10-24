@@ -731,3 +731,21 @@ run("car logistics", () => {
     }, anon);
   });
 });
+
+run("business accounts", () => {
+  it("are private to their owner, and need a real company name", async () => {
+    await tx(async (q) => {
+      await q("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: ids["customer"], role: "authenticated" })]);
+      await q("set local role authenticated");
+      await q("insert into public.business_accounts (owner_id, company_name, billing_email) values (auth.uid(), 'Acme Plumbing', 'ap@example.test')");
+      expect((await q("select count(*)::int as n from public.business_accounts")).rows[0].n).toBe(1);
+      await q("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: ids["mechanic.basic"], role: "authenticated" })]);
+      expect((await q("select count(*)::int as n from public.business_accounts")).rows[0].n).toBe(0);
+      expect((await q("update public.business_accounts set company_name = 'Hijacked'")).rowCount).toBe(0);
+    });
+    await expect(
+      tx((q) => q("insert into public.business_accounts (owner_id, company_name) values ($1, 'Someone Else Inc')", [ids["customer"]]), asUser(ids["mechanic.basic"])),
+    ).rejects.toThrow(/row-level security/);
+    await expect(tx((q) => q("insert into public.business_accounts (owner_id, company_name) values (auth.uid(), 'X')"), asUser(ids["customer"]))).rejects.toThrow(/check constraint/);
+  });
+});

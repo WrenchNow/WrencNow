@@ -100,3 +100,21 @@ Each entry: what was done, test results, commits, and any questions for the owne
 
 **Question for you:** I flagged only transmission and timing belt as "might need a lift". Tell me if there are
 others you'd like flagged.
+
+### Sat Oct 24 — item 8 done (fleet accounts MVP)
+- **Research first:** `docs/research/2026-10-24-small-fleets.md`, with sources. Most small fleets are run by one
+  person, and paperwork and scheduling repairs are their biggest time sinks. So the MVP is one login, jobs tagged to
+  the business, and a statement they can print.
+- **Business page (`/account/business`):** company name and billing email. Bookings get a "This job is for {company}"
+  checkbox, on by default once a business exists. The business name is saved on the booking so old statements stay
+  correct.
+- **Monthly statement:** completed business jobs grouped by vehicle, showing date, service, mechanic, mileage and
+  amount after refunds. It has vehicle totals, a grand total, previous/next month links, and "Print / save PDF".
+  Months follow Denver time. That caught a real edge case: daylight saving ends on Nov 1, 2026, and a unit test covers
+  it.
+- **Database:** migration `0013_business_accounts` (owner-only rules, tested) plus `bookings.business_name`.
+- **Results:** lint ✓, build ✓, vitest 122/122 ✓, Playwright 125 passed / 1 skipped ✓. Each fleet e2e run signs up its
+  own customer, so parallel runs can't collide.
+
+**Questions for you (fleet):** Do you want fleet discounts, net-30 invoicing (it would break the "card hold first"
+rule, so it needs your OK), or multiple logins per business? None of these are built yet.

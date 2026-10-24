@@ -6,6 +6,7 @@ const TABS = [
   { href: "/account", label: "Overview" },
   { href: "/account/bookings", label: "Bookings" },
   { href: "/account/garage", label: "Garage" },
+  { href: "/account/business", label: "Business" },
 ];
 
 export default async function AccountLayout({ children }: { children: React.ReactNode }) {

@@ -44,6 +44,7 @@ export function BookingWizard({
   initialPhone,
   noShowFeeLabel,
   minWarrantyDays,
+  businessName,
 }: {
   mechanic: { id: string; name: string; rateCents: number };
   services: ServiceOpt[];
@@ -54,6 +55,7 @@ export function BookingWizard({
   initialPhone: string;
   noShowFeeLabel: string;
   minWarrantyDays: number;
+  businessName: string | null;
 }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -67,6 +69,7 @@ export function BookingWizard({
   const [odometer, setOdometer] = useState("");
   const [carLocation, setCarLocation] = useState<CarLocation | "">("");
   const [carCovered, setCarCovered] = useState(false);
+  const [billToBusiness, setBillToBusiness] = useState(Boolean(businessName));
   const [start, setStart] = useState("");
   const [dayIdx, setDayIdx] = useState(0);
   const [terms, setTerms] = useState(false);
@@ -129,6 +132,7 @@ export function BookingWizard({
         returnOldParts,
         carLocation: carLocation as CarLocation, // required at step 1; the server validates it too
         carCovered: carCovered || carLocation === "garage",
+        billToBusiness: Boolean(businessName) && billToBusiness,
         odometer: odometer.trim() ? Number(odometer.replace(/[,\s]/g, "")) : null,
       });
       if (res.error || !res.clientSecret || !res.bookingId) {
@@ -263,6 +267,9 @@ export function BookingWizard({
               )}
               {carLocation === "street" && <p className="mt-1 text-xs text-muted">Check that street parking allows repairs where you are, and leave room to work around the car.</p>}
             </fieldset>
+            {businessName && (
+              <Checkbox id="bill_to_business" checked={billToBusiness} onChange={(e) => setBillToBusiness(e.target.checked)} label={`This job is for ${businessName} (shows on your monthly business statement)`} />
+            )}
             <Field label="Your phone number" htmlFor="phone" hint="Your mechanic calls or texts this when they arrive.">
               <Input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" maxLength={32} placeholder="(303) 555-0100" />
             </Field>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { addVehicle, customerTransition, fileWarrantyClaim, updateVehicleCare, reportOffPlatformPayment, submitReview, updateProfile, type FormState } from "@/app/(customer)/account/actions";
+import { addVehicle, customerTransition, fileWarrantyClaim, updateVehicleCare, saveBusinessAccount, reportOffPlatformPayment, submitReview, updateProfile, type FormState } from "@/app/(customer)/account/actions";
 import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/feedback";
 import { Checkbox, Field, Input, Textarea } from "@/components/ui/form";
@@ -215,5 +215,31 @@ export function VehicleCareForm({ id, mileage, reminders, label }: { id: string;
         {pending ? "Saving…" : "Save"}
       </Button>
     </form>
+  );
+}
+
+export function BusinessForm({ companyName, billingEmail }: { companyName: string; billingEmail: string }) {
+  const [state, action, pending] = useActionState(saveBusinessAccount, {});
+  return (
+    <form action={action} className="flex flex-col gap-4">
+      <StateNotice state={state} />
+      <Field label="Company name" htmlFor="company_name">
+        <Input id="company_name" name="company_name" defaultValue={companyName} required minLength={2} maxLength={120} autoComplete="organization" />
+      </Field>
+      <Field label="Billing email (optional)" htmlFor="billing_email" hint="Shown on your monthly statements.">
+        <Input id="billing_email" name="billing_email" type="email" defaultValue={billingEmail} maxLength={200} />
+      </Field>
+      <Button type="submit" disabled={pending} className="self-start">
+        {pending ? "Saving…" : "Save"}
+      </Button>
+    </form>
+  );
+}
+
+export function PrintButton() {
+  return (
+    <button type="button" onClick={() => window.print()} className="font-semibold text-ore hover:underline">
+      Print / save PDF
+    </button>
   );
 }

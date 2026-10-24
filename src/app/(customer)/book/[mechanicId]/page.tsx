@@ -21,9 +21,10 @@ export default async function BookPage({ params, searchParams }: PageProps<"/boo
   const supabase = await createClient();
   const now = new Date();
   const until = new Date(now.getTime() + (BOOKING_WINDOW_DAYS + 1) * 86_400_000);
-  const [{ data: vehicles }, { data: busy }] = await Promise.all([
+  const [{ data: vehicles }, { data: busy }, { data: business }] = await Promise.all([
     supabase.from("vehicles").select("id, year, make, model, trim, nickname").eq("owner_id", viewer.id).order("created_at"),
     supabase.rpc("mechanic_busy_slots", { mechanic_id: m.id, from_ts: now.toISOString(), to_ts: until.toISOString() }),
+    supabase.from("business_accounts").select("company_name").eq("owner_id", viewer.id).maybeSingle(),
   ]);
 
   // Validate the fee config on the server so a misconfiguration fails loudly here, not at payment.
@@ -44,6 +45,7 @@ export default async function BookPage({ params, searchParams }: PageProps<"/boo
         initialPhone={viewer.profile.phone ?? ""}
         noShowFeeLabel={money(customerNoShowFeeCents(), { whole: true })}
         minWarrantyDays={minWarrantyDays()}
+        businessName={business?.company_name ?? null}
       />
     </Container>
   );
