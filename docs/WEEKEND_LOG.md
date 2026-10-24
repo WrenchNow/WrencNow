@@ -118,3 +118,12 @@ others you'd like flagged.
 
 **Questions for you (fleet):** Do you want fleet discounts, net-30 invoicing (it would break the "card hold first"
 rule, so it needs your OK), or multiple logins per business? None of these are built yet.
+
+### Sat Oct 24 — item 9 done, plus a security fix
+- **Nightly PR #3 refreshed:** I merged this branch into it (merge, not rebase) and resolved three conflicts. One of
+  them was outdated copy saying "WrenchNow covers card processing", which is no longer true, so it was dropped.
+  All tests pass on it.
+- **⚠️ Leaked Resend API key:** PR #4 (opened by someone else) points out that a real Resend key was in the old
+  prototype. My branch had the same file in `legacy/`, and the key is now removed there. **It's still in git history,
+  so please revoke it in Resend and make a new one** (steps at the top of `docs/MORNING.md`). I also scanned the
+  branch for other secrets. Only the standard Supabase local-demo keys turned up, and those are public on purpose.

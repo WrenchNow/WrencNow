@@ -34,7 +34,7 @@ The owner is away. Each scheduled check-in takes the **first unchecked item**, f
        lot) and whether it's covered. Services flag "needs a lift / not mobile-friendly". Weather note in the wizard.
 - [x] 8. Fleet accounts (MVP): a business profile (company name, multiple vehicles, billing email), bookings tagged
        to the business, and a monthly statement page. Research small-fleet needs first.
-- [ ] 9. Refresh the sample nightly PR #3 onto the current branch, or close it and open a new
+- [x] 9. Refresh the sample nightly PR #3 onto the current branch, or close it and open a new
        `nightly/2026-10-25` with a fresh research run.
 - [ ] 10. Research (write `docs/research/2026-10-2X-*.md`, sourced): Denver mobile mechanic price ranges for top
         services; Colorado insurance norms for mobile mechanics; Checkr package pricing; Stripe Connect fees (verify
