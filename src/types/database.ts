@@ -202,6 +202,7 @@ export type Database = {
       };
       bookings: {
         Row: {
+          warranty_days: number | null;
           business_name: string | null;
           car_covered: boolean;
           car_location: string | null;
@@ -262,6 +263,7 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
+          warranty_days?: number | null;
           business_name?: string | null;
           car_covered?: boolean;
           car_location?: string | null;
@@ -321,6 +323,7 @@ export type Database = {
           vehicle_model?: string | null;
         };
         Update: {
+          warranty_days?: number | null;
           business_name?: string | null;
           car_covered?: boolean;
           car_location?: string | null;

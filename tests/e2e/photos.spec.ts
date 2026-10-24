@@ -50,7 +50,7 @@ test("mechanic sees before/after photo upload on an accepted job; customer sees 
   await expect(job.getByText("Photos", { exact: true })).toBeVisible();
   await expect(job.getByText("+ Add before photos")).toBeVisible();
   await expect(job.getByText("+ Add after photos")).toBeVisible();
-  await expect(job.getByLabel("Add before photos")).toHaveAttribute("accept", "image/*");
+  await expect(job.getByLabel("Add before photos")).toHaveAttribute("accept", "image/jpeg,image/png,image/webp");
 
   await page.context().clearCookies();
   await login(page, USERS.customer, `/account/bookings/${bookingId}`);

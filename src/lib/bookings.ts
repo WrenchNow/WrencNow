@@ -120,7 +120,7 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
   const admin = createAdminClient();
   const now = new Date();
   const [{ data: mechanic }, { data: service }, { data: vehicle }] = await Promise.all([
-    admin.from("mechanics").select("id, is_live, insurance_expires_on, hourly_rate_cents, stripe_account_id, display_name").eq("id", input.mechanicId).maybeSingle(),
+    admin.from("mechanics").select("id, is_live, insurance_expires_on, hourly_rate_cents, stripe_account_id, display_name, warranty_days").eq("id", input.mechanicId).maybeSingle(),
     admin.from("services").select("*").eq("slug", input.serviceSlug).eq("active", true).maybeSingle(),
     admin.from("vehicles").select("id, owner_id, year, make, model, trim, mileage").eq("id", input.vehicleId).maybeSingle(),
   ]);
@@ -187,6 +187,7 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
       car_location: input.carLocation ?? null,
       car_covered: input.carCovered ?? false,
       business_name: businessName,
+      warranty_days: mechanic.warranty_days, // the mechanic's own warranty as offered at booking
     })
     .select("id")
     .single();

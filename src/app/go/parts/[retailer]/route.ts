@@ -11,14 +11,15 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   if (!query) return NextResponse.json({ error: "missing search" }, { status: 400 });
 
   const viewer = await getViewer();
-  if (!viewer?.profile || (viewer.profile.role !== "mechanic" && viewer.profile.role !== "admin")) {
+  if (!viewer) {
     const login = new URL("/login", request.url);
     login.searchParams.set("next", `${request.nextUrl.pathname}${request.nextUrl.search}`);
     return NextResponse.redirect(login);
   }
 
   const bookingId = request.nextUrl.searchParams.get("b");
-  if (viewer.profile.role === "mechanic") {
+  // Only mechanics' clicks are logged; anyone else signed in just goes to the store.
+  if (viewer.profile?.role === "mechanic") {
     const admin = createAdminClient();
     // Only attach the booking if it's this mechanic's.
     const { data: own } = bookingId && /^[0-9a-f-]{36}$/i.test(bookingId) ? await admin.from("bookings").select("id").eq("id", bookingId).eq("mechanic_id", viewer.id).maybeSingle() : { data: null };

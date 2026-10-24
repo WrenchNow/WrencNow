@@ -106,6 +106,7 @@ export function BookingWizard({
     if (step === 1 && !vehicleId) return setError("Pick or add the vehicle.");
     if (step === 1 && address.trim().length < 5) return setError("Enter the address where the car will be.");
     if (step === 1 && !carLocation) return setError("Tell us where the car is parked.");
+    if (step === 1 && odometer.trim() && !/^\d{1,7}$/.test(odometer.replace(/[,\s]/g, ""))) return setError("Enter the mileage as a whole number, like 84,500 — or leave it blank.");
     if (step === 1 && phone.replace(/\D/g, "").length < 7) return setError("Enter a phone number your mechanic can reach you at.");
     if (step === 2 && !start) return setError("Pick a time.");
     setStep((s) => s + 1);

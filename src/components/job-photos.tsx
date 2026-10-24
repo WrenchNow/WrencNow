@@ -110,7 +110,7 @@ export function JobPhotosPanel({ bookingId, mechanicId, photos, max }: { booking
                       <button
                         type="button"
                         onClick={() => remove(p.id)}
-                        className="absolute top-1 right-1 rounded-full bg-bg/80 px-2 text-xs text-cream hover:text-danger"
+                        className="absolute top-1 right-1 grid size-8 place-items-center rounded-full bg-bg/80 text-sm text-cream hover:text-danger"
                         aria-label={`Remove ${kind} photo`}
                       >
                         ✕
@@ -124,7 +124,7 @@ export function JobPhotosPanel({ bookingId, mechanicId, photos, max }: { booking
                   {busy === kind ? "Uploading…" : `+ Add ${kind} photos`}
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/webp"
                     multiple
                     capture="environment"
                     className="sr-only"

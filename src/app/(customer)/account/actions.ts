@@ -75,7 +75,7 @@ const bookingSchema = z.object({
   terms: z.literal(true, { error: "Please accept the service terms" }),
   estimateApproved: z.literal(true, { error: "Please approve the estimate" }),
   returnOldParts: z.boolean().default(false),
-  odometer: z.coerce.number().int().min(0).max(2_000_000).nullable().optional(),
+  odometer: z.number({ error: "Enter the mileage as a whole number, like 84500" }).int("Enter the mileage as a whole number, like 84500").min(0).max(2_000_000, "That mileage looks too high").nullable().optional(),
   carLocation: z.enum(["driveway", "street", "garage", "parking_lot"], { error: "Tell us where the car is parked" }),
   carCovered: z.boolean().default(false),
   billToBusiness: z.boolean().default(false),
@@ -253,14 +253,13 @@ export async function fileProblemReport(_: FormState, formData: FormData): Promi
     .safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0]!.message };
   const supabase = await createClient();
-  const { data: b } = await supabase.from("bookings").select("id, customer_id, mechanic_id, status, completed_at").eq("id", parsed.data.bookingId).maybeSingle();
+  const { data: b } = await supabase.from("bookings").select("id, customer_id, mechanic_id, status, completed_at, warranty_days").eq("id", parsed.data.bookingId).maybeSingle();
   if (!b || b.customer_id !== viewer.id) return { error: "Booking not found." };
   const { createAdminClient } = await import("@/lib/supabase/admin");
   const { reportWindowDays, withinDays } = await import("@/lib/warranty");
   const { issueReportDays, siteUrl } = await import("@/lib/env");
   const admin = createAdminClient();
-  const { data: m } = await admin.from("mechanics").select("warranty_days").eq("id", b.mechanic_id).single();
-  const days = reportWindowDays(m?.warranty_days, issueReportDays());
+  const days = reportWindowDays(b.warranty_days, issueReportDays());
   if (b.status !== "completed" || !withinDays(b.completed_at, days)) return { error: `It's been a while since this job. Email ${CONTACT_EMAIL} and we'll take a look.` };
   const { data: claim, error } = await admin
     .from("job_issues")

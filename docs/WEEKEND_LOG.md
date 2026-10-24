@@ -217,3 +217,33 @@ rule, so it needs your OK), or multiple logins per business? None of these are b
   in this **public** WrenchNow repo. That branch also carries the old `index.html` with the leaked key. Your other
   session has moved Pantry Pal to its own private repo. Once you've confirmed everything is there, deleting that
   branch from WrenchNow keeps the two separate. I didn't delete it.
+
+### Sat Oct 24 — item 11 done (QA review) and fixes
+The QA reviewer agent went over every change since Friday. Lint and build passed. It found no fake stats, no
+remaining WrenchNow warranty claims in the product, and the new tables' permission rules held up. Fixed:
+- **Photo storage was too open:** any signed-in user could upload files to job-photo storage. Now only the mechanic,
+  into their own accepted/active job's folder (migration 0016). There's a DB test for it.
+- **Price-check redirect loop:** links looped forever for signed-in customers. Now they just go to the store.
+- **Mileage errors:** a typo like "85k" showed a raw error at the payment step. It's now caught at the car step with
+  a plain message.
+- **iPhone photos:** HEIC photos would show as broken images for customers. Uploads are now JPEG/PNG/WebP, and
+  iPhones convert automatically.
+- **Report window:** it changed if a mechanic later edited their own warranty. Each booking now saves the mechanic's
+  warranty as offered at booking.
+- **Photo limit:** 6 per kind is now enforced in the database, so parallel uploads can't get past it.
+- **Admin problem reports:**
+  - A "mechanic contacted" click no longer erases an earlier note.
+  - Reopening a report shows a clear error instead of "not found".
+  - The customer email says "report", not "claim".
+- **Photo remove button:** now big enough to tap on a phone (32px).
+- **Fake-Stripe safety:** the test-only switch now also requires an explicit `E2E_FAKE_STRIPE=1`. Setting
+  `STRIPE_API_BASE` by mistake on Netlify can't redirect payments.
+- **Not changed:**
+  - The leaked Resend key: needs you to revoke it, see the checklist.
+  - Service pages render per request rather than prebuilt: minor and fine for now.
+  - The legal pages use the Gmail address: question below.
+- **Results:** lint ✓, build ✓, vitest 128/128 ✓, Playwright 129 passed ✓, lifecycle 5/5 ✓.
+
+**Question for you:** the Terms, Privacy Policy and Mechanic Agreement now list getwrenchnow11@gmail.com as the legal
+and privacy contact. Fine for now, or do you want a getwrenchnow.com address (e.g. through Google Workspace or
+Zoho) before launch?

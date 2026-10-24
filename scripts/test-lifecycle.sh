@@ -12,7 +12,7 @@ FAKE_PORT=12112
 fuser -k 3000/tcp "$FAKE_PORT/tcp" 2>/dev/null || true
 FAKE_STRIPE_PORT=$FAKE_PORT APP_WEBHOOK_URL=http://localhost:3000/api/stripe/webhook node scripts/fake-stripe/server.mjs > /tmp/fake-stripe.log 2>&1 &
 FAKE_PID=$!
-STRIPE_SECRET_KEY=sk_test_lifecycle STRIPE_API_BASE=http://127.0.0.1:$FAKE_PORT \
+E2E_FAKE_STRIPE=1 STRIPE_SECRET_KEY=sk_test_lifecycle STRIPE_API_BASE=http://127.0.0.1:$FAKE_PORT \
   STRIPE_CONNECT_WEBHOOK_SECRET= npx next start -p 3000 > /tmp/next-lifecycle.log 2>&1 &
 APP_PID=$!
 trap 'kill $FAKE_PID $APP_PID 2>/dev/null || true' EXIT

@@ -749,3 +749,41 @@ run("business accounts", () => {
     await expect(tx((q) => q("insert into public.business_accounts (owner_id, company_name) values (auth.uid(), 'X')"), asUser(ids["customer"]))).rejects.toThrow(/check constraint/);
   });
 });
+
+run("qa fixes", () => {
+  it("caps job photos at 6 per kind in the database", async () => {
+    await expect(
+      tx(async (q) => {
+        const id = await insertBooking(q, ids["mechanic.basic"], "oil-change", future(6));
+        for (let i = 0; i < 7; i++) {
+          await q("insert into public.booking_photos (booking_id, mechanic_id, kind, path) values ($1, $2, 'before', $3)", [id, ids["mechanic.basic"], `${ids["mechanic.basic"]}/${id}/b-${i}.jpg`]);
+        }
+      }),
+    ).rejects.toThrow(/booking_photos_limit/);
+  });
+
+  it("only lets a mechanic upload job photos into their own active job's folder", async () => {
+    await tx(async (q) => {
+      const id = await insertBooking(q, ids["mechanic.basic"], "oil-change", future(7));
+      await q("update public.bookings set payment_status = 'authorized' where id = $1", [id]);
+      const mech = ids["mechanic.basic"];
+      // Hosted Supabase grants this; the local stand-in doesn't (rolled back with the test).
+      await q("grant insert on storage.objects to authenticated");
+      const ins = (owner: string, folder: string) =>
+        q("insert into storage.objects (bucket_id, name, owner) values ('job-photos', $1, $2)", [`${folder}/${id}/x-${Math.random()}.jpg`, owner]);
+      await q("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: mech, role: "authenticated" })]);
+      await q("set local role authenticated");
+      await q("savepoint a");
+      await expect(ins(mech, mech)).rejects.toThrow(/row-level security/); // job not accepted yet
+      await q("rollback to savepoint a");
+      await q("reset role");
+      await q("update public.bookings set status = 'accepted' where id = $1", [id]);
+      await q("set local role authenticated");
+      await ins(mech, mech); // accepted → allowed
+      await q("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: ids["customer"], role: "authenticated" })]);
+      await q("savepoint b");
+      await expect(ins(ids["customer"], ids["customer"])).rejects.toThrow(/row-level security/); // customer can't
+      await q("rollback to savepoint b");
+    });
+  });
+});

@@ -152,19 +152,21 @@ export async function updateJobIssue(_: FormState, formData: FormData): Promise<
     .safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: "Invalid input." };
   const admin = createAdminClient();
-  const { data: c } = await admin
+  const { data: c, error } = await admin
     .from("job_issues")
-    .update({ status: parsed.data.status, resolution: parsed.data.resolution || null, updated_at: new Date().toISOString() })
+    // Keep an earlier note unless a new one is given.
+    .update({ status: parsed.data.status, ...(parsed.data.resolution ? { resolution: parsed.data.resolution } : {}), updated_at: new Date().toISOString() })
     .eq("id", parsed.data.id)
     .select("id, customer_id")
     .single();
+  if (error?.code === "23505") return { error: "This booking already has another open report. Close that one first." };
   if (!c) return { error: "Report not found." };
   await admin.from("audit_log").insert({ actor_id: viewer.id, action: `issue.${parsed.data.status}`, entity: "job_issue", entity_id: c.id, data: { resolution: parsed.data.resolution } });
   if (parsed.data.status !== "mechanic_contacted") {
     const { notifyUser } = await import("@/lib/notify");
     await notifyUser(`issue:${c.id}:${parsed.data.status}`, c.customer_id, {
       subject: parsed.data.status === "resolved" ? "Your problem report is resolved" : "Update on your problem report",
-      text: parsed.data.resolution || (parsed.data.status === "resolved" ? "Your problem report has been resolved." : "We reviewed your claim. Reply to this email if you have questions."),
+      text: parsed.data.resolution || (parsed.data.status === "resolved" ? "Your problem report has been resolved." : "We reviewed your report. Reply to this email if you have questions."),
     });
   }
   revalidatePath("/admin");

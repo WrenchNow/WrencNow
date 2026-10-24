@@ -66,8 +66,7 @@ export default async function BookingDetailPage({ params, searchParams }: PagePr
   const laborMax = b.labor_max_cents ?? b.estimated_max_cents;
   const quoteNewMax = laborMax + partsChargeCents(quotedCost + boughtCost, handlingBps);
   // The mechanic's own warranty, if they offer one (WrenchNow offers none).
-  const warranty =
-    b.status === "completed" ? ((await createAdminClient().from("mechanics").select("warranty_days").eq("id", b.mechanic_id).maybeSingle()).data?.warranty_days ?? 0) : null;
+  const warranty = b.status === "completed" ? (b.warranty_days ?? 0) : null;
   const covered = warranty !== null && withinDays(b.completed_at, reportWindowDays(warranty, issueReportDays()));
   const photos = (await photosFor([b.id])).get(b.id) ?? [];
   const { data: claims } = b.status === "completed" ? await supabase.from("job_issues").select("id, status, description, resolution, created_at").eq("booking_id", b.id).order("created_at", { ascending: false }) : { data: null };

@@ -40,5 +40,5 @@ The owner is away. Each scheduled check-in takes the **first unchecked item**, f
         services; Colorado insurance norms for mobile mechanics; Checkr package pricing; Stripe Connect fees (verify
         what we assume in `.env.example`); Google Business Profile/LSA eligibility for mobile mechanics. Feed
         verified findings into copy or settings only when they're solid.
-- [ ] 11. QA pass (qa-reviewer agent) over everything added this weekend; fix blockers.
+- [x] 11. QA pass (qa-reviewer agent) over everything added this weekend; fix blockers.
 - [ ] 12. Final: update `docs/MORNING.md`, the PR #2 description and `docs/WEEKEND_LOG.md` summary.

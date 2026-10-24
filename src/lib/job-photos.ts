@@ -17,6 +17,7 @@ export async function recordJobPhoto(bookingId: string, mechanicId: string, kind
   const { count } = await admin.from("booking_photos").select("*", { count: "exact", head: true }).eq("booking_id", bookingId).eq("kind", kind);
   if ((count ?? 0) >= MAX_PHOTOS_PER_KIND) throw new BookingError(`Up to ${MAX_PHOTOS_PER_KIND} ${kind} photos per job.`);
   const { error } = await admin.from("booking_photos").insert({ booking_id: bookingId, mechanic_id: mechanicId, kind, path });
+  if (error?.message.includes("booking_photos_limit")) throw new BookingError(`Up to ${MAX_PHOTOS_PER_KIND} ${kind} photos per job.`);
   if (error) throw new BookingError("Couldn't save that photo. Please try again.");
 }
 
