@@ -11,6 +11,14 @@ export function getStripe(): Stripe {
     // Guardrail: live keys must be enabled deliberately once the business entity is set up.
     throw new Error("Live Stripe key present but STRIPE_LIVE_MODE_CONFIRMED is not 'true'");
   }
-  client ??= new Stripe(key, { appInfo: { name: "WrenchNow" }, maxNetworkRetries: 2 });
+  client ??= new Stripe(key, { appInfo: { name: "WrenchNow" }, maxNetworkRetries: 2, ...testApiBase(key) });
   return client;
+}
+
+/** Local end-to-end tests only: point the SDK at scripts/fake-stripe. Never applies to live keys. */
+function testApiBase(key: string): Partial<Stripe.StripeConfig> {
+  const base = process.env.STRIPE_API_BASE;
+  if (!base || !key.startsWith("sk_test_")) return {};
+  const u = new URL(base);
+  return { host: u.hostname, port: Number(u.port || (u.protocol === "https:" ? 443 : 80)), protocol: u.protocol.replace(":", "") as "http" | "https", maxNetworkRetries: 0 };
 }

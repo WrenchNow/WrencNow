@@ -14,7 +14,8 @@
     "db:reset:local": "bash scripts/local-db/up.sh --reset",
     "db:seed": "node scripts/seed.mjs",
     "db:types": "supabase gen types typescript --local --schema public > src/types/database.ts",
-    "make-admin": "node scripts/make-admin.mjs"
+    "make-admin": "node scripts/make-admin.mjs",
+    "test:lifecycle": "bash scripts/test-lifecycle.sh"
   },
   "dependencies": {
     "@stripe/react-stripe-js": "^7.0.0",
