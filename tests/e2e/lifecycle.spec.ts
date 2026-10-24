@@ -158,3 +158,42 @@ test("customer cancels before the mechanic heads out — the card hold is releas
   expect(state.payment_intents.find((p: { id: string }) => p.id === pi.id).status).toBe("canceled");
   await waitFor(async () => (await booking(b!.id)).payment_status === "canceled", "hold released");
 });
+
+test("a mechanic goes live only after the background check clears AND Stripe payouts are enabled — and drops off if the check changes", async ({ page, request }) => {
+  const CHECKR_KEY = "checkr_test_lifecycle"; // matches scripts/test-lifecycle.sh
+  const { createHmac } = await import("node:crypto");
+  const [m] = await q<{ id: string }>("select id from auth.users where email = 'test.mechanic.pending@example.test'");
+  await q(
+    `update public.mechanics set status = 'approved', checkr_candidate_id = 'cand_e2e_lifecycle', stripe_account_id = 'acct_e2elifecycle',
+       insurance_status = 'verified', insurance_expires_on = current_date + 300, check_status = 'pending', stripe_charges_enabled = false, stripe_payouts_enabled = false
+     where id = $1`,
+    [m!.id],
+  );
+  const live = async () => (await q<{ is_live: boolean }>("select is_live from public.mechanics where id = $1", [m!.id]))[0]!.is_live;
+  const checkr = (id: string, result: string) => {
+    const body = JSON.stringify({ id, type: "report.completed", data: { object: { id: `rep_${id}`, object: "report", candidate_id: "cand_e2e_lifecycle", result } } });
+    return request.post("/api/checks/webhook", { data: body, headers: { "content-type": "application/json", "x-checkr-signature": createHmac("sha256", CHECKR_KEY).update(body).digest("hex") } });
+  };
+  expect(await live()).toBe(false);
+
+  // Background check clears (signed Checkr webhook) — still not live: payouts aren't set up.
+  expect((await checkr("evt_e2e_clear", "clear")).ok()).toBe(true);
+  expect((await q<{ check_status: string }>("select check_status from public.mechanics where id = $1", [m!.id]))[0]!.check_status).toBe("clear");
+  expect(await live()).toBe(false);
+  // Replaying the same event is a no-op.
+  expect(await (await checkr("evt_e2e_clear", "clear")).json()).toMatchObject({ duplicate: true });
+  // A forged signature is rejected.
+  expect((await request.post("/api/checks/webhook", { data: "{}", headers: { "x-checkr-signature": "deadbeef" } })).status()).toBe(401);
+
+  // Stripe Connect onboarding finishes (signed account.updated) → live, and shows in search.
+  await fetch(`${FAKE}/__test/emit`, { method: "POST", body: JSON.stringify({ type: "account.updated", object: { id: "acct_e2elifecycle", object: "account", charges_enabled: true, payouts_enabled: true } }) });
+  await waitFor(live, "mechanic to go live");
+  await page.goto("/search?loc=39.7392,-104.9903");
+  await expect(page.getByText("Test Mechanic Pending")).toBeVisible();
+
+  // The check comes back "consider" → off the platform immediately.
+  expect((await checkr("evt_e2e_consider", "consider")).ok()).toBe(true);
+  expect(await live()).toBe(false);
+  await page.reload();
+  await expect(page.getByText("Test Mechanic Pending")).toHaveCount(0);
+});

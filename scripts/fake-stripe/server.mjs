@@ -6,7 +6,8 @@
 //   STRIPE_WEBHOOK_SECRET=whsec_test node scripts/fake-stripe/server.mjs
 //
 // Point the app at it with STRIPE_API_BASE=http://127.0.0.1:12112 (ignored with live keys).
-// Test controls: POST /__test/authorize/:pi (customer's card authorizes the hold), GET /__test/state.
+// Test controls: POST /__test/authorize/:pi (customer's card authorizes the hold), POST /__test/emit {type, object}
+// (send any signed event, e.g. account.updated), GET /__test/state.
 import crypto from "node:crypto";
 import http from "node:http";
 
@@ -64,6 +65,11 @@ const server = http.createServer(async (req, res) => {
 
   // ── test controls ──
   if (p === "/__test/state") return send(res, 200, { payment_intents: [...db.pi.values()], refunds: [...db.re.values()], events: db.events });
+  if (p === "/__test/emit" && req.method === "POST") {
+    const { type, object } = JSON.parse(body);
+    await emit(type, object);
+    return send(res, 200, db.events.at(-1));
+  }
   if ((m = p.match(/^\/__test\/authorize\/(pi_\w+)$/))) {
     const pi = db.pi.get(m[1]);
     if (!pi) return notFound(res, "payment_intent");

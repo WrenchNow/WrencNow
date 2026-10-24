@@ -175,3 +175,10 @@ rule, so it needs your OK), or multiple logins per business? None of these are b
   uploads (no file storage locally). Both need one manual run in Stripe test mode once keys are connected.
 - **Results:** lint ✓, build ✓, vitest 122/122 ✓, Playwright 125 passed (lifecycle tests skip in the normal run) ✓,
   lifecycle 4/4 ✓.
+- **Added lifecycle step 5, mechanic go-live through the backend:**
+  - A signed Checkr "clear" webhook sets the check to clear, but the mechanic still isn't live until Stripe payouts
+    work.
+  - Replaying the same event does nothing, and a forged signature is rejected (401).
+  - A signed Stripe `account.updated` (payouts enabled) makes the mechanic live, and they show up in search.
+  - A later Checkr "consider" takes them off the platform and out of search immediately.
+  - Lifecycle now passes **5/5**.
