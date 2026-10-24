@@ -3934,7 +3934,7 @@ function bookFromProfile(){
 //
 // SETUP REQUIRED IN SUPABASE:
 // 1. Go to Edge Functions → New Function → name it "send-email"
-// 2. Add secret: RESEND_API_KEY = re_QnMPRVNR_3iUr3EQE9v69AKBk1ZebdmoC
+// 2. Add secret: RESEND_API_KEY = <your Resend API key: set it as a secret in your email function, never in this file>
 // 3. Deploy the function code below (see comment at bottom)
 // ═══════════════════════════════════════════════════════════
 
@@ -4027,7 +4027,7 @@ function sendMechanicApprovalEmail({mechEmail, mechName, slug}) {
 SUPABASE EDGE FUNCTION CODE
 Create this at: Supabase → Edge Functions → New Function
 Name it: send-email
-Add secret: RESEND_API_KEY = re_QnMPRVNR_3iUr3EQE9v69AKBk1ZebdmoC
+Add secret: RESEND_API_KEY = <your Resend API key: set it as a secret in your email function, never in this file>
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
