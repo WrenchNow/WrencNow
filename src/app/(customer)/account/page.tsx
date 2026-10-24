@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/layout";
 import { requireRole } from "@/lib/auth";
 import { dateTime } from "@/lib/format";
+import { mechanicNames } from "@/lib/public-data";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Your account" };
@@ -17,12 +18,13 @@ export default async function AccountPage() {
   const supabase = await createClient();
   const { data: upcoming } = await supabase
     .from("bookings")
-    .select("id, status, scheduled_start, vehicle_desc, services(name), mechanics(display_name)")
+    .select("id, mechanic_id, status, scheduled_start, vehicle_desc, services(name)")
     .eq("customer_id", viewer.id)
     .in("status", ["requested", "accepted", "en_route", "in_progress"])
     .order("scheduled_start")
     .limit(3);
 
+  const names = await mechanicNames((upcoming ?? []).map((b) => b.mechanic_id));
   const first = viewer.profile.full_name?.split(" ")[0];
 
   return (
@@ -39,7 +41,7 @@ export default async function AccountPage() {
                     <span>
                       <span className="block font-semibold text-cream">{b.services?.name}</span>
                       <span className="block text-sm text-muted">
-                        {dateTime(b.scheduled_start)} · {b.mechanics?.display_name ?? "Mechanic"} · {b.vehicle_desc}
+                        {dateTime(b.scheduled_start)} · {names.get(b.mechanic_id) ?? "Mechanic"} · {b.vehicle_desc}
                       </span>
                     </span>
                     <StatusBadge status={b.status} />

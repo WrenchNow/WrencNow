@@ -5,6 +5,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { Container } from "@/components/ui/layout";
 import { MECHANIC_FAQ } from "@/content/faq";
 import { featuredPriceCents, platformFeeBps } from "@/lib/env";
+import { processingLabel } from "@/lib/fee-copy";
 import { money } from "@/lib/format";
 import { SKILL_TIERS, TIER_DESCRIPTION, TIER_LABEL } from "@/lib/tiers";
 
@@ -21,36 +22,24 @@ function fee() {
   }
 }
 
-function keepPercent(): string | null {
-  try {
-    return `${100 - platformFeeBps() / 100}%`;
-  } catch {
-    return null;
-  }
-}
-
 const REQUIREMENTS = [
   "Valid driver's license",
   "Your own tools and a way to get to customers",
   "Proof of liability insurance",
   "A smartphone for job notifications",
-  "Pass our background and identity check",
+  "Pass our background and identity check (nothing up front — $10 from each of your first 5 jobs covers it)",
   "A bank account to connect through Stripe for payouts",
 ];
 
 export default function ForMechanicsPage() {
   const f = fee();
-  const keep = keepPercent();
   const benefits = [
-    {
-      title: keep ? `Keep ${keep} of every job` : "Keep more of what you earn",
-      body: `You set your hourly rate. WrenchNow keeps a ${f} platform fee per completed job and covers card processing — no monthly fee to be listed.`,
-    },
+    { title: "Keep more of what you earn", body: `You set your hourly rate. Per completed job, WrenchNow keeps a ${f} platform fee and card processing (${processingLabel()}) comes out — no monthly fee to be listed.` },
     { title: "You set the schedule", body: "Go online when you want work and offline when you don't. Accept the jobs you want." },
     { title: "Paid through the app", body: "Customers pay through WrenchNow. No invoicing, no chasing payments, no cash." },
     { title: "Start basic, grow from there", body: "Newer to the trade? Start with basic jobs and move up to certified work as you build experience." },
     { title: "Reputation that travels with you", body: "Every completed job and verified review lifts your ranking in search." },
-    { title: "Featured placement (optional)", body: `Want more jobs? Featured is ${money(featuredPriceCents(), { whole: true })}/month for a badge and a boost in search. Cancel anytime.` },
+    { title: "Sponsored placement (optional)", body: `Want more jobs? Sponsored placement is ${money(featuredPriceCents(), { whole: true })}/month to show in the labeled Sponsored row above matching search results. Cancel anytime.` },
   ];
 
   return (

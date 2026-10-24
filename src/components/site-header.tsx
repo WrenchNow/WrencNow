@@ -6,6 +6,7 @@ import { buttonClass } from "./ui/button";
 
 const NAV = [
   { href: "/search", label: "Find a Mechanic" },
+  { href: "/services", label: "Services" },
   { href: "/how-it-works", label: "How it works" },
   { href: "/for-mechanics", label: "For Mechanics" },
   { href: "/pricing", label: "Pricing" },

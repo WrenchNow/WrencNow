@@ -77,3 +77,28 @@ test("search never shows raw coordinates from 'use my location'", async ({ page 
   await expect(page.getByText("Near your current location")).toBeVisible();
   await expect(page.locator("main")).not.toContainText("39.7392");
 });
+
+test("service pages have structured data and send customers to search for that service", async ({ page }) => {
+  await page.goto("/services");
+  await page.getByRole("link", { name: /Mobile brake repair/ }).click();
+  await expect(page).toHaveURL(/\/services\/mobile-brake-repair$/);
+  const ld = JSON.parse((await page.locator('script[type="application/ld+json"]').textContent()) ?? "[]");
+  expect(ld.map((x: { "@type": string }) => x["@type"])).toEqual(["Service", "FAQPage", "BreadcrumbList"]);
+  await page.getByRole("link", { name: "Find a mechanic for this" }).click();
+  await expect(page).toHaveURL(/\/search\?service=brakes/);
+});
+
+test("unknown service pages 404", async ({ page }) => {
+  const res = await page.goto("/services/not-a-real-service");
+  expect(res?.status()).toBe(404);
+});
+
+test("web app manifest and icons are served", async ({ request }) => {
+  const res = await request.get("/manifest.webmanifest");
+  expect(res.ok()).toBe(true);
+  const m = await res.json();
+  expect(m.display).toBe("standalone");
+  for (const icon of m.icons) expect((await request.get(icon.src)).headers()["content-type"]).toContain("image/png");
+  expect(m.icons.some((i: { purpose: string }) => i.purpose === "maskable")).toBe(true);
+  expect((await request.get("/apple-icon.png")).ok()).toBe(true);
+});

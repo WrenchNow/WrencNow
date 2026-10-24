@@ -2,15 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { MechanicCard } from "@/components/search/mechanic-card";
+import { OpenRequestForm } from "@/components/search/open-request-form";
 import { UseLocationButton } from "@/components/search/use-location-button";
-import { Button, ButtonLink } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { EmptyState, Notice } from "@/components/ui/feedback";
 import { Input, Select } from "@/components/ui/form";
 import { Container, PageHeader, SetupRequired } from "@/components/ui/layout";
+import { getViewer } from "@/lib/auth";
 import { supabaseConfigured } from "@/lib/env";
 import { geocode } from "@/lib/geocode";
 import { getServices } from "@/lib/public-data";
-import type { SortKey } from "@/lib/ranking";
+import { sponsoredRow, type SortKey } from "@/lib/ranking";
 import { searchMechanics } from "@/lib/search";
 
 export const metadata: Metadata = {
@@ -137,31 +139,46 @@ async function Results({ loc, service, sort }: { loc: string; service: string | 
   }
 
   if (results.length === 0) {
+    const viewer = await getViewer();
+    const label = point.label === "Your location" ? "your location" : point.label;
     return (
-      <EmptyState
-        icon="🔧"
-        title="No mechanics here yet"
-        action={
-          <div className="flex flex-wrap justify-center gap-3">
-            <ButtonLink href="/search" variant="ghost">
-              Try another location
-            </ButtonLink>
-            <ButtonLink href="/for-mechanics">Know a mechanic? Send them our way</ButtonLink>
-          </div>
-        }
-      >
-        We&apos;re still building our network around {point.label === "Your location" ? "your location" : point.label}. {service ? "Try “Any service” or check back soon." : "Check back soon."}
+      <EmptyState icon="🔧" title="No mechanics here yet">
+        <p>
+          We&apos;re still building our network around {label}. Send your request and we&apos;ll match you with a mechanic by hand — or{" "}
+          <Link href="/search" className="text-ore hover:underline">
+            try another location
+          </Link>
+          .
+        </p>
+        <div className="mt-6">
+          <OpenRequestForm
+            location={label === "your location" ? loc : point.label}
+            service={service}
+            defaults={{ name: viewer?.profile?.full_name ?? "", email: viewer?.email ?? "", phone: viewer?.profile?.phone ?? "" }}
+          />
+        </div>
       </EmptyState>
     );
   }
 
+  const { sponsored, organic } = sponsoredRow(results);
   return (
     <>
+      {sponsored.length > 0 && (
+        <section aria-label="Sponsored" className="mb-8">
+          <p className="mb-2 text-xs font-semibold tracking-wider text-warn uppercase">Sponsored</p>
+          <ul className="grid gap-4 lg:grid-cols-2">
+            {sponsored.map((m) => (
+              <MechanicCard key={m.id} m={m} service={service ?? undefined} />
+            ))}
+          </ul>
+        </section>
+      )}
       <p className="mb-4 text-sm text-muted">
         {results.length} mechanic{results.length === 1 ? "" : "s"} {results.length === 1 ? "covers" : "cover"} {point.label === "Your location" ? "your location" : point.label}
       </p>
       <ul className="grid gap-4 lg:grid-cols-2">
-        {results.map((m) => (
+        {organic.map((m) => (
           <MechanicCard key={m.id} m={m} service={service ?? undefined} />
         ))}
       </ul>

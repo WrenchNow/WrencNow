@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { BookingWizard } from "@/components/booking/booking-wizard";
 import { Container, PageHeader } from "@/components/ui/layout";
 import { requireRole } from "@/lib/auth";
-import { platformFeeBps, stripeConfigured } from "@/lib/env";
+import { customerNoShowFeeCents, minWarrantyDays, platformFeeBps, stripeConfigured } from "@/lib/env";
+import { money } from "@/lib/format";
 import { getPublicMechanic } from "@/lib/public-data";
 import { BOOKING_WINDOW_DAYS } from "@/lib/slots";
 import { createClient } from "@/lib/supabase/server";
@@ -20,9 +21,10 @@ export default async function BookPage({ params, searchParams }: PageProps<"/boo
   const supabase = await createClient();
   const now = new Date();
   const until = new Date(now.getTime() + (BOOKING_WINDOW_DAYS + 1) * 86_400_000);
-  const [{ data: vehicles }, { data: busy }] = await Promise.all([
+  const [{ data: vehicles }, { data: busy }, { data: business }] = await Promise.all([
     supabase.from("vehicles").select("id, year, make, model, trim, nickname").eq("owner_id", viewer.id).order("created_at"),
     supabase.rpc("mechanic_busy_slots", { mechanic_id: m.id, from_ts: now.toISOString(), to_ts: until.toISOString() }),
+    supabase.from("business_accounts").select("company_name").eq("owner_id", viewer.id).maybeSingle(),
   ]);
 
   // Validate the fee config on the server so a misconfiguration fails loudly here, not at payment.
@@ -35,11 +37,15 @@ export default async function BookPage({ params, searchParams }: PageProps<"/boo
       </PageHeader>
       <BookingWizard
         mechanic={{ id: m.id, name: m.display_name ?? "your mechanic", rateCents: m.hourly_rate_cents ?? 0 }}
-        services={m.services.map((s) => ({ slug: s.slug, name: s.name, icon: s.icon, min: s.est_minutes_min, max: s.est_minutes_max }))}
+        services={m.services.map((s) => ({ slug: s.slug, name: s.name, icon: s.icon, min: s.est_minutes_min, max: s.est_minutes_max, needsLift: s.needs_lift }))}
         vehicles={(vehicles ?? []).map((v) => ({ id: v.id, label: [v.year, v.make, v.model, v.trim].filter(Boolean).join(" "), nickname: v.nickname }))}
         busy={busy ?? []}
         initialService={typeof sp.service === "string" ? sp.service : ""}
         publishableKey={stripeConfigured() ? process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY! : null}
+        initialPhone={viewer.profile.phone ?? ""}
+        noShowFeeLabel={money(customerNoShowFeeCents(), { whole: true })}
+        minWarrantyDays={minWarrantyDays()}
+        businessName={business?.company_name ?? null}
       />
     </Container>
   );

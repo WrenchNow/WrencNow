@@ -1,6 +1,7 @@
 import "server-only";
 import type Stripe from "stripe";
 import { cancelOpenBookingsForMechanic } from "@/lib/bookings";
+import { notifyBooking } from "@/lib/notify";
 import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -15,9 +16,40 @@ async function onPaymentIntent(admin: Admin, event: Stripe.Event) {
   const bookingId = bookingIdOf(pi);
   if (!bookingId) return;
 
+  // Top-up hold for an approved parts quote: finalize the approval once the card authorizes.
+  if (pi.metadata?.kind === "parts_topup") {
+    if (event.type === "payment_intent.amount_capturable_updated") {
+      const { data: b } = await admin.from("bookings").select("topup_payment_intent_id").eq("id", bookingId).maybeSingle();
+      if (b?.topup_payment_intent_id === pi.id) {
+        const { finalizePartsApproval } = await import("@/lib/parts");
+        await finalizePartsApproval(bookingId, null, pi.amount_capturable);
+      }
+    }
+    if (event.type === "payment_intent.succeeded") {
+      const { data: b } = await admin.from("bookings").select("mechanic_id").eq("id", bookingId).single();
+      await admin.from("ledger_entries").upsert(
+        [
+          { booking_id: bookingId, mechanic_id: b?.mechanic_id ?? null, type: "charge", amount_cents: pi.amount_received, stripe_object_id: pi.id },
+          { booking_id: bookingId, mechanic_id: b?.mechanic_id ?? null, type: "platform_fee", amount_cents: pi.application_fee_amount ?? 0, stripe_object_id: pi.id },
+        ],
+        { onConflict: "type,stripe_object_id", ignoreDuplicates: true },
+      );
+    }
+    return;
+  }
+
   switch (event.type) {
     case "payment_intent.amount_capturable_updated":
-      await admin.from("bookings").update({ payment_status: "authorized" }).eq("id", bookingId).in("payment_status", ["unpaid", "failed"]);
+      {
+        const { data: changed } = await admin
+          .from("bookings")
+          .update({ payment_status: "authorized" })
+          .eq("id", bookingId)
+          .in("payment_status", ["unpaid", "failed"])
+          .select("id");
+        // The request only reaches the mechanic once the card hold is in place.
+        if (changed?.length) await notifyBooking(bookingId, "requested");
+      }
       break;
     case "payment_intent.succeeded": {
       await admin.from("bookings").update({ payment_status: "captured" }).eq("id", bookingId).in("payment_status", ["unpaid", "authorized"]);
@@ -41,7 +73,7 @@ async function onPaymentIntent(admin: Admin, event: Stripe.Event) {
       // so a mechanic never shows up to unpaid work. The mechanic's job list updates live.
       const { data: ended } = await admin
         .from("bookings")
-        .update({ status: "cancelled", cancel_reason: "Payment hold released" })
+        .update({ status: "cancelled", cancel_reason: "Payment hold released", admin_override: true }) // system action
         .eq("id", bookingId)
         .in("status", ["requested", "accepted", "en_route"])
         .select("id");
@@ -60,23 +92,32 @@ async function onCharge(admin: Admin, event: Stripe.Event) {
   const charge = event.data.object as Stripe.Charge;
   const piId = typeof charge.payment_intent === "string" ? charge.payment_intent : charge.payment_intent?.id;
   if (!piId) return;
-  const { data: b } = await admin.from("bookings").select("id, mechanic_id").eq("stripe_payment_intent_id", piId).maybeSingle();
+  // A job can be paid by its original PaymentIntent and/or a parts top-up.
+  const { data: b } = await admin
+    .from("bookings")
+    .select("id, mechanic_id, final_amount_cents, payment_status")
+    .or(`stripe_payment_intent_id.eq.${piId},topup_payment_intent_id.eq.${piId}`)
+    .maybeSingle();
   if (!b) return;
 
   if (event.type === "charge.refunded") {
-    const refunded = charge.amount_refunded;
-    await admin
-      .from("bookings")
-      .update({ refunded_cents: refunded, payment_status: refunded >= charge.amount_captured ? "refunded" : "partially_refunded" })
-      .eq("id", b.id)
-      .neq("payment_status", "disputed");
-    await admin.from("bookings").update({ refunded_cents: refunded }).eq("id", b.id).eq("payment_status", "disputed");
     // One ledger row per refund (keyed by refund id), so partial refunds aren't double-counted.
     const refunds = await getStripe().refunds.list({ charge: charge.id, limit: 100 });
     const rows = refunds.data
       .filter((r) => r.status === "succeeded" || r.status === "pending")
       .map((r) => ({ booking_id: b.id, mechanic_id: b.mechanic_id, type: "refund" as const, amount_cents: -r.amount, stripe_object_id: r.id }));
     if (rows.length) await admin.from("ledger_entries").upsert(rows, { onConflict: "type,stripe_object_id", ignoreDuplicates: true });
+
+    // Total refunded across every charge on the booking.
+    const { data: all } = await admin.from("ledger_entries").select("amount_cents").eq("booking_id", b.id).eq("type", "refund");
+    const refunded = -(all ?? []).reduce((s, r) => s + r.amount_cents, 0);
+    const full = refunded >= (b.final_amount_cents ?? charge.amount_captured);
+    await admin
+      .from("bookings")
+      .update(b.payment_status === "disputed" ? { refunded_cents: refunded } : { refunded_cents: refunded, payment_status: full ? "refunded" : "partially_refunded" })
+      .eq("id", b.id);
+    // A fully refunded job doesn't count toward the mechanic's onboarding fee.
+    if (full) await admin.rpc("release_onboarding_fee", { p_booking_id: b.id });
   }
 }
 
@@ -84,7 +125,11 @@ async function onDispute(admin: Admin, event: Stripe.Event) {
   const dispute = event.data.object as Stripe.Dispute;
   const piId = typeof dispute.payment_intent === "string" ? dispute.payment_intent : dispute.payment_intent?.id;
   if (!piId) return;
-  const { data: b } = await admin.from("bookings").select("id, mechanic_id").eq("stripe_payment_intent_id", piId).maybeSingle();
+  const { data: b } = await admin
+    .from("bookings")
+    .select("id, mechanic_id")
+    .or(`stripe_payment_intent_id.eq.${piId},topup_payment_intent_id.eq.${piId}`)
+    .maybeSingle();
   if (!b) return;
   await admin.from("bookings").update({ payment_status: "disputed" }).eq("id", b.id);
   await admin
@@ -109,7 +154,7 @@ async function onAccount(admin: Admin, event: Stripe.Event) {
   }
 }
 
-/** Featured subscription period end. Newer API versions moved it onto subscription items. */
+/** Sponsored placement subscription period end. Newer API versions moved it onto subscription items. */
 export function subscriptionPeriodEnd(sub: Stripe.Subscription): number | null {
   const items = sub.items?.data ?? [];
   const ends = items.map((i) => (i as unknown as { current_period_end?: number }).current_period_end).filter((n): n is number => typeof n === "number");

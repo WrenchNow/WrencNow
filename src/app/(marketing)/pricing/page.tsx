@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Container, PageHeader } from "@/components/ui/layout";
-import { featuredPriceCents, platformFeeBps } from "@/lib/env";
+import { featuredPriceCents, onboardingFeePerJobCents, onboardingFeeTotalCents, platformFeeBps } from "@/lib/env";
+import { processingLabel } from "@/lib/fee-copy";
 import { money } from "@/lib/format";
 import { getServices } from "@/lib/public-data";
 import { TIER_LABEL } from "@/lib/tiers";
@@ -42,12 +43,13 @@ export default async function PricingPage() {
         </Card>
         <Card>
           <h2 className="text-xl font-bold uppercase">For mechanics</h2>
-          <p className="mt-2 text-sm text-ink">Free to join. WrenchNow keeps a {fee} platform fee on each completed job. Card processing and payouts run through Stripe.</p>
+          <p className="mt-2 text-sm text-ink">Nothing to pay up front. On each completed job, WrenchNow keeps a {fee} platform fee, card processing ({processingLabel()}) comes out, plus {money(onboardingFeePerJobCents(), { whole: true })} a job toward your{" "}
+            {money(onboardingFeeTotalCents(), { whole: true })} background check until it&apos;s covered. Card processing and payouts run through Stripe.</p>
         </Card>
         <Card>
-          <h2 className="text-xl font-bold uppercase">Featured mechanics</h2>
+          <h2 className="text-xl font-bold uppercase">Sponsored placement</h2>
           <p className="mt-2 text-sm text-ink">
-            Optional {money(featuredPriceCents(), { whole: true })}/month for a Featured badge and a boost in search. Cancel anytime. Reviews still matter most.
+            Optional {money(featuredPriceCents(), { whole: true })}/month to appear in the labeled “Sponsored” row above search results (up to 3, only when you match the search). Regular results are still ranked by reviews and reliability. Cancel anytime.
           </p>
         </Card>
       </div>

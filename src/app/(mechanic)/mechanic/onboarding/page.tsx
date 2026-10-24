@@ -1,14 +1,17 @@
 import type { Metadata } from "next";
-import { MechanicProfileForm, PhotoUpload, ServicesForm, SubmitApplicationForm } from "@/components/mechanic/forms";
+import { InsuranceForm, MechanicProfileForm, PhotoUpload, ServicesForm, SubmitApplicationForm, TypicalPartsForm } from "@/components/mechanic/forms";
 import { Readiness } from "@/components/mechanic/readiness";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Notice } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/layout";
 import { requireRole } from "@/lib/auth";
-import { stripeConfigured } from "@/lib/env";
+import { minWarrantyDays, onboardingFeePerJobCents, stripeConfigured } from "@/lib/env";
+import { onboardingJobsRemaining } from "@/lib/fees";
+import { money } from "@/lib/format";
 import { getMyMechanic, readiness } from "@/lib/mechanic";
 import { getServices } from "@/lib/public-data";
+import { createClient } from "@/lib/supabase/server";
 import { TIER_LABEL, tierRank } from "@/lib/tiers";
 import { syncStripeAccount } from "@/lib/stripe-sync";
 import { startStripeOnboarding } from "../actions";
@@ -22,6 +25,8 @@ export default async function MechanicOnboardingPage({ searchParams }: PageProps
   const [m, services] = await Promise.all([getMyMechanic(viewer.id), getServices()]);
   if (!m) return <Notice tone="danger">We couldn&apos;t find your mechanic profile. Contact support.</Notice>;
   const steps = readiness(m);
+  const { data: priceRows } = await (await createClient()).from("mechanic_services").select("service_id, typical_parts_cents").eq("mechanic_id", viewer.id);
+  const partsPrices = new Map((priceRows ?? []).map((r) => [r.service_id, r.typical_parts_cents]));
   const stripeDone = m.stripe_charges_enabled && m.stripe_payouts_enabled;
 
   return (
@@ -49,6 +54,7 @@ export default async function MechanicOnboardingPage({ searchParams }: PageProps
               <PhotoUpload userId={viewer.id} current={m.photo_url} />
             </div>
             <MechanicProfileForm
+              minWarrantyDays={minWarrantyDays()}
               d={{
                 display_name: m.display_name ?? viewer.profile.full_name ?? "",
                 phone: viewer.profile.phone ?? "",
@@ -59,6 +65,7 @@ export default async function MechanicOnboardingPage({ searchParams }: PageProps
                 hourly_rate: m.hourly_rate_cents ? m.hourly_rate_cents / 100 : null,
                 base_location: m.city ?? "",
                 service_radius_miles: m.service_radius_miles,
+                warranty_days: m.warranty_days,
                 has_tools: m.has_tools,
                 has_transport: m.has_transport,
               }}
@@ -73,18 +80,55 @@ export default async function MechanicOnboardingPage({ searchParams }: PageProps
               selected={m.serviceIds}
               tierRank={tierRank(m.skill_tier)}
             />
+            <div className="mt-6 border-t border-line pt-5">
+              <h3 className="mb-3 text-lg font-bold text-cream uppercase">Typical parts cost</h3>
+              <TypicalPartsForm
+                services={services
+                  .filter((s) => m.serviceIds.includes(s.id))
+                  .map((s) => ({ id: s.id, name: s.name, icon: s.icon, typical_parts_cents: partsPrices.get(s.id) ?? null }))}
+              />
+            </div>
           </Card>
 
           <Card>
             <h2 className="text-2xl font-bold uppercase">3. Submit & background check</h2>
             <p className="mt-1 mb-4 text-sm text-muted">
               When you submit, Checkr (our background check partner) emails you a secure link. They handle your SSN and consent — WrenchNow never sees it.
+              There&apos;s nothing to pay up front: the {money(m.onboarding_fee_total_cents, { whole: true })} check is covered by{" "}
+              {money(onboardingFeePerJobCents(), { whole: true })} from each of your first{" "}
+              {onboardingJobsRemaining(m.onboarding_fee_total_cents, 0, onboardingFeePerJobCents())} jobs.
             </p>
             <SubmitApplicationForm submitted={Boolean(m.onboarding_submitted_at)} />
           </Card>
 
           <Card>
-            <h2 className="text-2xl font-bold uppercase">4. Get paid</h2>
+            <h2 className="text-2xl font-bold uppercase">4. Proof of insurance</h2>
+            <p className="mt-1 mb-4 text-sm text-muted">
+              You need your own liability insurance to work on customers&apos; cars. We verify the certificate before you go live, and you&apos;ll need to upload a new one
+              before it expires.
+            </p>
+            {m.insurance_status === "verified" && (
+              <div className="mb-4">
+                <Notice tone="ok" title={`Verified through ${m.insurance_expires_on}`}>
+                  {m.insurance_pending_expires_on ? "Your renewal is being reviewed — you stay live in the meantime." : "Upload your renewal here before it expires."}
+                </Notice>
+              </div>
+            )}
+            {m.insurance_status === "submitted" && (
+              <div className="mb-4">
+                <Notice tone="info" title="Submitted">We&apos;re verifying your certificate.</Notice>
+              </div>
+            )}
+            {m.insurance_status === "rejected" && (
+              <div className="mb-4">
+                <Notice tone="danger" title="We couldn't verify your insurance">Upload a current certificate that shows your name and liability coverage.</Notice>
+              </div>
+            )}
+            <InsuranceForm userId={viewer.id} defaults={{ provider: m.insurance_provider ?? "", policy: m.insurance_policy_number ?? "" }} />
+          </Card>
+
+          <Card>
+            <h2 className="text-2xl font-bold uppercase">5. Get paid</h2>
             <p className="mt-1 mb-4 text-sm text-muted">Payouts go through Stripe. Takes about 5 minutes — have your bank details ready.</p>
             {stripeDone ? (
               <Notice tone="ok" title="Payouts connected">You&apos;re all set to get paid.</Notice>

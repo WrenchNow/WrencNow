@@ -1,7 +1,23 @@
 import "server-only";
-import { actorMayTransition, canTransition, NO_SHOW_GRACE_MINUTES, type Actor, type BookingStatus } from "@/lib/booking-status";
-import { platformFeeBps } from "@/lib/env";
-import { estimateMaxCents, platformFeeCents } from "@/lib/fees";
+import { randomInt } from "node:crypto";
+import { after } from "next/server";
+import { notifyBooking, type BookingEvent } from "@/lib/notify";
+import {
+  actorMayTransition,
+  ARRIVAL_CODE_MAX_ATTEMPTS,
+  ARRIVAL_RADIUS_METERS,
+  canCancel,
+  canTransition,
+  customerNoShowAt,
+  NO_SHOW_GRACE_MINUTES,
+  type Actor,
+  type BookingStatus,
+} from "@/lib/booking-status";
+import { customerNoShowFeeCents, onboardingFeePerJobCents, partsHandlingBps, platformFeeBps, processingFeeBps, processingFeeFixedCents } from "@/lib/env";
+import { partsEstimateFor } from "@/lib/parts";
+import { jobFees, partsChargeCents, partsHandlingCents, planCapture } from "@/lib/parts-math";
+import { geocode } from "@/lib/geocode";
+import { estimateMaxCents, mechanicDeductionsCents } from "@/lib/fees";
 import { isOfferedSlot } from "@/lib/slots";
 import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -9,7 +25,8 @@ import type { Database } from "@/types/database";
 
 export type BookingRow = Database["public"]["Tables"]["bookings"]["Row"];
 
-export class BookingError extends Error {}
+export { BookingError } from "@/lib/booking-error";
+import { BookingError } from "@/lib/booking-error";
 
 const STALE_UNPAID_MINUTES = 30;
 
@@ -29,7 +46,14 @@ export async function syncBookingPayment(bookingId: string): Promise<BookingRow[
   if (!b?.stripe_payment_intent_id || !["unpaid", "failed"].includes(b.payment_status)) return b?.payment_status ?? null;
   const pi = await getStripe().paymentIntents.retrieve(b.stripe_payment_intent_id);
   if (pi.status === "requires_capture") {
-    await admin.from("bookings").update({ payment_status: "authorized" }).eq("id", b.id).in("payment_status", ["unpaid", "failed"]);
+    const { data: changed } = await admin
+      .from("bookings")
+      .update({ payment_status: "authorized" })
+      .eq("id", b.id)
+      .in("payment_status", ["unpaid", "failed"])
+      .select("id");
+    // The request only reaches the mechanic once the card hold is in place.
+    if (changed?.length) after(() => notifyBooking(b.id, "requested"));
     return "authorized";
   }
   if (pi.status === "canceled") {
@@ -80,6 +104,11 @@ export type CreateBookingInput = {
   problem: string | null;
   urgency: Database["public"]["Enums"]["urgency"];
   start: string;
+  returnOldParts: boolean;
+  odometer?: number | null;
+  carLocation?: "driveway" | "street" | "garage" | "parking_lot" | null;
+  carCovered?: boolean;
+  billToBusiness?: boolean;
 };
 
 /**
@@ -91,11 +120,13 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
   const admin = createAdminClient();
   const now = new Date();
   const [{ data: mechanic }, { data: service }, { data: vehicle }] = await Promise.all([
-    admin.from("mechanics").select("id, is_live, hourly_rate_cents, stripe_account_id, display_name").eq("id", input.mechanicId).maybeSingle(),
+    admin.from("mechanics").select("id, is_live, insurance_expires_on, hourly_rate_cents, stripe_account_id, display_name").eq("id", input.mechanicId).maybeSingle(),
     admin.from("services").select("*").eq("slug", input.serviceSlug).eq("active", true).maybeSingle(),
-    admin.from("vehicles").select("id, owner_id, year, make, model, trim").eq("id", input.vehicleId).maybeSingle(),
+    admin.from("vehicles").select("id, owner_id, year, make, model, trim, mileage").eq("id", input.vehicleId).maybeSingle(),
   ]);
-  if (!mechanic?.is_live || !mechanic.stripe_account_id || !mechanic.hourly_rate_cents) throw new BookingError("This mechanic isn't taking bookings right now.");
+  if (!mechanic?.is_live || !insuranceCurrent(mechanic.insurance_expires_on) || !mechanic.stripe_account_id || !mechanic.hourly_rate_cents) {
+    throw new BookingError("This mechanic isn't taking bookings right now.");
+  }
   if (!service) throw new BookingError("Pick a service.");
   if (!isOfferedSlot(input.start, now, service.est_minutes_max)) throw new BookingError("That time isn't available. Please pick another slot.");
   if (!vehicle || vehicle.owner_id !== input.customerId) throw new BookingError("Pick one of your vehicles.");
@@ -105,11 +136,27 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
 
   await releaseStaleUnpaid(mechanic.id);
 
+  // Geocode the job address so a mechanic's arrival check-in can be verified against it.
+  let lat = input.lat;
+  let lng = input.lng;
+  if (lat === null || lng === null) {
+    const point = await geocode(input.address);
+    lat = point?.lat ?? null;
+    lng = point?.lng ?? null;
+  }
+
   const start = new Date(input.start);
   const end = new Date(start.getTime() + service.est_minutes_max * 60_000);
-  const estimate = estimateMaxCents(mechanic.hourly_rate_cents, service.est_minutes_max);
-  const fee = platformFeeCents(estimate, platformFeeBps());
+  const laborMax = estimateMaxCents(mechanic.hourly_rate_cents, service.est_minutes_max);
+  // Parts estimate (cost) from real receipts for similar jobs, else the mechanic's typical price; handling added on top.
+  const partsEst = await partsEstimateFor(mechanic.id, service.id, vehicle.make, vehicle.model);
+  const estimate = laborMax + partsChargeCents(partsEst.cents, partsHandlingBps());
+  const deductions = feesFor(estimate);
+  const fee = deductions.platform;
   const vehicleDesc = [vehicle.year, vehicle.make, vehicle.model, vehicle.trim].filter(Boolean).join(" ");
+  const businessName = input.billToBusiness
+    ? ((await admin.from("business_accounts").select("company_name").eq("owner_id", input.customerId).maybeSingle()).data?.company_name ?? null)
+    : null;
 
   const { data: booking, error } = await admin
     .from("bookings")
@@ -120,14 +167,26 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
       vehicle_id: vehicle.id,
       vehicle_desc: vehicleDesc,
       address: input.address,
-      location: input.lat !== null && input.lng !== null ? `SRID=4326;POINT(${input.lng} ${input.lat})` : null,
+      location: lat !== null && lng !== null ? `SRID=4326;POINT(${lng} ${lat})` : null,
       problem_description: input.problem,
       urgency: input.urgency,
       scheduled_start: start.toISOString(),
       scheduled_end: end.toISOString(),
       hourly_rate_cents: mechanic.hourly_rate_cents,
       estimated_max_cents: estimate,
+      hold_cents: estimate,
+      labor_max_cents: laborMax,
+      parts_estimate_cents: partsEst.cents,
+      vehicle_make: vehicle.make,
+      vehicle_model: vehicle.model,
       platform_fee_cents: fee,
+      // Colorado Motor Vehicle Repair Act: record the customer's consent to the written estimate.
+      estimate_approved_at: new Date().toISOString(),
+      return_old_parts: input.returnOldParts,
+      odometer: input.odometer ?? null,
+      car_location: input.carLocation ?? null,
+      car_covered: input.carCovered ?? false,
+      business_name: businessName,
     })
     .select("id")
     .single();
@@ -135,6 +194,10 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
     if (error?.message.includes("bookings_no_overlap")) throw new BookingError("That time was just taken. Please pick another slot.");
     if (error?.message.includes("tier")) throw new BookingError("This mechanic isn't qualified for that service.");
     throw new BookingError("We couldn't create that booking. Please try again.");
+  }
+  // Odometer at booking keeps the garage's mileage current (only ever moves forward).
+  if (input.odometer != null && input.odometer > (vehicle.mileage ?? -1)) {
+    await admin.from("vehicles").update({ mileage: input.odometer, mileage_updated_at: new Date().toISOString() }).eq("id", vehicle.id);
   }
 
   let piId: string | null = null;
@@ -145,7 +208,7 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
         currency: "usd",
         capture_method: "manual",
         automatic_payment_methods: { enabled: true },
-        application_fee_amount: fee,
+        application_fee_amount: deductions.platform + deductions.processing, // recomputed on the final amount at capture
         transfer_data: { destination: mechanic.stripe_account_id },
         description: `WrenchNow: ${service.name} with ${mechanic.display_name ?? "mechanic"}`,
         metadata: { booking_id: booking.id, customer_id: input.customerId, mechanic_id: mechanic.id },
@@ -165,7 +228,37 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
   }
 }
 
-export type TransitionOptions = { finalAmountCents?: number; reason?: string };
+/** Platform fee + card processing pass-through on a charge, both taken from the mechanic's share. */
+function feesFor(totalCents: number) {
+  return mechanicDeductionsCents(totalCents, platformFeeBps(), processingFeeBps(), processingFeeFixedCents());
+}
+
+export type TransitionOptions = { finalAmountCents?: number; laborCents?: number; reason?: string; arrivalCode?: string };
+
+function insuranceCurrent(expiresOn: string | null): boolean {
+  return Boolean(expiresOn && expiresOn >= new Date().toISOString().slice(0, 10));
+}
+
+/** 4-digit code the customer reads to the mechanic on arrival. */
+function newArrivalCode(): string {
+  return String(randomInt(0, 10_000)).padStart(4, "0");
+}
+
+/** Check the code the mechanic typed in. Locks after too many wrong tries. */
+async function verifyArrivalCode(bookingId: string, attempt: string | undefined) {
+  const admin = createAdminClient();
+  const { data: c } = await admin.from("booking_codes").select("*").eq("booking_id", bookingId).maybeSingle();
+  if (!c) throw new BookingError("This job has no arrival code. Contact support.");
+  if (c.verified_at) return;
+  if (c.attempts >= ARRIVAL_CODE_MAX_ATTEMPTS) throw new BookingError("Too many wrong codes. Contact support to start this job.");
+  const code = (attempt ?? "").replace(/\D/g, "");
+  if (code !== c.code) {
+    await admin.from("booking_codes").update({ attempts: c.attempts + 1 }).eq("booking_id", bookingId);
+    const left = ARRIVAL_CODE_MAX_ATTEMPTS - c.attempts - 1;
+    throw new BookingError(left > 0 ? `That code doesn't match. Ask the customer for the 4-digit code in their app (${left} tries left).` : "Too many wrong codes. Contact support to start this job.");
+  }
+  await admin.from("booking_codes").update({ verified_at: new Date().toISOString() }).eq("booking_id", bookingId);
+}
 
 /**
  * The only path for changing a booking's status. Checks who's asking, then
@@ -188,6 +281,13 @@ export async function transitionBooking(
   if (role !== "admin" && !isCustomer && !isMechanic) throw new BookingError("Booking not found.");
   if (!actorMayTransition(role, to)) throw new BookingError("You can't make that change.");
   if (!canTransition(current.status, to)) throw new BookingError(`This booking is already ${current.status.replace("_", " ")}.`);
+  if (to === "cancelled" && !canCancel(role, current.status)) {
+    throw new BookingError(
+      role === "mechanic"
+        ? "You've accepted this job, so it can't be cancelled in the app. Contact support if there's an emergency."
+        : "Your mechanic is already on the way, so this booking can't be cancelled in the app. Contact support if something's wrong.",
+    );
+  }
 
   // Claim the booking so a concurrent change (e.g. cancel vs. accept) can't also move money.
   const now = new Date().toISOString();
@@ -210,7 +310,7 @@ export async function transitionBooking(
 
 async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor, to: BookingStatus, opts: TransitionOptions): Promise<BookingRow> {
   const admin = createAdminClient();
-  const update: Database["public"]["Tables"]["bookings"]["Update"] = { status: to };
+  const update: Database["public"]["Tables"]["bookings"]["Update"] = { status: to, admin_override: role === "admin" };
   const stripe = getStripe();
 
 
@@ -218,13 +318,15 @@ async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor
     case "accepted": {
       if (b.payment_status !== "authorized") throw new BookingError("The customer's payment hasn't gone through yet.");
       if (new Date(b.scheduled_end).getTime() < Date.now()) throw new BookingError("This request's time has already passed.");
+      await admin.from("booking_codes").upsert({ booking_id: b.id, code: newArrivalCode() }, { onConflict: "booking_id", ignoreDuplicates: true });
+      break;
+    }
+    case "in_progress": {
+      // Proves the mechanic is physically there: the code only exists in the customer's app.
+      if (role !== "admin") await verifyArrivalCode(b.id, opts.arrivalCode);
       break;
     }
     case "cancelled": {
-      // Customers can cancel free until the mechanic heads out.
-      if (role === "customer" && !["requested", "accepted"].includes(b.status)) {
-        throw new BookingError("Your mechanic is already on the way. Contact them or support to cancel.");
-      }
       if (b.stripe_payment_intent_id && ["authorized", "unpaid"].includes(b.payment_status)) {
         const reason = role === "customer" ? "requested_by_customer" : "abandoned";
         await stripe.paymentIntents.cancel(b.stripe_payment_intent_id, { cancellation_reason: reason }).catch((e) => {
@@ -237,6 +339,7 @@ async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor
       break;
     }
     case "no_show": {
+      if (b.arrived_at && role !== "admin") throw new BookingError("Your mechanic checked in at your address. Contact support if something's wrong.");
       const graceEnds = new Date(b.scheduled_start).getTime() + NO_SHOW_GRACE_MINUTES * 60_000;
       if (role !== "admin" && Date.now() < graceEnds) {
         throw new BookingError("You can report a no-show 30 minutes after the scheduled time.");
@@ -247,32 +350,115 @@ async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor
       update.payment_status = "canceled";
       break;
     }
-    case "completed": {
-      const final = opts.finalAmountCents;
-      if (!final || !Number.isInteger(final) || final <= 0) throw new BookingError("Enter the final amount for the job.");
-      if (final > b.estimated_max_cents) throw new BookingError("The final amount can't be more than the estimate the customer approved.");
-      if (!b.stripe_payment_intent_id || !["authorized", "captured"].includes(b.payment_status)) {
-        throw new BookingError("There's no authorized payment to capture.");
+    case "customer_no_show": {
+      if (!b.arrived_at) throw new BookingError("Check in at the address first.");
+      const waitEnds = customerNoShowAt(b.arrived_at, b.scheduled_start);
+      if (role !== "admin" && Date.now() < waitEnds) {
+        const mins = Math.ceil((waitEnds - Date.now()) / 60_000);
+        throw new BookingError(`Give the customer ${mins} more minute${mins === 1 ? "" : "s"} to respond.`);
       }
-      // If a previous attempt captured but failed to save, don't capture twice — record what Stripe actually took.
+      if (!b.stripe_payment_intent_id || b.payment_status !== "authorized") throw new BookingError("There's no card hold to charge the no-show fee to.");
+      const fee = Math.min(customerNoShowFeeCents(), b.estimated_max_cents);
       const pi = await stripe.paymentIntents.retrieve(b.stripe_payment_intent_id);
-      let captured = final;
+      let charged = fee;
       if (pi.status === "requires_capture") {
         await stripe.paymentIntents.capture(
           b.stripe_payment_intent_id,
-          { amount_to_capture: final, application_fee_amount: platformFeeCents(final, platformFeeBps()) },
-          { idempotencyKey: `capture-${b.id}-${final}` },
+          { amount_to_capture: fee, application_fee_amount: feesFor(fee).platform + feesFor(fee).processing },
+          { idempotencyKey: `customer-no-show-${b.id}` },
         );
       } else if (pi.status === "succeeded") {
-        captured = pi.amount_received;
+        charged = pi.amount_received;
       } else {
-        throw new BookingError("The customer's payment can't be captured. Contact support.");
+        throw new BookingError("The customer's card hold is no longer available. Contact support.");
       }
-      update.final_amount_cents = captured;
-      update.platform_fee_cents = platformFeeCents(captured, platformFeeBps());
+      update.customer_no_show_fee_cents = charged;
+      update.final_amount_cents = charged;
+      update.platform_fee_cents = feesFor(charged).platform;
+      update.processing_fee_cents = feesFor(charged).processing;
       update.payment_status = "captured";
       break;
     }
+    case "completed": {
+      // Labor is entered by the mechanic; parts come from uploaded receipts (+ disclosed handling).
+      const labor = opts.laborCents;
+      if (labor === undefined || !Number.isInteger(labor) || labor < 0) throw new BookingError("Enter the labor charge.");
+      const laborMax = b.labor_max_cents ?? b.estimated_max_cents;
+      if (labor > laborMax) throw new BookingError(`Labor can't be more than the approved labor estimate (${(laborMax / 100).toFixed(2)}).`);
+      const { data: parts } = await admin.from("booking_parts").select("status, receipt_cents").eq("booking_id", b.id);
+      if ((parts ?? []).some((p) => p.status === "approved")) {
+        throw new BookingError("Upload the receipt for each approved part, or remove parts you didn't use.");
+      }
+      if ((parts ?? []).some((p) => p.status === "quoted")) throw new BookingError("The customer hasn't approved your parts quote yet.");
+      const partsReceipt = (parts ?? []).filter((p) => p.status === "purchased").reduce((sum, p) => sum + (p.receipt_cents ?? 0), 0);
+      const handling = partsHandlingCents(partsReceipt, partsHandlingBps());
+      const final = labor + partsReceipt + handling;
+      if (final <= 0) throw new BookingError("Enter what the job cost.");
+      if (final > b.estimated_max_cents) throw new BookingError("The total can't be more than the estimate the customer approved.");
+      if (!b.stripe_payment_intent_id || !["authorized", "captured"].includes(b.payment_status)) {
+        throw new BookingError("There's no authorized payment to capture.");
+      }
+
+      const fees = jobFees(labor, final, platformFeeBps(), processingFeeBps(), processingFeeFixedCents());
+      const main = await stripe.paymentIntents.retrieve(b.stripe_payment_intent_id);
+      const topup = b.topup_payment_intent_id ? await stripe.paymentIntents.retrieve(b.topup_payment_intent_id) : null;
+      let captured = final;
+      let onboarding = 0;
+      if (main.status === "requires_capture") {
+        // Onboarding fee installment comes out of the mechanic's share, on top of the platform and processing fees.
+        const { data: claimed } = await admin.rpc("claim_onboarding_fee", {
+          p_booking_id: b.id,
+          p_per_job_cents: onboardingFeePerJobCents(),
+          p_final_cents: final,
+          p_platform_fee_cents: fees.platform + fees.processing,
+        });
+        onboarding = claimed ?? 0;
+        const topupAuth = topup?.status === "requires_capture" ? topup.amount_capturable : 0;
+        const plan = planCapture(final, main.amount_capturable, topupAuth, fees.platform + fees.processing + onboarding);
+        try {
+          await stripe.paymentIntents.capture(
+            main.id,
+            { amount_to_capture: plan.mainCapture, application_fee_amount: plan.mainFee },
+            { idempotencyKey: `capture-${b.id}-${final}-${onboarding}` },
+          );
+          if (topup && topup.status === "requires_capture") {
+            if (plan.topupCapture > 0) {
+              await stripe.paymentIntents.capture(
+                topup.id,
+                { amount_to_capture: plan.topupCapture, application_fee_amount: plan.topupFee },
+                { idempotencyKey: `capture-topup-${b.id}-${final}` },
+              );
+            } else {
+              await stripe.paymentIntents.cancel(topup.id).catch(() => undefined);
+            }
+          }
+        } catch (e) {
+          if (onboarding) await admin.rpc("release_onboarding_fee", { p_booking_id: b.id });
+          throw e;
+        }
+      } else if (main.status === "succeeded") {
+        // A previous attempt captured but failed to save — record what Stripe actually took.
+        captured = main.amount_received + (topup?.status === "succeeded" ? topup.amount_received : 0);
+        const { data: row } = await admin.from("onboarding_fee_charges").select("amount_cents").eq("booking_id", b.id).maybeSingle();
+        onboarding = row?.amount_cents ?? 0;
+      } else {
+        throw new BookingError("The customer's payment can't be captured. Contact support.");
+      }
+      update.labor_cents = labor;
+      update.parts_cents = partsReceipt;
+      update.parts_handling_cents = handling;
+      update.final_amount_cents = captured;
+      update.platform_fee_cents = fees.platform;
+      update.processing_fee_cents = fees.processing;
+      update.onboarding_fee_cents = onboarding;
+      update.payment_status = "captured";
+      break;
+    }
+  }
+
+  // Release any unused parts top-up hold when a job ends without completing.
+  if (["cancelled", "no_show", "customer_no_show"].includes(to) && b.topup_payment_intent_id) {
+    await stripe.paymentIntents.cancel(b.topup_payment_intent_id).catch(() => undefined);
   }
 
   update.processing_until = null;
@@ -282,6 +468,7 @@ async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor
   if (to === "no_show") {
     await admin.from("no_shows").insert({ booking_id: b.id, mechanic_id: b.mechanic_id, reported_by: actor.id, reason: opts.reason?.slice(0, 1000) ?? null });
   }
+  if (to !== "requested") after(() => notifyBooking(b.id, to as BookingEvent));
   await audit(actor.id, `booking.${to}`, b.id, { from: b.status, ...(opts.finalAmountCents ? { final: opts.finalAmountCents } : {}) });
   return updated;
 }
@@ -292,8 +479,8 @@ async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor
  */
 export async function cancelOpenBookingsForMechanic(mechanicId: string, actorId: string | null, reason: string) {
   const admin = createAdminClient();
-  const { data: m } = await admin.from("mechanics").select("is_live").eq("id", mechanicId).maybeSingle();
-  if (!m || m.is_live) return 0;
+  const { data: m } = await admin.from("mechanics").select("is_live, insurance_expires_on").eq("id", mechanicId).maybeSingle();
+  if (!m || (m.is_live && insuranceCurrent(m.insurance_expires_on))) return 0;
   const { data: open } = await admin.from("bookings").select("id").eq("mechanic_id", mechanicId).in("status", ["requested", "accepted", "en_route"]);
   let n = 0;
   for (const b of open ?? []) {
@@ -305,4 +492,29 @@ export async function cancelOpenBookingsForMechanic(mechanicId: string, actorId:
     }
   }
   return n;
+}
+
+/**
+ * Mechanic checks in at the job address. Requires their device location within
+ * ARRIVAL_RADIUS_METERS of the address (when the address could be geocoded), so a
+ * customer no-show can't be claimed from somewhere else.
+ */
+export async function checkInAtAddress(bookingId: string, mechanicId: string, lat: number, lng: number) {
+  const admin = createAdminClient();
+  const { data: b } = await admin.from("bookings").select("id, mechanic_id, status, arrived_at").eq("id", bookingId).maybeSingle();
+  if (!b || b.mechanic_id !== mechanicId) throw new BookingError("Booking not found.");
+  if (b.status !== "en_route") throw new BookingError("Tap “I'm on my way” first.");
+  if (b.arrived_at) return;
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) throw new BookingError("We couldn't read your location.");
+  const { data: distance } = await admin.rpc("distance_to_booking_m", { p_booking_id: bookingId, p_lat: lat, p_lng: lng });
+  if (typeof distance === "number" && distance > ARRIVAL_RADIUS_METERS) {
+    throw new BookingError(`You're about ${(distance / 1609.344).toFixed(1)} miles from the address. Check in when you get there.`);
+  }
+  await admin
+    .from("bookings")
+    .update({ arrived_at: new Date().toISOString(), arrived_location: `SRID=4326;POINT(${lng} ${lat})`, arrived_distance_m: typeof distance === "number" ? distance : null })
+    .eq("id", bookingId)
+    .is("arrived_at", null);
+  await audit(mechanicId, "booking.arrived", bookingId, { distance_m: distance ?? null });
+  after(() => notifyBooking(bookingId, "arrived"));
 }

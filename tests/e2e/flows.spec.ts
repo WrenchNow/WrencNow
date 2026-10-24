@@ -70,12 +70,24 @@ test("customer booking wizard reaches the payment step", async ({ page }) => {
   await page.getByRole("radio", { name: /2015 Testmake Testmodel/ }).check({ force: true });
   await page.getByLabel("Where will the car be?").fill("1234 Test St, Denver, CO 80205");
   await page.getByRole("button", { name: /Next: Time/ }).click();
+  await expect(page.getByText("Tell us where the car is parked.")).toBeVisible();
+  await page.getByRole("radio", { name: "Street" }).check({ force: true });
+  await expect(page.getByText(/Mobile mechanics work outdoors/)).toBeVisible();
+  await page.getByLabel(/under cover/).check();
+  await expect(page.getByText(/Mobile mechanics work outdoors/)).toHaveCount(0);
+  // Phone is required so the mechanic can reach the customer on arrival.
+  await page.getByLabel("Your phone number").fill("");
+  await page.getByRole("button", { name: /Next: Time/ }).click();
+  await expect(page.getByText("Enter a phone number your mechanic can reach you at.")).toBeVisible();
+  await page.getByLabel("Your phone number").fill("(303) 555-0100");
+  await page.getByRole("button", { name: /Next: Time/ }).click();
   // Pick tomorrow's first open slot.
   await page.getByRole("tab").nth(1).click();
   await page.getByRole("tabpanel").getByRole("button", { disabled: false }).first().click();
   await page.getByRole("button", { name: /Next: Confirm/ }).click();
   await expect(page.getByText("How payment works")).toBeVisible();
   await expect(page.getByText(/We place a hold of \$/)).toBeVisible();
+  await expect(page.getByText(/no-show fee is charged instead of the job/)).toBeVisible();
 });
 
 test("mechanic sees the live dashboard and online toggle works", async ({ page }) => {
@@ -101,3 +113,14 @@ test("non-admins can't open admin pages", async ({ page }) => {
   await page.goto("/admin");
   await expect(page).toHaveURL(/\/account/);
 });
+
+test("no mechanics nearby → customer can send a request to be matched by hand", async ({ page }) => {
+  await page.goto("/search?loc=40.7128,-74.0060"); // far outside the Denver test data
+  await expect(page.getByText("No mechanics here yet")).toBeVisible();
+  await page.waitForLoadState("networkidle");
+  await page.getByLabel("Your name").fill("E2E Requester");
+  await page.getByLabel("Email").fill(`e2e.req.${Date.now()}@example.test`);
+  await page.getByRole("button", { name: "Send my request" }).click();
+  await expect(page.getByText("Request sent")).toBeVisible();
+});
+

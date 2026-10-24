@@ -1,7 +1,8 @@
 /**
  * Search ranking. Reviews dominate: a Bayesian-smoothed rating (so one 5★ review
  * doesn't beat fifty 4.8★ reviews) times a confidence factor from review volume.
- * No-shows are a heavy penalty. Featured is a boost, not an override. Distance
+ * No-shows are a heavy penalty. Sponsored placement does NOT affect this score —
+ * sponsored mechanics are shown separately in a labeled row (see sponsoredRow). Distance
  * and availability break ties.
  */
 export type RankInput = {
@@ -32,10 +33,9 @@ export function rankScore(m: RankInput): number {
   const reviewWeight = 60 * (rating / 5); // up to 60 points
   const volume = 10 * Math.min(1, Math.log10(1 + m.review_count) / 2); // up to 10 at ~100 reviews
   const reliability = -40 * noShowRate(m.no_show_count, m.completed_jobs); // up to −40
-  const featured = m.featured ? 8 : 0;
   const online = m.online ? 4 : 0;
   const distance = -Math.min(10, m.distance_miles / 2.5); // up to −10 at 25 mi
-  return reviewWeight + volume + reliability + featured + online + distance;
+  return reviewWeight + volume + reliability + online + distance;
 }
 
 export type SortKey = "best" | "nearest" | "price";
@@ -45,4 +45,13 @@ export function sortMechanics<T extends RankInput & { hourly_rate_cents: number 
   if (sort === "nearest") return copy.sort((a, b) => a.distance_miles - b.distance_miles);
   if (sort === "price") return copy.sort((a, b) => (a.hourly_rate_cents ?? Infinity) - (b.hourly_rate_cents ?? Infinity));
   return copy.sort((a, b) => rankScore(b) - rankScore(a));
+}
+
+export const SPONSORED_SLOTS = 3;
+
+/** Split results into a labeled Sponsored row (best-ranked sponsored matches, max 3) and the organic list. */
+export function sponsoredRow<T extends RankInput & { id: string; hourly_rate_cents: number | null }>(ranked: T[]): { sponsored: T[]; organic: T[] } {
+  const sponsored = sortMechanics(ranked.filter((m) => m.featured)).slice(0, SPONSORED_SLOTS);
+  const ids = new Set(sponsored.map((m) => m.id));
+  return { sponsored, organic: ranked.filter((m) => !ids.has(m.id)) };
 }

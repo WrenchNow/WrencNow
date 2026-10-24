@@ -48,3 +48,17 @@ export function monthKey(d: Date): string {
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit" }).formatToParts(d);
   return `${parts.find((p) => p.type === "year")!.value}-${parts.find((p) => p.type === "month")!.value}`;
 }
+
+export function timeOnly(iso: string | Date): string {
+  return new Intl.DateTimeFormat("en-US", { timeZone: TZ, hour: "numeric", minute: "2-digit" }).format(new Date(iso));
+}
+
+export const WARRANTY_OPTIONS = [0, 30, 90, 180, 365] as const;
+
+export function warrantyLabel(days: number): string {
+  if (days <= 0) return "No warranty";
+  if (days === 180) return "6-month warranty";
+  if (days === 365) return "12-month warranty";
+  return `${days}-day warranty`;
+}
+

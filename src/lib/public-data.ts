@@ -32,13 +32,27 @@ export async function getPublicMechanic(id: string) {
   const { data } = await supabase.rpc("get_public_mechanic", { mechanic_id: id });
   const m = data?.[0];
   if (!m) return null;
-  const [{ data: offered }, { data: reviews }] = await Promise.all([
+  const [{ data: offered }, { data: reviews }, { data: warranty }] = await Promise.all([
     supabase.from("mechanic_services").select("services(*)").eq("mechanic_id", id),
     supabase.from("reviews").select("id, reviewer_name, rating, body, created_at").eq("mechanic_id", id).order("created_at", { ascending: false }).limit(20),
+    supabase.rpc("mechanic_warranty_days", { mid: id }),
   ]);
   const services = (offered ?? [])
     .map((o) => o.services)
     .filter((s): s is Service => Boolean(s && s.active))
     .sort((a, b) => a.sort - b.sort);
-  return { ...m, rating_avg: m.rating_avg === null ? null : Number(m.rating_avg), services, reviews: reviews ?? [] };
+  return { ...m, rating_avg: m.rating_avg === null ? null : Number(m.rating_avg), services, reviews: reviews ?? [], warranty_days: warranty ?? 0 };
+}
+
+/**
+ * Display names for mechanics on the viewer's own bookings. Customers can't read the
+ * private mechanics table (RLS), so names come from the service role — pass only ids
+ * taken from bookings the viewer was allowed to read.
+ */
+export async function mechanicNames(ids: string[]): Promise<Map<string, string>> {
+  const unique = [...new Set(ids)];
+  if (!unique.length) return new Map();
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const { data } = await createAdminClient().from("mechanics").select("id, display_name").in("id", unique);
+  return new Map((data ?? []).filter((m) => m.display_name).map((m) => [m.id, m.display_name!]));
 }

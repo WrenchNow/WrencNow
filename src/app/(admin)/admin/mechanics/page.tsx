@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ReviewMechanicForm } from "@/components/admin-forms";
+import { InsuranceReviewForm, ReviewMechanicForm, WaiveFeeForm } from "@/components/admin-forms";
 import { Badge, EmptyState } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/layout";
 import { money, shortDate } from "@/lib/format";
@@ -24,9 +24,19 @@ export default async function AdminMechanicsPage({ searchParams }: PageProps<"/a
   await requireAdmin();
   const admin = createAdminClient();
   let q = admin.from("mechanics").select("*, profiles(full_name, phone)").order("onboarding_submitted_at", { ascending: true, nullsFirst: false }).limit(200);
-  if (filter === "review") q = q.eq("status", "pending").not("onboarding_submitted_at", "is", null);
+  if (filter === "review") q = q.or("and(status.eq.pending,onboarding_submitted_at.not.is.null),insurance_status.eq.submitted,insurance_pending_expires_on.not.is.null");
   if (filter === "live") q = q.eq("is_live", true);
   const { data: mechanics } = await q;
+  // Short-lived links to private insurance certificates.
+  const docLinks = new Map<string, string>();
+  await Promise.all(
+    (mechanics ?? [])
+      .filter((m) => m.insurance_doc_path)
+      .map(async (m) => {
+        const { data } = await admin.storage.from("mechanic-docs").createSignedUrl(m.insurance_doc_path!, 600).catch(() => ({ data: null }));
+        if (data?.signedUrl) docLinks.set(m.id, data.signedUrl);
+      }),
+  );
 
   return (
     <>
@@ -54,13 +64,39 @@ export default async function AdminMechanicsPage({ searchParams }: PageProps<"/a
                     <Badge tone={CHECK_TONE[m.check_status]}>Check: {m.check_status.replace("_", " ")}</Badge>
                     <Badge tone={m.stripe_charges_enabled && m.stripe_payouts_enabled ? "ok" : "neutral"}>Stripe: {m.stripe_charges_enabled && m.stripe_payouts_enabled ? "ready" : m.stripe_account_id ? "incomplete" : "not started"}</Badge>
                     <Badge tone="ore">{TIER_LABEL[m.skill_tier]}</Badge>
+                    <Badge tone={m.insurance_status === "verified" ? "ok" : m.insurance_status === "rejected" ? "danger" : m.insurance_status === "submitted" ? "info" : "neutral"}>
+                      Insurance: {m.insurance_status}
+                      {m.insurance_expires_on ? ` · exp ${m.insurance_expires_on}` : ""}
+                    </Badge>
+                    <Badge tone={m.onboarding_fee_collected_cents >= m.onboarding_fee_total_cents ? "ok" : "neutral"}>
+                      Check fee: {money(m.onboarding_fee_collected_cents, { whole: true })}/{money(m.onboarding_fee_total_cents, { whole: true })}
+                    </Badge>
                     {m.is_live && <Badge tone="ok">● Live</Badge>}
                   </div>
+                  {(m.insurance_status === "submitted" || m.insurance_pending_expires_on) && (
+                    <div className="mt-3 rounded-[var(--radius-control)] border border-line-strong bg-raised p-3 text-sm">
+                      <p className="font-semibold text-cream">{m.insurance_status === "verified" ? "Insurance renewal to review" : "Insurance to review"}</p>
+                      <p className="mt-1 text-ink">
+                        {m.insurance_provider} · policy {m.insurance_policy_number} · mechanic says it expires {m.insurance_pending_expires_on ?? "—"}
+                      </p>
+                      {docLinks.get(m.id) ? (
+                        <a href={docLinks.get(m.id)} target="_blank" rel="noopener noreferrer" className="mt-1 inline-block font-semibold text-ore hover:underline">
+                          Open certificate (link valid 10 min) →
+                        </a>
+                      ) : (
+                        <p className="mt-1 text-muted">Certificate file unavailable.</p>
+                      )}
+                      <div className="mt-3">
+                        <InsuranceReviewForm id={m.id} pendingExpiry={m.insurance_pending_expires_on} />
+                      </div>
+                    </div>
+                  )}
                   {m.certifications.length > 0 && <p className="mt-2 text-sm text-ink">Certs: {m.certifications.join(", ")}</p>}
                   {m.bio && <p className="mt-2 line-clamp-3 max-w-2xl text-sm text-ink">{m.bio}</p>}
                 </div>
-                <div className="shrink-0">
+                <div className="flex shrink-0 flex-col gap-3">
                   <ReviewMechanicForm id={m.id} status={m.status} tier={m.skill_tier} />
+                  {m.onboarding_fee_collected_cents < m.onboarding_fee_total_cents && <WaiveFeeForm id={m.id} />}
                 </div>
               </div>
             </li>
@@ -68,7 +104,7 @@ export default async function AdminMechanicsPage({ searchParams }: PageProps<"/a
         </ul>
       ) : (
         <EmptyState icon="🧰" title="Nothing here">
-          {filter === "review" ? "No applications waiting for review." : "No mechanics match this filter."}
+          {filter === "review" ? "No applications or insurance certificates waiting for review." : "No mechanics match this filter."}
         </EmptyState>
       )}
     </>

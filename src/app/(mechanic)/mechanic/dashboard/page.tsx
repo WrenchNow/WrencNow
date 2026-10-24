@@ -10,8 +10,9 @@ import { PageHeader } from "@/components/ui/layout";
 import { requireRole } from "@/lib/auth";
 import { featuredPriceCents, platformFeeBps } from "@/lib/env";
 import { dateTime, money } from "@/lib/format";
-import { getMyMechanic, readiness } from "@/lib/mechanic";
+import { getMyMechanic, insuranceDaysRemaining, readiness } from "@/lib/mechanic";
 import { createClient } from "@/lib/supabase/server";
+import { processingLabel } from "@/lib/fee-copy";
 import { manageFeatured, setOnline, startFeatured } from "../actions";
 
 export const metadata: Metadata = { title: "Mechanic dashboard" };
@@ -30,8 +31,15 @@ export default async function MechanicDashboardPage({ searchParams }: PageProps<
     .eq("payment_status", "authorized")
     .order("scheduled_start")
     .limit(10);
+  const { data: claims } = await supabase
+    .from("warranty_claims")
+    .select("id, description, status, created_at, bookings(services(name), vehicle_desc)")
+    .eq("mechanic_id", viewer.id)
+    .in("status", ["open", "mechanic_contacted"])
+    .order("created_at");
 
   const featured = m.featured_until && new Date(m.featured_until) > new Date();
+  const insuranceDaysLeft = insuranceDaysRemaining(m.insurance_expires_on);
   const fee = platformFeeBps() / 100;
 
   return (
@@ -39,8 +47,38 @@ export default async function MechanicDashboardPage({ searchParams }: PageProps<
       <LiveRefresh mechanicId={viewer.id} />
       <PageHeader eyebrow="Dashboard" title={`Hey, ${(m.display_name ?? viewer.profile.full_name ?? "there").split(" ")[0]}`} />
 
-      {sp.featured === "success" && <div className="mb-6"><Notice tone="ok" title="You're Featured">Your badge and search boost are active. It can take a minute to show up.</Notice></div>}
-      {sp.featured === "not-live" && <div className="mb-6"><Notice tone="warn">Finish your go-live checklist before upgrading to Featured.</Notice></div>}
+      {m.insurance_status === "verified" && insuranceDaysLeft !== null && insuranceDaysLeft <= 30 && !m.insurance_pending_expires_on && (
+        <div className="mb-6">
+          <Notice tone="warn" title={insuranceDaysLeft < 0 ? "Your insurance has expired" : `Your insurance expires in ${insuranceDaysLeft} day${insuranceDaysLeft === 1 ? "" : "s"}`}>
+            {insuranceDaysLeft < 0 ? "You're hidden from search until you upload a current certificate. " : "Upload your renewal so you don't drop out of search. "}
+            <Link href="/mechanic/onboarding" className="font-semibold text-ore hover:underline">
+              Upload certificate →
+            </Link>
+          </Notice>
+        </div>
+      )}
+      {sp.featured === "success" && <div className="mb-6"><Notice tone="ok" title="You're sponsored">You&apos;ll show in the Sponsored row for matching searches. It can take a minute to show up.</Notice></div>}
+      {sp.featured === "not-live" && <div className="mb-6"><Notice tone="warn">Finish your go-live checklist before adding sponsored placement.</Notice></div>}
+
+      {claims && claims.length > 0 && (
+        <div className="mb-6">
+          <Notice tone="warn" title={`${claims.length} warranty claim${claims.length === 1 ? "" : "s"} open`}>
+            <ul className="mt-2 space-y-2">
+              {claims.map((c) => (
+                <li key={c.id}>
+                  <span className="font-semibold text-cream">
+                    {c.bookings?.services?.name ?? "Job"}
+                    {c.bookings?.vehicle_desc ? ` · ${c.bookings.vehicle_desc}` : ""}
+                  </span>{" "}
+                  <span className="text-muted">({dateTime(c.created_at)})</span>
+                  <span className="block">&ldquo;{c.description}&rdquo;</span>
+                </li>
+              ))}
+            </ul>
+            <span className="mt-2 block">WrenchNow support will contact you to arrange a fix. Warranty repairs are part of the job you were paid for.</span>
+          </Notice>
+        </div>
+      )}
 
       {!m.is_live ? (
         <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
@@ -114,17 +152,18 @@ export default async function MechanicDashboardPage({ searchParams }: PageProps<
                   <dd className={`font-display text-2xl font-bold ${m.no_show_count ? "text-danger" : "text-cream"}`}>{m.no_show_count}</dd>
                 </div>
                 <div>
-                  <dt className="text-muted">Platform fee</dt>
+                  <dt className="text-muted">Fees per job</dt>
                   <dd className="font-display text-2xl font-bold text-cream">{fee}%</dd>
+                  <dd className="text-xs text-muted">+ card processing {processingLabel()}</dd>
                 </div>
               </dl>
             </Card>
 
             <Card className={featured ? "border-warn/40" : ""}>
-              <h2 className="text-xl font-bold uppercase">★ Featured</h2>
+              <h2 className="text-xl font-bold uppercase">Sponsored placement</h2>
               {featured ? (
                 <>
-                  <p className="mt-2 text-sm text-ink">Active through {dateTime(m.featured_until!)}. You get a Featured badge and a boost in search.</p>
+                  <p className="mt-2 text-sm text-ink">Active through {dateTime(m.featured_until!)}. You show in the Sponsored row for matching searches.</p>
                   <form action={manageFeatured} className="mt-4">
                     <Button type="submit" variant="subtle">
                       Manage subscription
@@ -134,13 +173,13 @@ export default async function MechanicDashboardPage({ searchParams }: PageProps<
               ) : (
                 <>
                   <ul className="mt-3 space-y-1.5 text-sm text-ink">
-                    <li>✓ Gold Featured badge on your profile</li>
+                    <li>✓ Shown in the labeled Sponsored row above matching searches (up to 3)</li>
                     <li>✓ Boost in search results</li>
                     <li>✓ Cancel anytime</li>
                   </ul>
-                  <p className="mt-3 text-xs text-muted">Reviews still count most — Featured helps you get seen, not skip the line.</p>
+                  <p className="mt-3 text-xs text-muted">Regular results are still ranked by reviews and reliability — sponsorship gets you seen, it doesn&apos;t change your rank.</p>
                   <form action={startFeatured} className="mt-4">
-                    <Button type="submit">Go Featured — {money(featuredPriceCents(), { whole: true })}/mo</Button>
+                    <Button type="submit">Get sponsored — {money(featuredPriceCents(), { whole: true })}/mo</Button>
                   </form>
                 </>
               )}

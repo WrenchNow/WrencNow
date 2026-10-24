@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { FaqList } from "@/components/faq-list";
 import { Container, PageHeader } from "@/components/ui/layout";
 import { CUSTOMER_FAQ, MECHANIC_FAQ } from "@/content/faq";
+import { CONTACT_EMAIL, CONTACT_MAILTO } from "@/lib/contact";
 
 export const metadata: Metadata = { title: "FAQ", description: "Answers about booking, pricing, payments, and joining WrenchNow as a mechanic." };
 
@@ -15,8 +16,8 @@ export default function FaqPage() {
       <FaqList items={MECHANIC_FAQ} />
       <p className="mt-10 text-sm text-muted">
         Still have a question? Email{" "}
-        <a href="mailto:hello@getwrenchnow.com" className="text-ore hover:underline">
-          hello@getwrenchnow.com
+        <a href={CONTACT_MAILTO} className="text-ore hover:underline">
+          {CONTACT_EMAIL}
         </a>
         .
       </p>

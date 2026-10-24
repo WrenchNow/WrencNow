@@ -1,10 +1,10 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { addVehicle, customerTransition, submitReview, updateProfile, type FormState } from "@/app/(customer)/account/actions";
+import { addVehicle, customerTransition, fileWarrantyClaim, updateVehicleCare, saveBusinessAccount, reportOffPlatformPayment, submitReview, updateProfile, type FormState } from "@/app/(customer)/account/actions";
 import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/feedback";
-import { Field, Input, Textarea } from "@/components/ui/form";
+import { Checkbox, Field, Input, Textarea } from "@/components/ui/form";
 
 export function StateNotice({ state }: { state: FormState }) {
   if (state.error) return <Notice tone="danger">{state.error}</Notice>;
@@ -140,5 +140,106 @@ export function ReviewForm({ bookingId }: { bookingId: string }) {
         {pending ? "Posting…" : "Post review"}
       </Button>
     </form>
+  );
+}
+
+export function OffPlatformReport({ bookingId }: { bookingId: string }) {
+  const [state, action, pending] = useActionState(reportOffPlatformPayment, {});
+  const [open, setOpen] = useState(false);
+  if (state.ok) return <StateNotice state={state} />;
+  return (
+    <div className="rounded-[var(--radius-control)] border border-line bg-raised p-4">
+      {!open ? (
+        <button type="button" onClick={() => setOpen(true)} className="text-sm font-semibold text-ore hover:underline">
+          Asked to pay outside WrenchNow? Report it
+        </button>
+      ) : (
+        <form action={action} className="flex flex-col gap-3">
+          <StateNotice state={state} />
+          <input type="hidden" name="bookingId" value={bookingId} />
+          <p className="text-sm text-ink">Don&apos;t pay. Tell us what happened and we&apos;ll look into it.</p>
+          <Field label="How did they ask you to pay? (optional)" htmlFor="method">
+            <Input id="method" name="method" maxLength={60} placeholder="Cash, Venmo, Zelle…" />
+          </Field>
+          <Field label="What happened? (optional)" htmlFor="details">
+            <Textarea id="details" name="details" maxLength={2000} />
+          </Field>
+          <div className="flex gap-2">
+            <Button type="submit" variant="danger" disabled={pending}>
+              {pending ? "Sending…" : "Send report"}
+            </Button>
+            <Button variant="subtle" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}
+
+export function WarrantyClaimForm({ bookingId }: { bookingId: string }) {
+  const [state, action, pending] = useActionState(fileWarrantyClaim, {});
+  if (state.ok) return <StateNotice state={state} />;
+  return (
+    <form action={action} className="flex flex-col gap-3">
+      <StateNotice state={state} />
+      <input type="hidden" name="bookingId" value={bookingId} />
+      <Field label="What's wrong?" htmlFor="claim_description" hint="e.g. the squeal came back after a week, or a light is back on.">
+        <Textarea id="claim_description" name="description" rows={3} required minLength={10} maxLength={2000} />
+      </Field>
+      <Button type="submit" variant="subtle" disabled={pending} className="self-start">
+        {pending ? "Sending…" : "Report a problem"}
+      </Button>
+    </form>
+  );
+}
+
+export function VehicleCareForm({ id, mileage, reminders, label }: { id: string; mileage: number | null; reminders: boolean; label: string }) {
+  const [state, action, pending] = useActionState(updateVehicleCare, {});
+  return (
+    <form action={action} className="flex flex-col gap-3">
+      <StateNotice state={state} />
+      <input type="hidden" name="id" value={id} />
+      <Field label="Mileage" htmlFor={`mileage-${id}`} hint="Optional. Updated automatically when you add it at booking.">
+        <Input id={`mileage-${id}`} name="mileage" inputMode="numeric" defaultValue={mileage ?? ""} maxLength={9} placeholder="e.g. 84,500" />
+      </Field>
+      <Checkbox
+        id={`reminders-${id}`}
+        name="reminders"
+        defaultChecked={reminders}
+        aria-label={`Maintenance reminders for ${label}`}
+        label="Email me maintenance reminders for this car. We'll save your choice now and start sending when reminders launch."
+      />
+      <Button type="submit" size="sm" variant="subtle" disabled={pending} className="self-start">
+        {pending ? "Saving…" : "Save"}
+      </Button>
+    </form>
+  );
+}
+
+export function BusinessForm({ companyName, billingEmail }: { companyName: string; billingEmail: string }) {
+  const [state, action, pending] = useActionState(saveBusinessAccount, {});
+  return (
+    <form action={action} className="flex flex-col gap-4">
+      <StateNotice state={state} />
+      <Field label="Company name" htmlFor="company_name">
+        <Input id="company_name" name="company_name" defaultValue={companyName} required minLength={2} maxLength={120} autoComplete="organization" />
+      </Field>
+      <Field label="Billing email (optional)" htmlFor="billing_email" hint="Shown on your monthly statements.">
+        <Input id="billing_email" name="billing_email" type="email" defaultValue={billingEmail} maxLength={200} />
+      </Field>
+      <Button type="submit" disabled={pending} className="self-start">
+        {pending ? "Saving…" : "Save"}
+      </Button>
+    </form>
+  );
+}
+
+export function PrintButton() {
+  return (
+    <button type="button" onClick={() => window.print()} className="font-semibold text-ore hover:underline">
+      Print / save PDF
+    </button>
   );
 }

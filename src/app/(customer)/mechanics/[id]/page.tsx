@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ReviewList, Stars } from "@/components/review-list";
@@ -7,7 +8,10 @@ import { Card } from "@/components/ui/card";
 import { Badge, EmptyState } from "@/components/ui/feedback";
 import { Container } from "@/components/ui/layout";
 import { estimateMaxCents, estimateMinCents } from "@/lib/fees";
-import { money, shortDate } from "@/lib/format";
+import { dealerLaborRateCents } from "@/lib/env";
+import { money, shortDate, warrantyLabel } from "@/lib/format";
+import { minWarrantyDays } from "@/lib/env";
+import { effectiveWarrantyDays } from "@/lib/warranty";
 import { getPublicMechanic } from "@/lib/public-data";
 import { TIER_LABEL } from "@/lib/tiers";
 
@@ -24,6 +28,7 @@ export default async function MechanicProfilePage({ params, searchParams }: Page
   if (!m) notFound();
   const selected = typeof sp.service === "string" ? sp.service : "";
   const bookHref = `/book/${m.id}${selected ? `?service=${encodeURIComponent(selected)}` : ""}`;
+  const dealerRate = dealerLaborRateCents();
 
   return (
     <Container className="py-10 sm:py-14">
@@ -38,8 +43,11 @@ export default async function MechanicProfilePage({ params, searchParams }: Page
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {m.check_clear && <Badge tone="ok">✓ Background checked</Badge>}
-                {m.featured && <Badge tone="warn">★ Featured</Badge>}
+                {m.featured && <Badge tone="warn">Sponsored</Badge>}
                 {m.online && <Badge tone="ok">● Online now</Badge>}
+                <Link href="/guarantee">
+                  <Badge tone="info">🛡 {warrantyLabel(effectiveWarrantyDays(m.warranty_days, minWarrantyDays()))} · WrenchNow guarantee</Badge>
+                </Link>
               </div>
             </div>
           </div>
@@ -99,9 +107,17 @@ export default async function MechanicProfilePage({ params, searchParams }: Page
                       {s.name}
                     </span>
                     <span className="flex items-center gap-3 text-sm text-muted">
-                      {m.hourly_rate_cents
-                        ? `${money(estimateMinCents(m.hourly_rate_cents, s.est_minutes_min), { whole: true })}–${money(estimateMaxCents(m.hourly_rate_cents, s.est_minutes_max), { whole: true })}`
-                        : "—"}
+                      <span className="text-right">
+                        {m.hourly_rate_cents
+                          ? `${money(estimateMinCents(m.hourly_rate_cents, s.est_minutes_min), { whole: true })}–${money(estimateMaxCents(m.hourly_rate_cents, s.est_minutes_max), { whole: true })}`
+                          : "—"}
+                        <span className="block text-xs">labor + parts at receipt cost</span>
+                        {dealerRate && m.hourly_rate_cents && (
+                          <span className="block text-xs">
+                            Dealer labor ≈ {money(estimateMaxCents(dealerRate, s.est_minutes_max), { whole: true })}
+                          </span>
+                        )}
+                      </span>
                       <ButtonLink href={`/book/${m.id}?service=${s.slug}`} size="sm" variant="subtle">
                         Book
                       </ButtonLink>
@@ -141,6 +157,9 @@ export default async function MechanicProfilePage({ params, searchParams }: Page
             <ButtonLink href={bookHref} size="lg" className="mt-5 w-full">
               Book {m.display_name?.split(" ")[0] ?? "this mechanic"}
             </ButtonLink>
+            {dealerRate && (
+              <p className="mt-3 text-xs text-muted">Dealer comparison uses a typical Denver dealer labor rate of {money(dealerRate, { whole: true })}/hr, labor only.</p>
+            )}
             <ul className="mt-5 space-y-2 text-sm text-ink">
               <li>✓ Pay through the app — charged only when it&apos;s done</li>
               <li>✓ Free cancellation before they head out</li>

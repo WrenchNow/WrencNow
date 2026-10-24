@@ -1,5 +1,7 @@
 import legal from "@/content/legal.json";
-import { platformFeeBps } from "@/lib/env";
+import { customerNoShowFeeCents, onboardingFeePerJobCents, onboardingFeeTotalCents, partsHandlingBps, platformFeeBps } from "@/lib/env";
+import { processingLabel } from "@/lib/fee-copy";
+import { money } from "@/lib/format";
 import { Container } from "./ui/layout";
 
 type Block = { p?: string; ul?: string[] };
@@ -28,7 +30,14 @@ function Blocks({ blocks }: { blocks: Block[] }) {
           </ul>
         ) : (
           <p key={i} className={`my-3 ${b.p!.endsWith(":") ? "font-semibold text-cream" : ""}`}>
-            {b.p!.replace("{{PLATFORM_FEE_PERCENT}}", fee)}
+            {b
+              .p!.replace("{{PLATFORM_FEE_PERCENT}}", fee)
+              .replace("{{PROCESSING_FEE}}", processingLabel())
+              .replace("{{PARTS_HANDLING}}", `${partsHandlingBps() / 100}%`)
+              .replace("{{ONBOARDING_TOTAL}}", money(onboardingFeeTotalCents(), { whole: true }))
+              .replace("{{ONBOARDING_PER_JOB}}", money(onboardingFeePerJobCents(), { whole: true }))
+              .replace("{{CUSTOMER_NO_SHOW_FEE}}", money(customerNoShowFeeCents(), { whole: true }))
+}
           </p>
         ),
       )}

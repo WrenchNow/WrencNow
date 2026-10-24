@@ -6,6 +6,7 @@ export const BOOKING_STATUSES = [
   "completed",
   "cancelled",
   "no_show",
+  "customer_no_show",
 ] as const;
 export type BookingStatus = (typeof BOOKING_STATUSES)[number];
 
@@ -13,11 +14,12 @@ export type BookingStatus = (typeof BOOKING_STATUSES)[number];
 const TRANSITIONS: Record<BookingStatus, readonly BookingStatus[]> = {
   requested: ["accepted", "cancelled"],
   accepted: ["en_route", "cancelled", "no_show"],
-  en_route: ["in_progress", "cancelled", "no_show"],
+  en_route: ["in_progress", "cancelled", "no_show", "customer_no_show"],
   in_progress: ["completed"],
   completed: [],
   cancelled: [],
   no_show: [],
+  customer_no_show: [],
 };
 
 export function canTransition(from: BookingStatus, to: BookingStatus): boolean {
@@ -49,8 +51,10 @@ export function actorMayTransition(actor: Actor, to: BookingStatus): boolean {
       return actor === "mechanic";
     case "no_show":
       return actor === "customer";
+    case "customer_no_show":
+      return actor === "mechanic";
     case "cancelled":
-      return true;
+      return true; // further limited by canCancel()
     default:
       return false;
   }
@@ -63,12 +67,41 @@ export const STATUS_LABEL: Record<BookingStatus, string> = {
   in_progress: "Working on it",
   completed: "Completed",
   cancelled: "Cancelled",
-  no_show: "No-show",
+  no_show: "Mechanic no-show",
+  customer_no_show: "Customer no-show",
 };
 
 export const NO_SHOW_GRACE_MINUTES = 30;
 
-/** Customers can report a no-show once the grace period after the start time has passed. */
-export function noShowReportable(status: BookingStatus, scheduledStart: string, now: number = Date.now()): boolean {
+/**
+ * Customers can report a mechanic no-show once the grace period after the start time has
+ * passed — unless the mechanic checked in at the address.
+ */
+export function noShowReportable(status: BookingStatus, scheduledStart: string, arrivedAt: string | null = null, now: number = Date.now()): boolean {
+  if (arrivedAt) return false;
   return (status === "accepted" || status === "en_route") && now > new Date(scheduledStart).getTime() + NO_SHOW_GRACE_MINUTES * 60_000;
 }
+
+/** How long a mechanic must wait after checking in (and after the booked time) before marking a customer no-show. */
+export const CUSTOMER_WAIT_MINUTES = 15;
+/** Mechanic must be within this distance of the address to check in. */
+export const ARRIVAL_RADIUS_METERS = 400;
+
+/** When the mechanic may mark the customer as a no-show (mirrors the DB trigger). */
+export function customerNoShowAt(arrivedAt: string, scheduledStart: string): number {
+  return Math.max(Date.parse(arrivedAt), Date.parse(scheduledStart)) + CUSTOMER_WAIT_MINUTES * 60_000;
+}
+
+/**
+ * Who can cancel when:
+ * - mechanics can only decline a request — once they accept, they're committed (support can step in);
+ * - customers cancel free until the mechanic is on the way;
+ * - after that only an admin can cancel; the arrival code or a no-show report settles it.
+ */
+export function canCancel(actor: Actor, from: BookingStatus): boolean {
+  if (actor === "admin") return from === "requested" || from === "accepted" || from === "en_route";
+  if (actor === "mechanic") return from === "requested";
+  return from === "requested" || from === "accepted";
+}
+
+export const ARRIVAL_CODE_MAX_ATTEMPTS = 5;

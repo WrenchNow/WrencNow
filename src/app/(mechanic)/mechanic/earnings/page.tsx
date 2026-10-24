@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/feedback";
+import { EmptyState, Notice } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/layout";
 import { requireRole } from "@/lib/auth";
-import { mechanicNetCents } from "@/lib/fees";
+import { mechanicNetCents, onboardingJobsRemaining } from "@/lib/fees";
+import { onboardingFeePerJobCents } from "@/lib/env";
 import { dateTime, monthKey, money } from "@/lib/format";
 import { getMyMechanic } from "@/lib/mechanic";
 import { createClient } from "@/lib/supabase/server";
@@ -19,7 +20,7 @@ export default async function EarningsPage() {
     getMyMechanic(viewer.id),
     supabase
       .from("bookings")
-      .select("id, completed_at, final_amount_cents, platform_fee_cents, refunded_cents, services(name)")
+      .select("id, completed_at, final_amount_cents, platform_fee_cents, processing_fee_cents, onboarding_fee_cents, refunded_cents, services(name)")
       .eq("mechanic_id", viewer.id)
       .eq("status", "completed")
       .order("completed_at", { ascending: false })
@@ -28,8 +29,9 @@ export default async function EarningsPage() {
 
   const rows = (jobs ?? []).map((j) => {
     const gross = j.final_amount_cents ?? 0;
-    const fee = j.platform_fee_cents ?? 0;
-    return { ...j, gross, fee, net: mechanicNetCents(gross, fee, j.refunded_cents ?? 0) };
+    const fee = (j.platform_fee_cents ?? 0) + (j.processing_fee_cents ?? 0);
+    const onboarding = j.onboarding_fee_cents ?? 0;
+    return { ...j, gross, fee, onboarding, net: mechanicNetCents(gross, fee + onboarding, j.refunded_cents ?? 0) };
   });
   const sum = (list: typeof rows) => list.reduce((a, r) => a + r.net, 0);
   const month = monthKey(new Date());
@@ -50,9 +52,18 @@ export default async function EarningsPage() {
           ) : undefined
         }
       >
-        Your share after the platform fee. Payouts land in your bank on Stripe&apos;s schedule.
+        Your share after the platform fee and card processing. Payouts land in your bank on Stripe&apos;s schedule.
       </PageHeader>
 
+      {m && m.onboarding_fee_total_cents > 0 && (
+        <div className="mb-6">
+          <Notice tone="info" title="Background check fee">
+            {m.onboarding_fee_collected_cents >= m.onboarding_fee_total_cents
+              ? `Paid off — all ${money(m.onboarding_fee_total_cents, { whole: true })} covered. Thanks!`
+              : `${money(m.onboarding_fee_collected_cents)} of ${money(m.onboarding_fee_total_cents)} covered. ${money(onboardingFeePerJobCents(), { whole: true })} comes out of each job until it's paid off — about ${onboardingJobsRemaining(m.onboarding_fee_total_cents, m.onboarding_fee_collected_cents, onboardingFeePerJobCents())} more job(s).`}
+          </Notice>
+        </div>
+      )}
       <div className="mb-8 grid gap-4 sm:grid-cols-3">
         <Card>
           <p className="text-xs tracking-wider text-muted uppercase">This month</p>
@@ -76,7 +87,7 @@ export default async function EarningsPage() {
                 <th className="px-4 py-3 font-semibold">Job</th>
                 <th className="px-4 py-3 font-semibold">Completed</th>
                 <th className="px-4 py-3 text-right font-semibold">Charged</th>
-                <th className="px-4 py-3 text-right font-semibold">Fee</th>
+                <th className="px-4 py-3 text-right font-semibold">Fees</th>
                 <th className="px-4 py-3 text-right font-semibold">You earn</th>
               </tr>
             </thead>
@@ -86,7 +97,10 @@ export default async function EarningsPage() {
                   <td className="px-4 py-3 text-cream">{r.services?.name}</td>
                   <td className="px-4 py-3">{r.completed_at ? dateTime(r.completed_at) : "—"}</td>
                   <td className="px-4 py-3 text-right">{money(r.gross)}</td>
-                  <td className="px-4 py-3 text-right text-muted">−{money(r.fee)}</td>
+                  <td className="px-4 py-3 text-right text-muted">
+                    −{money(r.fee)}
+                    {r.onboarding > 0 && <span className="block text-xs">−{money(r.onboarding)} check fee</span>}
+                  </td>
                   <td className="px-4 py-3 text-right font-semibold text-cream">{money(r.net)}</td>
                 </tr>
               ))}
