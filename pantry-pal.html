@@ -300,6 +300,24 @@ label.hit{display:inline-flex;align-items:center;justify-content:center;width:44
 .premium-soon{margin:2px 0 4px}
 .cart-each summary{padding:13px 0;min-height:44px;box-sizing:border-box;cursor:pointer;color:var(--muted);font-weight:600}
 select.input{min-height:44px}
+/* waste-cutting: Used / Froze / Tossed, Eat first, undo toast */
+.item-acts{display:flex;gap:4px;flex:none}
+.item-acts .ia{width:40px;height:40px;border:0;border-radius:10px;background:var(--surface-2);font-size:16px;display:grid;place-items:center;padding:0}
+.food-acts{display:flex;gap:8px;margin:2px 0 10px}
+.food-acts .btn{flex:1;padding:7px 6px}
+#toast.show.has-undo{pointer-events:auto}
+.toast-undo{border:0;background:none;color:inherit;font-weight:700;text-decoration:underline;margin-left:8px;padding:6px 4px;min-height:32px}
+.eat-first{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:8px 12px 4px;margin-bottom:14px}
+.eat-first h2{font-size:16px}
+.ef-more{border:0;background:none;color:var(--brand);font-weight:600;font-size:13px;min-height:36px;padding:0 4px}
+.ef-row{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;padding:6px 0;border-top:1px solid var(--line)}
+.eat-first .row + .ef-row{border-top:0}
+.ef-main{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.3}
+.ef-main b{font-size:14px;text-transform:capitalize;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ef-past{color:var(--danger);font-weight:600}
+.ef-nudge{color:var(--accent);font-weight:600;flex-basis:100%}
+.ef-btns{display:flex;gap:4px;flex:none}
+.ef-btns .btn{min-height:36px;padding:5px 8px;font-size:13px;border-radius:9px}
 
 </style>
 </head>
@@ -1161,6 +1179,14 @@ const hash = s => { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCo
 const CATEGORIES = ['Produce', 'Meat & Seafood', 'Dairy & Eggs', 'Bakery', 'Pantry', 'Spices', 'Condiments', 'Frozen', 'Beverages', 'Snacks', 'Leftovers', 'Other'];
 const CAT_ICON = { 'Produce': '🥬', 'Meat & Seafood': '🥩', 'Dairy & Eggs': '🧀', 'Bakery': '🍞', 'Pantry': '🥫', 'Spices': '🧂', 'Condiments': '🫙', 'Frozen': '🧊', 'Beverages': '🧃', 'Snacks': '🍿', 'Leftovers': '🍱', 'Other': '📦' };
 const SHELF = { 'Produce': 7, 'Meat & Seafood': 3, 'Dairy & Eggs': 10, 'Bakery': 5, 'Pantry': 365, 'Spices': 730, 'Condiments': 180, 'Frozen': 90, 'Beverages': 30, 'Snacks': 60, 'Leftovers': 4, 'Other': 30 };
+// Waste-cutting: Used / Froze / Tossed. Froze is offered only for kinds of food that usually freeze well, and the
+// "Freeze it?" nudge only for a smaller, conservative list. Never for eggs in the shell, salad greens, cucumbers and the like.
+const FREEZE_CATS = ['Produce', 'Meat & Seafood', 'Dairy & Eggs', 'Bakery', 'Leftovers'];
+const NO_FREEZE = ['egg', 'lettuce', 'salad', 'cucumber', 'radish', 'celery', 'sprout', 'watercress', 'arugula', 'endive', 'potato', 'watermelon', 'mayonnaise', 'mayo', 'sour cream', 'yogurt', 'cream cheese', 'cottage cheese', 'custard', 'meringue'];
+const NUDGE_PRODUCE = ['banana', 'berry', 'strawberry', 'blueberry', 'raspberry', 'blackberry', 'cherry', 'mango', 'peach', 'grape'];
+const canFreeze = i => FREEZE_CATS.includes(i.category) && !NO_FREEZE.some(w => hasWord(i.name, w));
+const freezeNudge = i => { const d = daysUntil(i.expires); return (d === 1 || d === 2) && canFreeze(i) && (i.category === 'Meat & Seafood' || i.category === 'Bakery' || (i.category === 'Produce' && NUDGE_PRODUCE.some(w => hasWord(i.name, w)))); };
+const LOG_MAX = 500, LOG_ACTIONS = ['used', 'froze', 'tossed'];
 const CUISINES = ['American', 'Italian', 'Mexican', 'Chinese', 'Japanese', 'Thai', 'Indian', 'Korean', 'Vietnamese', 'French', 'Spanish', 'Mediterranean', 'Middle Eastern', 'Caribbean', 'Other'];
 const MEALS = ['Any', 'Breakfast', 'Lunch', 'Dinner', 'Side', 'Snack', 'Dessert'];
 const TIMES = [0, 15, 30, 45, 60];
@@ -1307,6 +1333,7 @@ function defaultState() {
     ui: { tab: 'cook', cookView: 'feed', pantryFilter: 'all' },
     plan: null,
     premium: null,        // { token, exp (ms), plan }: signed by the backend, opaque here. Never exported or imported.
+    foodLog: [],          // [{ name, category, action: used|froze|tossed, date, wasNearExpiry, qty, unit }], newest last, max LOG_MAX
     arrivalSnooze: null   // ISO date "Not yet" was tapped on the "Did your order arrive?" card; hidden for that day
   };
 }
@@ -1340,6 +1367,11 @@ function sanitizePlan(p) {
   while (items.length < days) items.push({ id: null, title: '', locked: false });
   return { start: p.start, days, party, items };
 }
+// On-device food log (Used / Froze / Tossed). Rebuilt from known fields so a saved state or backup can't inject anything.
+function sanitizeFoodLog(v) {
+  return (Array.isArray(v) ? v : []).filter(x => x && typeof x === 'object' && LOG_ACTIONS.includes(x.action) && typeof x.name === 'string' && x.name.trim() && /^\d{4}-\d{2}-\d{2}$/.test(x.date))
+    .slice(-LOG_MAX).map(x => { const q = Number(x.qty); return { name: x.name.trim().slice(0, 80), category: CATEGORIES.includes(x.category) ? x.category : 'Other', action: x.action, date: x.date, wasNearExpiry: x.wasNearExpiry === true, qty: Number.isFinite(q) ? clamp(Math.round(q * 100) / 100, 0, 1e6) : 1, unit: typeof x.unit === 'string' ? x.unit.slice(0, 20) : '' }; });
+}
 let S = defaultState();
 function hydrate(saved) {
   const d = defaultState();
@@ -1356,6 +1388,7 @@ function hydrate(saved) {
   out.plan = sanitizePlan(saved.plan);
   out.premium = sanitizePremium(saved.premium);
   out.arrivalSnooze = snoozeDate(saved.arrivalSnooze);
+  out.foodLog = sanitizeFoodLog(saved.foodLog);
   return out;
 }
 
@@ -1402,7 +1435,8 @@ function sanitizeBackup(d) {
     filters: { cuisines: strs(f.cuisines, c => CUISINES.includes(c)), meal: MEALS.includes(f.meal) ? f.meal : 'Any', maxTime: TIMES.includes(Number(f.maxTime)) ? Number(f.maxTime) : 0, party: num(f.party, 0, 30, 0), cookWith: str(f.cookWith, 100), goal: GOALS.some(g => g.k === f.goal) ? f.goal : 'any' },
     settings: bools,   // premium (the token) is never imported: a backup can't make anyone Premium
     plan: sanitizePlan(d.plan),
-    arrivalSnooze: snoozeDate(d.arrivalSnooze)
+    arrivalSnooze: snoozeDate(d.arrivalSnooze),
+    foodLog: sanitizeFoodLog(d.foodLog)
   };
 }
 
@@ -2407,7 +2441,13 @@ function orderTextForAI(text) {
 
 /* ---------- toast & sheet ---------- */
 let _toastT;
-function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(_toastT); _toastT = setTimeout(() => t.classList.remove('show'), 2600); }
+let _undo = null;   // set while a toast shows "Undo" (5 seconds)
+function toast(msg, undo) {
+  const t = $('#toast'); _undo = undo || null;
+  t.innerHTML = esc(msg) + (undo ? ' <button class="toast-undo" data-act="undo">Undo</button>' : '');
+  t.classList.toggle('has-undo', !!undo); t.classList.add('show'); clearTimeout(_toastT);
+  _toastT = setTimeout(() => { t.classList.remove('show'); _undo = null; }, undo ? 5000 : 2600);
+}
 let sheet = null;
 function openSheet(renderFn, onClose) {
   sheet = { render: renderFn, onClose }; drawSheet();
@@ -2454,10 +2494,21 @@ function card(e) {
     </div></button>`;
 }
 
+// Eat first: up to 5 items within 3 days of their date (past-date ones say "check it"). Nothing when nothing qualifies.
+function eatFirstList() { return S.inventory.map(i => [i, daysUntil(i.expires)]).filter(([, d]) => d != null && d <= 3).sort((a, b) => a[1] - b[1]); }
+function eatFirstStrip() {
+  const all = eatFirstList(); if (!all.length) return '';
+  const row = ([i, d]) => {
+    const nudge = freezeNudge(i), when = d < 0 ? 'Past date: check it' : d === 0 ? 'Today' : d === 1 ? 'Tomorrow' : `${d} days`;
+    return `<div class="ef-row" data-ef="${i.id}"><div class="ef-main"><b>${esc(i.name)}</b><span class="tiny ${d < 0 ? 'ef-past' : 'muted'}">${when}</span></div>
+      <div class="ef-btns"><button class="btn btn-soft" data-act="food" data-a="used" data-id="${i.id}" aria-label="Used ${esc(i.name)}">Used</button>${d >= 0 && canFreeze(i) ? `<button class="btn ${nudge ? 'btn-accent' : 'btn-soft'}" data-act="food" data-a="froze" data-id="${i.id}" aria-label="Froze ${esc(i.name)}">Froze</button>` : ''}<button class="btn btn-ghost" data-act="efRecipes" data-id="${i.id}" aria-label="See recipes with ${esc(i.name)}">Recipes</button></div>${nudge ? `<span class="tiny ef-nudge">❄️ Freeze it before it goes bad?</span>` : ''}</div>`;
+  };
+  return `<section class="eat-first" aria-label="Eat first"><div class="row" style="justify-content:space-between"><h2>⏳ Eat first</h2>${all.length > 5 ? `<button class="ef-more" data-act="efAll">+${all.length - 5} more</button>` : ''}</div>${all.slice(0, 5).map(row).join('')}</section>`;
+}
 function viewCook() {
   const name = firstName();
   const head = `<header class="top"><div><p class="eyebrow">${greeting()}${name ? ', ' + esc(name) : ''}</p><h1>What’s cooking?</h1></div>
-    <button class="icon-btn" data-act="goto" data-tab="household" aria-label="Household">👥 ${S.filters.party || S.household.partySize}</button></header>${arrivalCard()}
+    <button class="icon-btn" data-act="goto" data-tab="household" aria-label="Household">👥 ${S.filters.party || S.household.partySize}</button></header>${arrivalCard()}${eatFirstStrip()}
     <div class="seg" role="tablist"><button class="${S.ui.cookView === 'feed' ? 'on' : ''}" data-act="cookView" data-v="feed">For you</button><button class="${S.ui.cookView === 'library' ? 'on' : ''}" data-act="cookView" data-v="library">Library · ${LIB.length}</button></div>`;
   return head + (S.ui.cookView === 'library' ? viewLibrary() : viewFeed());
 }
@@ -2639,9 +2690,40 @@ function arriveSheet() {
 }
 
 /* ---- pantry ---- */
+// One tap Used / Froze / Tossed: changes the pantry, adds a line to the on-device food log, and offers Undo for 5 seconds.
+function foodAction(id, action) {
+  const idx = S.inventory.findIndex(i => i.id === id); if (idx < 0 || !LOG_ACTIONS.includes(action)) return;
+  const it = S.inventory[idx], before = { ...it }, d = daysUntil(it.expires), q = Number(it.qty) || 0;
+  if (action === 'froze' && !canFreeze(it)) return toast('That one usually doesn’t freeze well');
+  const partial = action === 'used' && q > 1;
+  const entry = { name: String(it.name).slice(0, 80), category: CATEGORIES.includes(it.category) ? it.category : 'Other', action, date: todayISO(), wasNearExpiry: d != null && d <= 3, qty: partial ? 1 : q, unit: it.unit || '' };
+  let msg;
+  if (partial) { it.qty = Math.round((q - 1) * 100) / 100; msg = `Used 1. ${fmtQty(it.qty, it.unit)}${it.unit ? ' ' + it.unit : ''} ${it.name} left`; }
+  else if (action === 'froze') { it.category = 'Frozen'; const e = addDays(SHELF.Frozen); if (!it.expires || e > it.expires) it.expires = e; msg = `${it.name} moved to Frozen`; }
+  else { S.inventory.splice(idx, 1); msg = action === 'used' ? `${it.name} used up` : `${it.name} tossed`; }
+  S.foodLog.push(entry); if (S.foodLog.length > LOG_MAX) S.foodLog.splice(0, S.foodLog.length - LOG_MAX);
+  persist(); if (sheet) closeSheet(); render();
+  toast(msg, () => {
+    const j = S.inventory.findIndex(i => i.id === id);
+    if (j >= 0) S.inventory[j] = before; else S.inventory.splice(Math.min(idx, S.inventory.length), 0, before);
+    const k = S.foodLog.lastIndexOf(entry); if (k >= 0) S.foodLog.splice(k, 1);
+    persist(); render(); toast('Undone');
+  });
+}
+const foodBtns = (i, cls) => `<button class="${cls}" data-act="food" data-a="used" data-id="${i.id}" aria-label="Used ${esc(i.name)}" title="Used">✓</button>${canFreeze(i) && !(daysUntil(i.expires) < 0) ? `<button class="${cls}" data-act="food" data-a="froze" data-id="${i.id}" aria-label="Froze ${esc(i.name)}" title="Froze">❄️</button>` : ''}<button class="${cls}" data-act="food" data-a="tossed" data-id="${i.id}" aria-label="Tossed ${esc(i.name)}" title="Tossed">🗑</button>`;
+const PAST_DATE = 'Best-by passed: look, smell, taste. If it’s a use-by date on meat, fish or dairy, follow it. When in doubt, throw it out.';
+function datesTip() {
+  if (S.ui.datesTipSeen) return '';
+  return `<div class="note dates-tip" style="margin-bottom:14px"><div class="row" style="justify-content:space-between;align-items:flex-start"><b style="color:var(--ink)">What the dates mean</b>
+    <button class="icon-btn" style="height:36px;min-width:36px" data-act="datesTipOk" aria-label="Dismiss">✕</button></div>
+    <p><b>Best by</b> is about quality, not safety. Past it? Look, smell, taste.</p>
+    <p><b>Use by</b>: follow it, especially for meat, fish and dairy.</p>
+    <p>When in doubt, throw it out: anything that smells or looks off.</p>
+    <p class="tiny" style="margin-top:4px">Tap ✓ Used, ❄️ Froze or 🗑 Tossed on an item to keep track.</p></div>`;
+}
 function expiryBadge(iso) {
   const d = daysUntil(iso); if (d == null) return '';
-  if (d < 0) return `<span class="badge danger">Expired ${-d}d ago</span>`;
+  if (d < 0) return `<span class="badge danger">Past date: check it</span>`;
   if (d === 0) return `<span class="badge danger">Use today</span>`;
   if (d === 1) return `<span class="badge warn">Use tomorrow</span>`;
   if (d <= 3) return `<span class="badge warn">${d} days left</span>`;
@@ -2663,9 +2745,9 @@ function viewPantry() {
     <button class="icon-btn" data-act="addItem">＋ Add</button></header>${arrivalCard()}
     ${inv.length ? `<div class="stats">
       <div class="stat"><b>${exp.length}</b><span>Use within 3 days</span></div>
-      <div class="stat"><b style="color:${expired.length ? 'var(--danger)' : 'inherit'}">${expired.length}</b><span>Expired</span></div>
+      <div class="stat"><b style="color:${expired.length ? 'var(--danger)' : 'inherit'}">${expired.length}</b><span>Past date</span></div>
       <div class="stat"><b style="color:${flagged.length ? 'var(--danger)' : 'inherit'}">${flagged.length}</b><span>Allergen flags</span></div></div>
-      ${hasAllergies() ? allergyNote('margin:-4px 0 14px') : ''}
+      ${datesTip()}${hasAllergies() ? allergyNote('margin:-4px 0 14px') : ''}
       ${exp.length ? `<button class="btn btn-soft btn-block" style="margin-bottom:14px" data-act="useItUp">🍳 Cook with what’s expiring</button>` : ''}
       <div class="chips scroll" style="margin-bottom:14px">
         <button class="chip ${filter === 'all' ? 'on' : ''}" data-act="pantryFilter" data-v="all">All</button>
@@ -2680,7 +2762,7 @@ function itemRow(i) {
   return `<div class="item" data-act="editItem" data-id="${i.id}" role="button" tabindex="0">
     <div class="item-main"><div class="item-name">${esc(i.name)}</div>
       <div class="badges">${i.qty ? `<span class="item-sub">${esc(fmtQty(i.qty, i.unit) + (i.unit ? ' ' + i.unit : ''))}</span>` : ''}${expiryBadge(i.expires)}${cf.map(c => `<span class="badge danger">⚠ ${esc(c.label)} · ${esc(c.who.join(', '))}</span>`).join('')}</div></div>
-    <span class="chev muted">›</span></div>`;
+    <div class="item-acts">${foodBtns(i, 'ia')}</div></div>`;
 }
 function itemSheet() {
   const d = itemDraft;
@@ -2689,10 +2771,12 @@ function itemSheet() {
     <div class="row"><div class="field grow"><label for="it-qty">Quantity</label><input id="it-qty" class="input" type="number" inputmode="decimal" min="0" step="any" data-draft="qty" value="${esc(d.qty)}"></div>
       <div class="field grow"><label for="it-unit">Unit</label><input id="it-unit" class="input" data-draft="unit" value="${esc(d.unit)}" placeholder="lb, oz, bag…"></div></div>
     <div class="field"><label for="it-cat">Category</label><select id="it-cat" class="input" data-draft="category">${CATEGORIES.map(c => `<option ${c === d.category ? 'selected' : ''}>${c}</option>`).join('')}</select></div>
-    <div class="field"><label for="it-exp">Use by</label><input id="it-exp" class="input" type="date" data-draft="expires" value="${esc(d.expires || '')}"></div>
+    <div class="field"><label for="it-exp">Date on the package (best by / use by)</label><input id="it-exp" class="input" type="date" data-draft="expires" value="${esc(d.expires || '')}"></div>
+    ${d.id && daysUntil(d.expires) < 0 ? `<div class="note warn" style="margin-bottom:10px">${esc(PAST_DATE)}</div>` : ''}
     ${conflictsFor([d.name]).map(c => `<div class="note danger" style="margin-bottom:10px">⚠ Contains ${esc(c.label)} — ${esc(c.who.join(', '))} is allergic.</div>`).join('')}
+    ${d.id ? `<div class="food-acts"><button class="btn btn-soft btn-sm" data-act="food" data-a="used" data-id="${esc(d.id)}">✓ ${Number(d.qty) > 1 ? 'Used 1' : 'Used it'}</button>${canFreeze(d) && !(daysUntil(d.expires) < 0) ? `<button class="btn btn-soft btn-sm" data-act="food" data-a="froze" data-id="${esc(d.id)}">❄️ Froze it</button>` : ''}<button class="btn btn-soft btn-sm" data-act="food" data-a="tossed" data-id="${esc(d.id)}">🗑 Tossed it</button></div>` : ''}
     <div class="stack" style="margin-top:6px"><button class="btn btn-primary btn-block" data-act="saveItem">Save</button>
-    ${d.id ? `<button class="btn btn-danger btn-block" data-act="deleteItem">Delete item</button>` : ''}</div>`;
+    ${d.id ? `<button class="btn btn-danger btn-block" data-act="deleteItem">Delete (added by mistake)</button>` : ''}</div>`;
 }
 
 /* ---- scan ---- */
@@ -3445,6 +3529,11 @@ const ACT = {
   scanDiscard: () => { scan.items = null; scan.source = ''; render(); },
 
   pantryFilter: el => { S.ui.pantryFilter = el.dataset.v; persist(); render(); },
+  food: el => foodAction(el.dataset.id, el.dataset.a),
+  undo: () => { const f = _undo; _undo = null; clearTimeout(_toastT); $('#toast').classList.remove('show', 'has-undo'); if (f) f(); },
+  datesTipOk: () => { S.ui.datesTipSeen = true; persist(); render(); },
+  efRecipes: el => { const i = S.inventory.find(x => x.id === el.dataset.id); if (!i) return; S.filters.cookWith = i.name; S.ui.cookView = 'feed'; S.ui.filtersOpen = true; goto('cook'); },
+  efAll: () => { S.ui.pantryFilter = 'soon'; goto('pantry'); },
   useItUp: () => {
     const soon = S.inventory.filter(i => { const d = daysUntil(i.expires); return d != null && d >= 0 && d <= 3; }).sort((a, b) => a.expires.localeCompare(b.expires));
     S.filters.cookWith = soon.slice(0, 2).map(i => i.name).join(', '); S.ui.cookView = 'feed'; S.ui.filtersOpen = true; goto('cook');
