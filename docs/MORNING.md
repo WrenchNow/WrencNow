@@ -28,13 +28,33 @@ It has been removed from `legacy/index.html` on this branch, and PR #4 removes i
    project to `WrenchNow/WrencNow` (branch `main`, build `npm run build`; `netlify.toml` is included), then merge PR #2.
    This replaces the current live site. Add every variable from `.env.example` with real values. The app reads
    `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` and `STRIPE_WEBHOOK_SECRET`; if your Stripe keys are already
-   saved in Netlify under different names, rename them or tell me the names. The repo only has the **publishable**
+   saved in Netlify under different names, rename them or tell me the names. **`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+   is baked in at build time:** set it before the deploy builds, and redeploy after changing it. The repo only has the **publishable**
    test key (`pk_test_51ToxK…`, in `legacy/index.html`); there is no secret key in the repo.
 5. **Make yourself admin** — sign up on the site, then run `npm run make-admin -- you@email.com`.
-6. **Nightly workflow** — run `/install-github-app`, then add the GitHub secrets `CLAUDE_CODE_OAUTH_TOKEN`,
+6. **One manual test in Stripe test mode** (after steps 1–4): book a job with test card `4242 4242 4242 4242`, upload one
+   job photo and one parts receipt, and complete the job. Everything else in that flow is already covered by
+   `npm run test:lifecycle`. Those three steps need the real Stripe and Supabase.
+7. **Click-test the parts store links** on a job's parts quote (AutoZone, O'Reilly, Advance, NAPA). I couldn't reach
+   those sites from here. If one doesn't open a search page, its URL can be changed with `PARTS_SEARCH_<STORE>`.
+8. **Apply to the parts stores' affiliate programs** (O'Reilly via CJ, AutoZone via Impact/CJ, Advance, NAPA via
+   Rakuten) once the site is live. Paste each approved deep link into `PARTS_AFFILIATE_<STORE>`. See
+   `docs/research/2026-10-24-parts-store-partnerships.md`.
+9. **Pantry Pal branch:** Pantry Pal has no code in the WrenchNow app, but its branch `claude/pantry-pal-setup` sits in
+   this public repo (and still has the old leaked key). Once you've confirmed Pantry Pal is safe in its own private
+   repo, delete that branch from WrenchNow.
+10. **Nightly workflow** — run `/install-github-app`, then add the GitHub secrets `CLAUDE_CODE_OAUTH_TOKEN`,
    `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `STRIPE_TEST_SECRET_KEY`.
 
 ## Questions for you
+
+- **Stripe's $2 per active mechanic per month:** absorb it, or raise `PROCESSING_FEE_CENTS`? (See
+  `docs/research/2026-10-24-costs-and-listings.md`.)
+- **Checkr package:** which one? $50 covers Basic (about $30) but not Essential (about $55–60).
+- **Insurance:** require garagekeepers coverage (it pays if a customer's car is damaged)?
+- **"Might need a lift":** currently flagged on transmission and timing belt only. Any others?
+- **Fleet accounts:** do you want discounts, invoices paid within 30 days (this breaks the "card hold first" rule), or
+  multiple logins per business?
 
 - **Legal entity:** the legal pages say "WrenchNow Inc." Is that the registered name and state? Contact emails now go
   to **getwrenchnow11@gmail.com** everywhere (site, legal pages, admin alerts). Change it in `src/lib/contact.ts`. Please have a lawyer review the Terms, Privacy Policy and Mechanic Agreement.
@@ -71,6 +91,10 @@ It has been removed from `legacy/index.html` on this branch, and PR #4 removes i
   booking page. "Asked to pay outside WrenchNow?" reports appear in Admin → Overview.
 - **Unverified mechanics:** not built. I advised against it (see chat).
 
+- **No WrenchNow warranty:** mechanics are independent contractors, which matches the Terms. Mechanics can list their own
+  optional warranty, always labeled as theirs. Customers can "Report a problem" for 30 days after a job
+  (`ISSUE_REPORT_DAYS`), and support mediates.
+
 ## Still open
-- **No notifications yet.** Customers see "Your mechanic is here" when their booking page is open, and mechanics
-  can call or text. Email and SMS alerts need a provider, such as Resend for email or Twilio for SMS.
+- **Email and text alerts** are built, but stay off until `RESEND_API_KEY` + `EMAIL_FROM` (email) or the Twilio
+  settings (SMS) are added in Netlify. Until then, customers see updates live on their booking page.
