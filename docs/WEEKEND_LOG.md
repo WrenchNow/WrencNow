@@ -53,3 +53,10 @@ Each entry: what was done, test results, commits, and any questions for the owne
 - **Follow-up fix:** the new warranty e2e test left completed jobs in the local DB. That made the DB tests fail
   when they ran after Playwright on the same database. The test now cleans up after itself, and both orders pass
   (Playwright 117 ✓, then vitest 116/116 ✓).
+
+### Sat Oct 24, early — item 4 done
+- **Installable app:** a web app manifest (standalone display, dark theme color, shortcuts to "Find a mechanic" and "My
+  bookings") and PNG icons: 192, 512, a maskable 512 for Android, and a 180 apple-touch icon. They're generated from the
+  brand mark by `node scripts/make-icons.mjs`. Customers can use "Add to Home Screen" on iPhone or "Install app" on
+  Android/Chrome to get an app-like icon.
+- **Results:** lint ✓, build ✓, vitest 116/116 ✓, Playwright 119 passed / 1 skipped ✓ (new manifest/icon check).

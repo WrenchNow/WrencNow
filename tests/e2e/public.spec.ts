@@ -86,3 +86,13 @@ test("unknown service pages 404", async ({ page }) => {
   const res = await page.goto("/services/not-a-real-service");
   expect(res?.status()).toBe(404);
 });
+
+test("web app manifest and icons are served", async ({ request }) => {
+  const res = await request.get("/manifest.webmanifest");
+  expect(res.ok()).toBe(true);
+  const m = await res.json();
+  expect(m.display).toBe("standalone");
+  for (const icon of m.icons) expect((await request.get(icon.src)).headers()["content-type"]).toContain("image/png");
+  expect(m.icons.some((i: { purpose: string }) => i.purpose === "maskable")).toBe(true);
+  expect((await request.get("/apple-icon.png")).ok()).toBe(true);
+});
