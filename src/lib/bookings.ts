@@ -106,6 +106,8 @@ export type CreateBookingInput = {
   start: string;
   returnOldParts: boolean;
   odometer?: number | null;
+  carLocation?: "driveway" | "street" | "garage" | "parking_lot" | null;
+  carCovered?: boolean;
 };
 
 /**
@@ -178,6 +180,8 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
       estimate_approved_at: new Date().toISOString(),
       return_old_parts: input.returnOldParts,
       odometer: input.odometer ?? null,
+      car_location: input.carLocation ?? null,
+      car_covered: input.carCovered ?? false,
     })
     .select("id")
     .single();

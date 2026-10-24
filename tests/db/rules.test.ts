@@ -716,3 +716,18 @@ run("job photos", () => {
     ).rejects.toThrow(/permission denied/);
   });
 });
+
+run("car logistics", () => {
+  it("car location is limited to known values and lift-only services are flagged", async () => {
+    await expect(
+      tx(async (q) => {
+        const id = await insertBooking(q, ids["mechanic.basic"], "oil-change", future(5));
+        await q("update public.bookings set car_location = 'roof' where id = $1", [id]);
+      }),
+    ).rejects.toThrow(/check constraint/);
+    await tx(async (q) => {
+      const r = await q("select slug from public.services where needs_lift order by slug");
+      expect(r.rows.map((x) => x.slug)).toEqual(["timing-belt", "transmission"]);
+    }, anon);
+  });
+});

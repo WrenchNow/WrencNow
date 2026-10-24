@@ -76,6 +76,8 @@ const bookingSchema = z.object({
   estimateApproved: z.literal(true, { error: "Please approve the estimate" }),
   returnOldParts: z.boolean().default(false),
   odometer: z.coerce.number().int().min(0).max(2_000_000).nullable().optional(),
+  carLocation: z.enum(["driveway", "street", "garage", "parking_lot"], { error: "Tell us where the car is parked" }),
+  carCovered: z.boolean().default(false),
 });
 
 export type CreateBookingResult = { error?: string; bookingId?: string; clientSecret?: string };
@@ -103,6 +105,8 @@ export async function createBookingAction(input: z.input<typeof bookingSchema>):
       start: d.start,
       returnOldParts: d.returnOldParts,
       odometer: d.odometer ?? null,
+      carLocation: d.carLocation,
+      carCovered: d.carCovered,
     });
   } catch (e) {
     if (e instanceof BookingError) return { error: e.message };

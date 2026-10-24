@@ -86,3 +86,17 @@ Each entry: what was done, test results, commits, and any questions for the owne
 - **Not tested:** the actual upload, because the local test setup has no storage server. Upload uses the same
   pattern as the part receipts upload. **Try one photo upload once the real Supabase project is connected.**
 - **Results:** lint ✓, build ✓, vitest 118/118 ✓, Playwright 123 passed / 1 skipped ✓.
+
+### Sat Oct 24 — item 7 done
+- **Where's the car?** Booking now asks where the car is parked (driveway, street, garage or parking lot) and
+  whether it's under cover. If it's outdoors and uncovered, a short note says the mechanic may contact the customer to
+  move the appointment in snow, heavy rain or extreme cold. Street parking gets a "check local parking rules" tip.
+  Mechanics see "Car is: on the street · outdoors" on the job card, and customers see it on their booking.
+- **"Might need a lift" flag on services:** set for transmission and timing belt. Booking those shows a note that the
+  mechanic will confirm the job can be done where the car is before starting.
+- **Database:** migration `0012_car_logistics` (`bookings.car_location`, `car_covered`; `services.needs_lift`).
+- **Results:** lint ✓, build ✓, vitest 119/119 ✓, Playwright 123 passed / 1 skipped ✓. The booking-flow test now
+  checks the new step.
+
+**Question for you:** I flagged only transmission and timing belt as "might need a lift". Tell me if there are
+others you'd like flagged.

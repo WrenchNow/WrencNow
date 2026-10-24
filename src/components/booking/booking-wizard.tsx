@@ -14,7 +14,14 @@ import { money } from "@/lib/format";
 import { buildSlots, type Busy } from "@/lib/slots";
 import { PaymentStep } from "./payment-step";
 
-type ServiceOpt = { slug: string; name: string; icon: string; min: number; max: number };
+type ServiceOpt = { slug: string; name: string; icon: string; min: number; max: number; needsLift?: boolean };
+type CarLocation = "driveway" | "street" | "garage" | "parking_lot";
+const CAR_LOCATIONS: { value: CarLocation; label: string }[] = [
+  { value: "driveway", label: "Driveway" },
+  { value: "street", label: "Street" },
+  { value: "garage", label: "Garage" },
+  { value: "parking_lot", label: "Parking lot" },
+];
 type VehicleOpt = { id: string; label: string; nickname: string | null };
 type Urgency = "flexible" | "soon" | "today" | "stranded";
 
@@ -58,6 +65,8 @@ export function BookingWizard({
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState(initialPhone);
   const [odometer, setOdometer] = useState("");
+  const [carLocation, setCarLocation] = useState<CarLocation | "">("");
+  const [carCovered, setCarCovered] = useState(false);
   const [start, setStart] = useState("");
   const [dayIdx, setDayIdx] = useState(0);
   const [terms, setTerms] = useState(false);
@@ -95,6 +104,7 @@ export function BookingWizard({
     if (step === 0 && !service) return setError("Pick a service to continue.");
     if (step === 1 && !vehicleId) return setError("Pick or add the vehicle.");
     if (step === 1 && address.trim().length < 5) return setError("Enter the address where the car will be.");
+    if (step === 1 && !carLocation) return setError("Tell us where the car is parked.");
     if (step === 1 && phone.replace(/\D/g, "").length < 7) return setError("Enter a phone number your mechanic can reach you at.");
     if (step === 2 && !start) return setError("Pick a time.");
     setStep((s) => s + 1);
@@ -117,6 +127,8 @@ export function BookingWizard({
         terms: true,
         estimateApproved: true,
         returnOldParts,
+        carLocation: carLocation as CarLocation, // required at step 1; the server validates it too
+        carCovered: carCovered || carLocation === "garage",
         odometer: odometer.trim() ? Number(odometer.replace(/[,\s]/g, "")) : null,
       });
       if (res.error || !res.clientSecret || !res.bookingId) {
@@ -161,6 +173,11 @@ export function BookingWizard({
                   </label>
                 ))}
               </div>
+              {service?.needsLift && (
+                <p className="mt-3 rounded-[var(--radius-control)] border border-warn/30 bg-warn-dim px-3 py-2 text-sm text-warn">
+                  This job sometimes needs a lift. Your mechanic will confirm it can be done where your car is before starting.
+                </p>
+              )}
             </fieldset>
             <Field label="Describe the problem (optional — plain English is fine)" htmlFor="problem">
               <Textarea id="problem" value={problem} onChange={(e) => setProblem(e.target.value)} maxLength={2000} placeholder="Squeals when I brake, started last week…" />
@@ -222,6 +239,30 @@ export function BookingWizard({
             <Field label="Where will the car be?" htmlFor="address" hint="Street address, plus any notes like “level 2 of the garage”.">
               <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} autoComplete="street-address" maxLength={300} placeholder="1234 Main St, Denver, CO 80205" />
             </Field>
+            <fieldset>
+              <legend className="text-sm font-semibold text-cream">Where is the car parked?</legend>
+              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {CAR_LOCATIONS.map((l) => (
+                  <label key={l.value} className="cursor-pointer">
+                    <input type="radio" name="car_location" value={l.value} checked={carLocation === l.value} onChange={() => setCarLocation(l.value)} className="peer sr-only" />
+                    <span className="block rounded-[var(--radius-control)] border border-line-strong bg-raised px-3 py-2 text-center text-sm text-cream transition peer-checked:border-ore peer-checked:bg-ore-dim peer-focus-visible:outline-2 peer-focus-visible:outline-ore-bright">
+                      {l.label}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              {carLocation && carLocation !== "garage" && (
+                <div className="mt-3">
+                  <Checkbox id="car_covered" checked={carCovered} onChange={(e) => setCarCovered(e.target.checked)} label="It's under cover (carport, parking garage)" />
+                </div>
+              )}
+              {carLocation && carLocation !== "garage" && !carCovered && (
+                <p className="mt-2 text-xs text-muted">
+                  Mobile mechanics work outdoors. In snow, heavy rain or extreme cold, your mechanic may contact you to move the appointment. A covered spot helps.
+                </p>
+              )}
+              {carLocation === "street" && <p className="mt-1 text-xs text-muted">Check that street parking allows repairs where you are, and leave room to work around the car.</p>}
+            </fieldset>
             <Field label="Your phone number" htmlFor="phone" hint="Your mechanic calls or texts this when they arrive.">
               <Input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" maxLength={32} placeholder="(303) 555-0100" />
             </Field>

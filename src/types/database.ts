@@ -177,6 +177,8 @@ export type Database = {
       };
       bookings: {
         Row: {
+          car_covered: boolean;
+          car_location: string | null;
           odometer: number | null;
           accepted_at: string | null;
           address: string;
@@ -234,6 +236,8 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
+          car_covered?: boolean;
+          car_location?: string | null;
           odometer?: number | null;
           accepted_at?: string | null;
           address: string;
@@ -290,6 +294,8 @@ export type Database = {
           vehicle_model?: string | null;
         };
         Update: {
+          car_covered?: boolean;
+          car_location?: string | null;
           odometer?: number | null;
           accepted_at?: string | null;
           address?: string;
@@ -946,6 +952,7 @@ export type Database = {
       };
       services: {
         Row: {
+          needs_lift: boolean;
           active: boolean;
           description: string;
           est_minutes_max: number;
@@ -959,6 +966,7 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
+          needs_lift?: boolean;
           active?: boolean;
           description: string;
           est_minutes_max: number;
@@ -971,6 +979,7 @@ export type Database = {
           sort?: number;
         };
         Update: {
+          needs_lift?: boolean;
           active?: boolean;
           description?: string;
           est_minutes_max?: number;

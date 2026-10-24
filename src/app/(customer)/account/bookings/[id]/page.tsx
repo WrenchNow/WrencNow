@@ -180,6 +180,7 @@ export default async function BookingDetailPage({ params, searchParams }: PagePr
           <h2 className="mb-4 text-2xl font-bold uppercase">Details</h2>
           <dl className="grid gap-4 text-sm sm:grid-cols-2">
             <Detail label="Vehicle" value={b.odometer !== null ? `${b.vehicle_desc} · ${b.odometer.toLocaleString("en-US")} mi` : b.vehicle_desc} />
+            {b.car_location && <Detail label="Car is" value={`${{ driveway: "In the driveway", street: "On the street", garage: "In a garage", parking_lot: "In a parking lot" }[b.car_location] ?? b.car_location}${b.car_covered ? " (covered)" : ""}`} />}
             <Detail label="Where" value={b.address} />
             <Detail label="When" value={dateTime(b.scheduled_start)} />
             <Detail label="Rate" value={`${money(b.hourly_rate_cents)}/hr`} />

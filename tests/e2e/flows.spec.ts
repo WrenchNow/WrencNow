@@ -69,6 +69,12 @@ test("customer booking wizard reaches the payment step", async ({ page }) => {
   await page.getByRole("button", { name: /Next: Car & place/ }).click();
   await page.getByRole("radio", { name: /2015 Testmake Testmodel/ }).check({ force: true });
   await page.getByLabel("Where will the car be?").fill("1234 Test St, Denver, CO 80205");
+  await page.getByRole("button", { name: /Next: Time/ }).click();
+  await expect(page.getByText("Tell us where the car is parked.")).toBeVisible();
+  await page.getByRole("radio", { name: "Street" }).check({ force: true });
+  await expect(page.getByText(/Mobile mechanics work outdoors/)).toBeVisible();
+  await page.getByLabel(/under cover/).check();
+  await expect(page.getByText(/Mobile mechanics work outdoors/)).toHaveCount(0);
   // Phone is required so the mechanic can reach the customer on arrival.
   await page.getByLabel("Your phone number").fill("");
   await page.getByRole("button", { name: /Next: Time/ }).click();

@@ -16,6 +16,7 @@ import { MAX_PHOTOS_PER_KIND, photosFor } from "@/lib/job-photos";
 
 export const metadata: Metadata = { title: "Jobs" };
 
+const CAR_LOCATION_LABEL: Record<string, string> = { driveway: "In a driveway", street: "On the street", garage: "In a garage", parking_lot: "In a parking lot" };
 const URGENCY_LABEL: Record<string, string> = { flexible: "Flexible", soon: "Within 2–3 days", today: "Today if possible", stranded: "Stranded — urgent" };
 
 export default async function MechanicJobsPage() {
@@ -98,6 +99,15 @@ export default async function MechanicJobsPage() {
                       {money(j.estimated_max_cents)} · {money(shareOf(j.estimated_max_cents))}
                     </dd>
                   </div>
+                  {j.car_location && (
+                    <div>
+                      <dt className="text-xs tracking-wider text-muted uppercase">Car is</dt>
+                      <dd className="text-cream">
+                        {CAR_LOCATION_LABEL[j.car_location] ?? j.car_location}
+                        {j.car_covered ? " · covered" : j.car_location !== "garage" ? " · outdoors" : ""}
+                      </dd>
+                    </div>
+                  )}
                   {j.return_old_parts && (
                     <div className="sm:col-span-3">
                       <dd className="rounded-[var(--radius-control)] border border-warn/30 bg-warn-dim px-3 py-2 text-warn">

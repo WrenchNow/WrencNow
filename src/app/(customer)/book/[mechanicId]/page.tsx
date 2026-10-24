@@ -36,7 +36,7 @@ export default async function BookPage({ params, searchParams }: PageProps<"/boo
       </PageHeader>
       <BookingWizard
         mechanic={{ id: m.id, name: m.display_name ?? "your mechanic", rateCents: m.hourly_rate_cents ?? 0 }}
-        services={m.services.map((s) => ({ slug: s.slug, name: s.name, icon: s.icon, min: s.est_minutes_min, max: s.est_minutes_max }))}
+        services={m.services.map((s) => ({ slug: s.slug, name: s.name, icon: s.icon, min: s.est_minutes_min, max: s.est_minutes_max, needsLift: s.needs_lift }))}
         vehicles={(vehicles ?? []).map((v) => ({ id: v.id, label: [v.year, v.make, v.model, v.trim].filter(Boolean).join(" "), nickname: v.nickname }))}
         busy={busy ?? []}
         initialService={typeof sp.service === "string" ? sp.service : ""}
