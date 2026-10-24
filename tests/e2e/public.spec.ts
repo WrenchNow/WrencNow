@@ -72,6 +72,12 @@ test("webhooks reject unsigned requests", async ({ request }) => {
   expect(checkr.status()).toBe(401);
 });
 
+test("search never shows raw coordinates from 'use my location'", async ({ page }) => {
+  await page.goto("/search?loc=39.7392,-104.9903");
+  await expect(page.getByText("Near your current location")).toBeVisible();
+  await expect(page.locator("main")).not.toContainText("39.7392");
+});
+
 test("service pages have structured data and send customers to search for that service", async ({ page }) => {
   await page.goto("/services");
   await page.getByRole("link", { name: /Mobile brake repair/ }).click();

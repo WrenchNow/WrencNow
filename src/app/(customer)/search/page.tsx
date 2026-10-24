@@ -35,6 +35,8 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
   const loc = str(sp.loc).slice(0, 200);
   const service = str(sp.service);
   const sort = (SORTS.find((s) => s.value === sp.sort)?.value ?? "best") as SortKey;
+  // "Use my location" passes raw coordinates; don't show those to people.
+  const isCoords = /^-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?$/.test(loc);
   const services = await getServices();
 
   return (
@@ -49,12 +51,24 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
         </div>
       )}
 
-      <form action="/search" method="get" className="grid gap-3 rounded-[var(--radius-card)] border border-line bg-surface p-4 sm:grid-cols-[2fr_1.5fr_1fr_auto] sm:items-end">
-        <div>
+      <form action="/search" method="get" className="grid grid-cols-2 gap-3 rounded-[var(--radius-card)] border border-line bg-surface p-4 sm:grid-cols-[2fr_1.5fr_1fr_auto] sm:items-end">
+        <div className="col-span-2 sm:col-span-1">
           <label htmlFor="loc" className="text-sm font-medium text-cream">
             Where&apos;s the car?
           </label>
-          <Input id="loc" name="loc" defaultValue={loc} placeholder="Address or ZIP" required className="mt-1.5" />
+          {isCoords ? (
+            <>
+              <input type="hidden" name="loc" value={loc} />
+              <p className="mt-1.5 flex items-center justify-between rounded-[var(--radius-control)] border border-line-strong bg-raised px-3.5 py-3 text-[15px] text-cream">
+                <span>📍 Near your current location</span>
+                <Link href="/search" className="text-sm font-semibold text-ore hover:underline">
+                  Change
+                </Link>
+              </p>
+            </>
+          ) : (
+            <Input id="loc" name="loc" defaultValue={loc} placeholder="Address or ZIP" required className="mt-1.5" />
+          )}
         </div>
         <div>
           <label htmlFor="service" className="text-sm font-medium text-cream">
@@ -81,7 +95,9 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
             ))}
           </Select>
         </div>
-        <Button type="submit">Search</Button>
+        <Button type="submit" className="col-span-2 sm:col-span-1">
+          Search
+        </Button>
       </form>
       <div className="mt-3">
         <Suspense>
@@ -159,7 +175,7 @@ async function Results({ loc, service, sort }: { loc: string; service: string | 
         </section>
       )}
       <p className="mb-4 text-sm text-muted">
-        {results.length} mechanic{results.length === 1 ? "" : "s"} cover {point.label}
+        {results.length} mechanic{results.length === 1 ? "" : "s"} {results.length === 1 ? "covers" : "cover"} {point.label === "Your location" ? "your location" : point.label}
       </p>
       <ul className="grid gap-4 lg:grid-cols-2">
         {organic.map((m) => (

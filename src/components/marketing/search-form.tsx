@@ -16,7 +16,7 @@ export const POPULAR_SERVICES = [
 export function SearchForm({ defaultLocation = "", defaultService = "" }: { defaultLocation?: string; defaultService?: string }) {
   return (
     <form action="/search" method="get" className="rounded-[var(--radius-card)] border border-line-strong bg-surface p-5 sm:p-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-xl font-bold uppercase">Find a mechanic</h2>
         <span className="text-xs text-muted">Free to browse · no account needed</span>
       </div>
