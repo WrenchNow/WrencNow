@@ -247,3 +247,9 @@ remaining WrenchNow warranty claims in the product, and the new tables' permissi
 **Question for you:** the Terms, Privacy Policy and Mechanic Agreement now list getwrenchnow11@gmail.com as the legal
 and privacy contact. Fine for now, or do you want a getwrenchnow.com address (e.g. through Google Workspace or
 Zoho) before launch?
+
+### Sat Oct 24 — item 13 done
+- **Admin overview:** a new "Parts-store price checks · last 30 days" panel shows clicks and distinct mechanics per
+  store (AutoZone, O'Reilly, Advance, NAPA) and the most-searched parts. Use it to check affiliate reports, and as
+  evidence when pitching a store's commercial team.
+- **Results:** lint ✓, build ✓, vitest 128/128 ✓, Playwright 131 passed ✓.

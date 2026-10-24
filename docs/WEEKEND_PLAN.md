@@ -45,7 +45,7 @@ The owner is away. Each scheduled check-in takes the **first unchecked item**, f
         `docs/MORNING.md`, the PR #2 description and the `docs/WEEKEND_LOG.md` summary.
 
 ## Round 2 (added Sat Oct 24 after items 1–11 finished; owner said "keep working")
-- [ ] 13. Admin: parts-store click summary (last 30 days by store; top searched parts), for affiliate reconciliation
+- [x] 13. Admin: parts-store click summary (last 30 days by store; top searched parts), for affiliate reconciliation
         and the pro-program pitch.
 - [ ] 14. Customer receipts by email on completion: itemized labor, parts at receipt cost, handling, total, and
         refunds. Only sent when the email keys are set. Also a printable receipt page.

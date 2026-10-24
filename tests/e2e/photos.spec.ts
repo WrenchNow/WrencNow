@@ -81,3 +81,20 @@ test("price-check links require a mechanic login", async ({ request }) => {
   expect([302, 307]).toContain(res.status());
   expect(res.headers().location).toContain("/login");
 });
+
+test("admin sees parts-store price-check totals", async ({ page }) => {
+  const c = new pg.Client({ connectionString: DB_URL });
+  await c.connect();
+  const mech = (await c.query("select id from auth.users where email = $1", [USERS.mechanic])).rows[0].id;
+  const tag = `zz-e2e-part-${Date.now()}`;
+  await c.query("insert into public.parts_link_clicks (mechanic_id, retailer, query) values ($1, 'napa', $2), ($1, 'napa', $2)", [mech, `${tag} 2015 Testmake`]);
+  try {
+    await login(page, USERS.admin, "/admin");
+    const section = page.locator("#parts-clicks + div");
+    await expect(section.getByText(tag)).toBeVisible();
+    await expect(section.getByText(/^NAPA$/)).toBeVisible();
+  } finally {
+    await c.query("delete from public.parts_link_clicks where query like $1", [`${tag}%`]);
+    await c.end();
+  }
+});

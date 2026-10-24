@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/ui/layout";
 import { dateTime } from "@/lib/format";
 import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { PARTS_RETAILERS } from "@/lib/parts-retailers";
 
 export const metadata: Metadata = { title: "Admin" };
 
@@ -13,7 +14,8 @@ export default async function AdminPage() {
   await requireAdmin();
   const admin = createAdminClient();
   const count = async (q: PromiseLike<{ count: number | null }>) => (await q).count ?? 0;
-  const [awaitingReview, live, activeBookings, disputed, { data: log }, { data: reports }, { data: requests }, { data: claims }] = await Promise.all([
+  const since = new Date(new Date().setUTCDate(new Date().getUTCDate() - 30)).toISOString();
+  const [awaitingReview, live, activeBookings, disputed, { data: log }, { data: reports }, { data: requests }, { data: claims }, { data: clicks }] = await Promise.all([
     count(
       admin
         .from("mechanics")
@@ -37,7 +39,20 @@ export default async function AdminPage() {
       .in("status", ["open", "mechanic_contacted"])
       .order("created_at")
       .limit(100),
+    admin.from("parts_link_clicks").select("retailer, query, mechanic_id").gte("created_at", since).limit(5000),
   ]);
+  // Parts-store price checks, last 30 days: per store, plus the most-searched parts (vehicle words dropped).
+  const byStore = new Map<string, { clicks: number; mechanics: Set<string> }>();
+  const byPart = new Map<string, number>();
+  for (const c of clicks ?? []) {
+    const s = byStore.get(c.retailer) ?? { clicks: 0, mechanics: new Set<string>() };
+    s.clicks += 1;
+    s.mechanics.add(c.mechanic_id);
+    byStore.set(c.retailer, s);
+    const part = c.query.toLowerCase().split(/\s+(?=\d{4}\b)/)[0]!.trim();
+    byPart.set(part, (byPart.get(part) ?? 0) + 1);
+  }
+  const topParts = [...byPart.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
 
   const tiles = [
     { label: "Applications & insurance to review", value: awaitingReview, href: "/admin/mechanics?filter=review" },
@@ -152,6 +167,32 @@ export default async function AdminPage() {
         </ul>
       ) : (
         <p className="text-sm text-muted">No open reports.</p>
+      )}
+
+      <h2 id="parts-clicks" className="mt-10 mb-3 scroll-mt-24 text-2xl font-bold uppercase">Parts-store price checks · last 30 days</h2>
+      {clicks && clicks.length > 0 ? (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <ul className="divide-y divide-line rounded-[var(--radius-card)] border border-line bg-surface text-sm">
+            {PARTS_RETAILERS.map((r) => (
+              <li key={r.key} className="flex justify-between px-4 py-2.5">
+                <span className="text-cream">{r.name}</span>
+                <span className="text-ink">
+                  {byStore.get(r.key)?.clicks ?? 0} clicks · {byStore.get(r.key)?.mechanics.size ?? 0} mechanics
+                </span>
+              </li>
+            ))}
+          </ul>
+          <ul className="divide-y divide-line rounded-[var(--radius-card)] border border-line bg-surface text-sm">
+            {topParts.map(([part, n]) => (
+              <li key={part} className="flex justify-between px-4 py-2.5">
+                <span className="text-cream">{part}</span>
+                <span className="text-ink">{n}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <p className="text-sm text-muted">No price checks yet. Mechanics see store links on their parts quotes.</p>
       )}
 
       <h2 className="mt-10 mb-3 text-2xl font-bold uppercase">Recent activity</h2>
