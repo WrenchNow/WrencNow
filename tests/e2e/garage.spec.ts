@@ -55,7 +55,7 @@ test.beforeEach(async ({ page }) => {
 test("garage shows each car's service history and saves mileage + reminders", async ({ page }) => {
   await login(page, USERS.customer, "/account/garage");
   const card = page.locator("section > div").filter({ has: page.getByRole("heading", { name: new RegExp(tag) }) });
-  await expect(card.getByText("Oil change")).toBeVisible();
+  await expect(card.getByText("Oil change", { exact: true })).toBeVisible();
   await expect(card.getByText(/84,500 mi/)).toBeVisible();
   // No WrenchNow warranty claim; this mechanic offers none of their own.
   await expect(card.getByText(/warranty/i)).toHaveCount(0);

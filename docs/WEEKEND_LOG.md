@@ -267,3 +267,16 @@ Zoho) before launch?
   link). Like all emails, it only sends once the email keys are set.
 - **Results:** lint ✓, build ✓, vitest 128/128 ✓, Playwright 131 passed ✓, lifecycle 5/5 ✓ (now also checks the
   receipt after a refund: Refunded $10.00, Net paid $40.00).
+
+### Sun Oct 25 — item 15 done (after a long outage)
+- **Outage:** the session's worker was down from about Sat 09:40 UTC to Sun 16:39 UTC. All the hourly check-ins in
+  that window were held until now, so no work happened during it.
+- **Maintenance reminders:**
+  - A daily job emails a customer when an opted-in car's last WrenchNow oil change was 180+ days ago
+    (`REMINDER_OIL_DAYS`). Cars with no oil change on record are skipped, so we never guess.
+  - One email per car per oil-change cycle, deduplicated. Each email links to booking and to turning reminders off.
+  - Runs through `/api/cron/reminders`, protected by `CRON_SECRET`, and `netlify/functions/reminders.mjs`, a Netlify
+    scheduled function set to run daily.
+  - **Off until** `CRON_SECRET` and the email keys are set in Netlify.
+  - The garage checkbox now says what it does.
+- **Results:** lint ✓, build ✓, vitest 131/131 ✓, Playwright 133 passed ✓.

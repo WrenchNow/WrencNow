@@ -49,7 +49,7 @@ The owner is away. Each scheduled check-in takes the **first unchecked item**, f
         and the pro-program pitch.
 - [x] 14. Customer receipts by email on completion: itemized labor, parts at receipt cost, handling, total, and
         refunds. Only sent when the email keys are set. Also a printable receipt page.
-- [ ] 15. Maintenance reminders: a daily route (`/api/cron/reminders`, protected by `CRON_SECRET`) that emails
+- [x] 15. Maintenance reminders: a daily route (`/api/cron/reminders`, protected by `CRON_SECRET`) that emails
         opted-in customers when a car is likely due (time since last oil change). Off until email keys and the
         schedule are set. Netlify scheduled function config.
 - [ ] 16. Prerender service pages and the static marketing pages (SEO/speed), if the auth layout allows.

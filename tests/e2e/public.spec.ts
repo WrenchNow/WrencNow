@@ -96,3 +96,9 @@ test("web app manifest and icons are served", async ({ request }) => {
   expect(m.icons.some((i: { purpose: string }) => i.purpose === "maskable")).toBe(true);
   expect((await request.get("/apple-icon.png")).ok()).toBe(true);
 });
+
+test("maintenance-reminder cron route is locked down", async ({ request }) => {
+  const res = await request.post("/api/cron/reminders");
+  expect([401, 503]).toContain(res.status()); // 503 until CRON_SECRET is set; 401 without the right bearer token
+  expect((await request.post("/api/cron/reminders", { headers: { authorization: "Bearer wrong" } })).status()).not.toBe(200);
+});

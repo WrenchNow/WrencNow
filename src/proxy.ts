@@ -20,6 +20,6 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     // Skip static assets, images, and webhooks (webhooks authenticate by signature, not session).
-    "/((?!_next/static|_next/image|favicon.ico|api/stripe/webhook|api/checks/webhook|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api/stripe/webhook|api/checks/webhook|api/cron|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml)$).*)",
   ],
 };

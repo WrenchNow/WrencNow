@@ -209,7 +209,7 @@ export function VehicleCareForm({ id, mileage, reminders, label }: { id: string;
         name="reminders"
         defaultChecked={reminders}
         aria-label={`Maintenance reminders for ${label}`}
-        label="Email me maintenance reminders for this car. We'll save your choice now and start sending when reminders launch."
+        label="Email me a reminder when this car is likely due for an oil change (about 6 months after its last WrenchNow oil change)."
       />
       <Button type="submit" size="sm" variant="subtle" disabled={pending} className="self-start">
         {pending ? "Saving…" : "Save"}

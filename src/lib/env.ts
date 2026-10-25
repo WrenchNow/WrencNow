@@ -86,3 +86,9 @@ export function issueReportDays(): number {
   return Number.isInteger(n) && n >= 0 && n <= 365 ? n : 30;
 }
 
+
+/** Days after an oil change before a maintenance reminder is sent (opted-in customers only). */
+export function reminderIntervalDays(): number {
+  const n = Number(process.env.REMINDER_OIL_DAYS ?? 180);
+  return Number.isInteger(n) && n >= 30 && n <= 730 ? n : 180;
+}
