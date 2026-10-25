@@ -1,6 +1,6 @@
 # Morning checklist — WrenchNow
 
-Branch: `claude/wrenchnow-bootstrap` (not merged to `main`, nothing deployed).
+Branch: `claude/wrenchnow-bootstrap` (not merged to `main`, nothing deployed). **Full weekend summary: `docs/WEEKEND_REPORT.md`.**
 
 ## ⚠️ Urgent: revoke the old Resend API key
 A real Resend API key (starts `re_QnMP…`) was in the old prototype's `index.html`. This repo is public, so treat the
@@ -56,8 +56,10 @@ It has been removed from `legacy/index.html` on this branch, and PR #4 removes i
 - **Fleet accounts:** do you want discounts, invoices paid within 30 days (this breaks the "card hold first" rule), or
   multiple logins per business?
 
-- **Legal entity:** the legal pages say "WrenchNow Inc." Is that the registered name and state? Contact emails now go
-  to **getwrenchnow11@gmail.com** everywhere (site, legal pages, admin alerts). Change it in `src/lib/contact.ts`. Please have a lawyer review the Terms, Privacy Policy and Mechanic Agreement.
+- **Legal entity:** no entity yet. I suggest a Colorado LLC; the legal pages name "WrenchNow" and Colorado law until
+  it exists. Contact emails go to **getwrenchnow11@gmail.com** everywhere (change it in `src/lib/contact.ts`). Keep
+  that Gmail address on the legal pages, or get a getwrenchnow.com address before launch? Please have a lawyer
+  review the Terms, Privacy Policy and Mechanic Agreement.
 - **Prototype stats I removed:** "4.9 average rating", "3 hrs vs 45 min", "$3,800+/month" and the demo bookings
   dashboard. None of them could be verified.
 - **Geocoding:** addresses are looked up with the free US Census and OpenStreetMap services. Do you want Mapbox or

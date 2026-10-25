@@ -41,7 +41,7 @@ The owner is away. Each scheduled check-in takes the **first unchecked item**, f
         what we assume in `.env.example`); Google Business Profile/LSA eligibility for mobile mechanics. Feed
         verified findings into copy or settings only when they're solid.
 - [x] 11. QA pass (qa-reviewer agent) over everything added this weekend; fix blockers.
-- [ ] 12. Final (done by the **Sunday-noon scheduled report**, not before): write `docs/WEEKEND_REPORT.md`, update
+- [x] 12. Final (done by the **Sunday-noon scheduled report**, not before): write `docs/WEEKEND_REPORT.md`, update
         `docs/MORNING.md`, the PR #2 description and the `docs/WEEKEND_LOG.md` summary.
 
 ## Round 2 (added Sat Oct 24 after items 1–11 finished; owner said "keep working")

@@ -280,3 +280,8 @@ Zoho) before launch?
   - **Off until** `CRON_SECRET` and the email keys are set in Netlify.
   - The garage checkbox now says what it does.
 - **Results:** lint ✓, build ✓, vitest 131/131 ✓, Playwright 133 passed ✓.
+
+### Sun Oct 25 — item 12 (final report)
+- `docs/WEEKEND_REPORT.md` covers everything done Fri–Sun, the launch checklist, open questions, and what's left
+  (items 16–18 weren't reached because of the outage). `docs/MORNING.md` and the PR #2 description were updated to
+  match. The hourly autopilot is turned off.
