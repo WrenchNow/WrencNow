@@ -27,11 +27,17 @@ from the old June project the current site may use. All 16 database setup steps 
   - `job_issues` was created under its final name (steps 9 + 14).
   - The job-photo upload rule was created in its final form (steps 11 + 16).
   - The review de-duplication was skipped because there were no rows.
-- **End result:** the same tables, rules and functions.
+- **End result:** verified identical to the local database built from the files. Fingerprints of all 245 columns,
+  every RLS policy's text, every function and every trigger match.
+- **Security check:** Supabase's checker was run and migration 17 (`function_grants`) fixed its findings. Trigger and
+  helper functions are no longer callable over the API, and two functions got a pinned search_path. The remaining
+  notices are the intentionally public search/profile functions.
 
 **Still needed in Netlify (from your accounts):**
-- From Supabase: `SUPABASE_SERVICE_ROLE_KEY` (Project Settings → API keys → service_role). The project URL and anon key
-  are saved already if the morning summary says so.
+- From Supabase: `SUPABASE_SERVICE_ROLE_KEY` (Project Settings → API keys → service_role). `NEXT_PUBLIC_SUPABASE_URL`
+  and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are already saved in Netlify.
+- In Supabase → Authentication → URL Configuration: set the Site URL to `https://getwrenchnow.com` and add the redirect
+  URL `https://getwrenchnow.com/auth/callback`. The connector can't change auth settings.
 - From Stripe: `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`.
 - From Checkr: `CHECKR_API_KEY`, `CHECKR_PACKAGE`.
 - Optional: `RESEND_API_KEY` + `EMAIL_FROM`, and the Twilio settings.
