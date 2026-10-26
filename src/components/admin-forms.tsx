@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { adminCancelBooking, refundBooking, resolvePaymentReport, reviewInsurance, updateJobIssue, setOpenRequestStatus, reviewMechanic, waiveOnboardingFee, type FormState } from "@/app/(admin)/admin/actions";
+import { adminCancelBooking, markTaxReviewed, refundBooking, resolvePaymentReport, reviewInsurance, updateJobIssue, setOpenRequestStatus, reviewMechanic, waiveOnboardingFee, type FormState } from "@/app/(admin)/admin/actions";
 import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/feedback";
 import { Input, Select } from "@/components/ui/form";
@@ -159,6 +159,19 @@ export function JobIssueForm({ id }: { id: string }) {
           Deny
         </Button>
       </div>
+    </form>
+  );
+}
+
+export function TaxReviewedForm({ id }: { id: string }) {
+  const [s, action, pending] = useActionState(markTaxReviewed, {});
+  return (
+    <form action={action}>
+      <Msg s={s} />
+      <input type="hidden" name="id" value={id} />
+      <Button type="submit" size="sm" variant="subtle" disabled={pending}>
+        Mark reviewed
+      </Button>
     </form>
   );
 }

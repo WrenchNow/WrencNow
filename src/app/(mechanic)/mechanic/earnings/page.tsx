@@ -20,7 +20,7 @@ export default async function EarningsPage() {
     getMyMechanic(viewer.id),
     supabase
       .from("bookings")
-      .select("id, completed_at, final_amount_cents, platform_fee_cents, processing_fee_cents, onboarding_fee_cents, refunded_cents, services(name)")
+      .select("id, completed_at, final_amount_cents, platform_fee_cents, processing_fee_cents, onboarding_fee_cents, sales_tax_cents, refunded_cents, services(name)")
       .eq("mechanic_id", viewer.id)
       .eq("status", "completed")
       .order("completed_at", { ascending: false })
@@ -30,8 +30,10 @@ export default async function EarningsPage() {
   const rows = (jobs ?? []).map((j) => {
     const gross = j.final_amount_cents ?? 0;
     const fee = (j.platform_fee_cents ?? 0) + (j.processing_fee_cents ?? 0);
+    // Sales tax on parts goes to the state (via WrenchNow), never to the mechanic.
+    const tax = j.sales_tax_cents ?? 0;
     const onboarding = j.onboarding_fee_cents ?? 0;
-    return { ...j, gross, fee, onboarding, net: mechanicNetCents(gross, fee + onboarding, j.refunded_cents ?? 0) };
+    return { ...j, gross, fee, tax, onboarding, net: mechanicNetCents(gross, fee + tax + onboarding, j.refunded_cents ?? 0) };
   });
   const sum = (list: typeof rows) => list.reduce((a, r) => a + r.net, 0);
   const month = monthKey(new Date());
@@ -52,7 +54,7 @@ export default async function EarningsPage() {
           ) : undefined
         }
       >
-        Your share after the platform fee and card processing. Payouts land in your bank on Stripe&apos;s schedule.
+        Your share after the platform fee and card processing. Sales tax on parts is collected and paid to the state by WrenchNow. Payouts land in your bank on Stripe&apos;s schedule.
       </PageHeader>
       <p className="-mt-4 mb-6 text-sm">
         <a href="/mechanic/earnings/csv" className="font-semibold text-ore hover:underline">
@@ -105,6 +107,7 @@ export default async function EarningsPage() {
                   <td className="px-4 py-3 text-right">{money(r.gross)}</td>
                   <td className="px-4 py-3 text-right text-muted">
                     −{money(r.fee)}
+                    {r.tax > 0 && <span className="block text-xs">−{money(r.tax)} sales tax</span>}
                     {r.onboarding > 0 && <span className="block text-xs">−{money(r.onboarding)} check fee</span>}
                   </td>
                   <td className="px-4 py-3 text-right font-semibold text-cream">{money(r.net)}</td>

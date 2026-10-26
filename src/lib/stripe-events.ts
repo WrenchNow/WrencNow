@@ -2,6 +2,7 @@ import "server-only";
 import type Stripe from "stripe";
 import { cancelOpenBookingsForMechanic } from "@/lib/bookings";
 import { notifyBooking, notifyRefund } from "@/lib/notify";
+import { taxShareOfRefund } from "@/lib/sales-tax";
 import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -95,7 +96,7 @@ async function onCharge(admin: Admin, event: Stripe.Event) {
   // A job can be paid by its original PaymentIntent and/or a parts top-up.
   const { data: b } = await admin
     .from("bookings")
-    .select("id, mechanic_id, final_amount_cents, payment_status")
+    .select("id, mechanic_id, final_amount_cents, payment_status, sales_tax_cents")
     .or(`stripe_payment_intent_id.eq.${piId},topup_payment_intent_id.eq.${piId}`)
     .maybeSingle();
   if (!b) return;
@@ -114,7 +115,12 @@ async function onCharge(admin: Admin, event: Stripe.Event) {
     const full = refunded >= (b.final_amount_cents ?? charge.amount_captured);
     await admin
       .from("bookings")
-      .update(b.payment_status === "disputed" ? { refunded_cents: refunded } : { refunded_cents: refunded, payment_status: full ? "refunded" : "partially_refunded" })
+      .update({
+        refunded_cents: refunded,
+        // Tax given back in proportion to the refund, so the sales tax report nets it out.
+        sales_tax_refunded_cents: taxShareOfRefund(refunded, b.sales_tax_cents ?? 0, b.final_amount_cents ?? charge.amount_captured),
+        ...(b.payment_status === "disputed" ? {} : { payment_status: full ? "refunded" : "partially_refunded" }),
+      })
       .eq("id", b.id);
     // A fully refunded job doesn't count toward the mechanic's onboarding fee.
     if (full) await admin.rpc("release_onboarding_fee", { p_booking_id: b.id });

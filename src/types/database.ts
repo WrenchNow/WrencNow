@@ -203,6 +203,16 @@ export type Database = {
       bookings: {
         Row: {
           warranty_days: number | null;
+          tax_zip: string | null;
+          tax_county: string | null;
+          tax_place: string | null;
+          tax_rate_mpct: number;
+          tax_components: Json;
+          tax_source: string | null;
+          tax_review_note: string | null;
+          tax_reviewed_at: string | null;
+          sales_tax_cents: number;
+          sales_tax_refunded_cents: number;
           business_name: string | null;
           car_covered: boolean;
           car_location: string | null;
@@ -264,6 +274,16 @@ export type Database = {
         ComputedFields: never;
         Insert: {
           warranty_days?: number | null;
+          tax_zip?: string | null;
+          tax_county?: string | null;
+          tax_place?: string | null;
+          tax_rate_mpct?: number;
+          tax_components?: Json;
+          tax_source?: string | null;
+          tax_review_note?: string | null;
+          tax_reviewed_at?: string | null;
+          sales_tax_cents?: number;
+          sales_tax_refunded_cents?: number;
           business_name?: string | null;
           car_covered?: boolean;
           car_location?: string | null;
@@ -324,6 +344,16 @@ export type Database = {
         };
         Update: {
           warranty_days?: number | null;
+          tax_zip?: string | null;
+          tax_county?: string | null;
+          tax_place?: string | null;
+          tax_rate_mpct?: number;
+          tax_components?: Json;
+          tax_source?: string | null;
+          tax_review_note?: string | null;
+          tax_reviewed_at?: string | null;
+          sales_tax_cents?: number;
+          sales_tax_refunded_cents?: number;
           business_name?: string | null;
           car_covered?: boolean;
           car_location?: string | null;

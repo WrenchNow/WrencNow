@@ -218,12 +218,14 @@ export async function declinePartsAction(bookingId: string): Promise<{ error?: s
 }
 
 /** Exact estimate for the booking review step: labor range + parts estimate (with handling). */
-export async function estimateAction(mechanicId: string, serviceSlug: string, vehicleId: string) {
+export async function estimateAction(mechanicId: string, serviceSlug: string, vehicleId: string, address = "") {
   const viewer = await requireRole(["customer"], `/book/${mechanicId}`);
   const { createAdminClient } = await import("@/lib/supabase/admin");
   const { partsEstimateFor } = await import("@/lib/parts");
-  const { partsChargeCents } = await import("@/lib/parts-math");
-  const { partsHandlingBps } = await import("@/lib/env");
+  const { partsChargeCents, partsHandlingCents } = await import("@/lib/parts-math");
+  const { partsHandlingBps, salesTaxOnHandling } = await import("@/lib/env");
+  const { partsSalesTaxCents, formatRate } = await import("@/lib/sales-tax");
+  const { lookupTax } = await import("@/lib/tax-lookup");
   const { estimateMaxCents, estimateMinCents } = await import("@/lib/fees");
   const admin = createAdminClient();
   const [{ data: m }, { data: svc }, { data: v }] = await Promise.all([
@@ -234,6 +236,8 @@ export async function estimateAction(mechanicId: string, serviceSlug: string, ve
   if (!m?.hourly_rate_cents || !svc || !v || v.owner_id !== viewer.id) return null;
   const parts = await partsEstimateFor(mechanicId, svc.id, v.make, v.model);
   const partsCharge = partsChargeCents(parts.cents, partsHandlingBps());
+  const tax = await lookupTax(String(address).slice(0, 300), null, null);
+  const partsTax = partsSalesTaxCents(parts.cents, partsHandlingCents(parts.cents, partsHandlingBps()), tax.mpct, salesTaxOnHandling());
   return {
     laborMin: estimateMinCents(m.hourly_rate_cents, svc.est_minutes_min),
     laborMax: estimateMaxCents(m.hourly_rate_cents, svc.est_minutes_max),
@@ -241,7 +245,9 @@ export async function estimateAction(mechanicId: string, serviceSlug: string, ve
     partsCharge,
     basis: parts.basis,
     sample: parts.sample,
-    total: estimateMaxCents(m.hourly_rate_cents, svc.est_minutes_max) + partsCharge,
+    partsTax,
+    taxLabel: `${formatRate(tax.mpct)}${tax.place ? ` (${tax.place})` : tax.county ? ` (${tax.county})` : ""}`,
+    total: estimateMaxCents(m.hourly_rate_cents, svc.est_minutes_max) + partsCharge + partsTax,
   };
 }
 

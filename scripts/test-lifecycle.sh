@@ -7,6 +7,7 @@ cd "$(dirname "$0")/.."
 export STRIPE_WEBHOOK_SECRET=whsec_test_lifecycle
 export CHECKR_API_KEY=checkr_test_lifecycle # signs the test background-check webhooks
 export NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_lifecycle
+export SALES_TAX_GEO_LOOKUP=off # no network here: the ZIP fallback picks the rate
 npx next build > /tmp/next-lifecycle-build.log 2>&1 || { tail -30 /tmp/next-lifecycle-build.log; exit 1; }
 FAKE_PORT=12112
 fuser -k 3000/tcp "$FAKE_PORT/tcp" 2>/dev/null || true

@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("bookings")
-    .select("id, completed_at, final_amount_cents, platform_fee_cents, processing_fee_cents, onboarding_fee_cents, refunded_cents, services(name)")
+    .select("id, completed_at, final_amount_cents, platform_fee_cents, processing_fee_cents, onboarding_fee_cents, sales_tax_cents, refunded_cents, services(name)")
     .eq("mechanic_id", viewer.id)
     .eq("status", "completed")
     .order("completed_at", { ascending: false })

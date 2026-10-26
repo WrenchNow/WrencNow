@@ -14,9 +14,10 @@ import { PageHeader } from "@/components/ui/layout";
 import { requireRole } from "@/lib/auth";
 import { customerNoShowAt, noShowReportable } from "@/lib/booking-status";
 import { syncBookingPayment } from "@/lib/bookings";
-import { customerNoShowFeeCents, issueReportDays, partsHandlingBps, stripeConfigured } from "@/lib/env";
+import { customerNoShowFeeCents, issueReportDays, partsHandlingBps, salesTaxOnHandling, stripeConfigured } from "@/lib/env";
 import { receiptLinks, syncTopup } from "@/lib/parts";
-import { partsChargeCents } from "@/lib/parts-math";
+import { partsChargeCents, partsHandlingCents } from "@/lib/parts-math";
+import { formatRate, partsSalesTaxCents } from "@/lib/sales-tax";
 import { dateTime, money, timeOnly, warrantyLabel } from "@/lib/format";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { mechanicNames } from "@/lib/public-data";
@@ -64,7 +65,9 @@ export default async function BookingDetailPage({ params, searchParams }: PagePr
   const quotedCost = parts.filter((p) => p.status === "quoted").reduce((s2, p) => s2 + p.quantity * p.quoted_unit_cents, 0);
   const boughtCost = parts.filter((p) => p.status === "purchased").reduce((s2, p) => s2 + (p.receipt_cents ?? 0), 0);
   const laborMax = b.labor_max_cents ?? b.estimated_max_cents;
-  const quoteNewMax = laborMax + partsChargeCents(quotedCost + boughtCost, handlingBps);
+  const quotePartsTax = partsSalesTaxCents(quotedCost + boughtCost, partsHandlingCents(quotedCost + boughtCost, handlingBps), b.tax_rate_mpct, salesTaxOnHandling());
+  const quoteNewMax = laborMax + partsChargeCents(quotedCost + boughtCost, handlingBps) + quotePartsTax;
+  const taxLabel = `${formatRate(b.tax_rate_mpct)}${b.tax_place ? `, ${b.tax_place}` : b.tax_county ? `, ${b.tax_county}` : ""}`;
   // The mechanic's own warranty, if they offer one (WrenchNow offers none).
   const warranty = b.status === "completed" ? (b.warranty_days ?? 0) : null;
   const covered = warranty !== null && withinDays(b.completed_at, reportWindowDays(warranty, issueReportDays()));
@@ -167,6 +170,8 @@ export default async function BookingDetailPage({ params, searchParams }: PagePr
             handlingBps={handlingBps}
             laborMax={laborMax}
             newMax={quoteNewMax}
+            partsTax={quotePartsTax}
+            taxLabel={taxLabel}
             approvedAt={b.parts_approved_at}
             publishableKey={stripeConfigured() ? process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY! : null}
           />
@@ -205,6 +210,7 @@ export default async function BookingDetailPage({ params, searchParams }: PagePr
                   {b.labor_cents !== null && <Detail label="Labor" value={money(b.labor_cents)} />}
                   {b.parts_cents !== null && b.parts_cents > 0 && <Detail label="Parts (at receipt cost)" value={money(b.parts_cents)} />}
                   {b.parts_handling_cents ? <Detail label="Parts handling" value={money(b.parts_handling_cents)} /> : null}
+                  {b.sales_tax_cents ? <Detail label={`Sales tax on parts (${taxLabel})`} value={money(b.sales_tax_cents)} /> : null}
                   <Detail label="Total charged" value={money(b.final_amount_cents)} />
                 </>
               )

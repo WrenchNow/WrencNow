@@ -89,10 +89,17 @@ Stripe → Developers → Webhooks → Add endpoint:
 
 ## Questions for you
 
-- **⚠️ Sales tax on parts:** Colorado taxes installed parts; separately stated labor isn't taxed. As a marketplace
-  that takes payment and a fee, WrenchNow is probably the "marketplace facilitator" that must collect state, RTD and
-  Denver tax on parts, and likely on the handling charge. **The app doesn't collect sales tax yet.** Confirm with a
-  CPA, then I'll add it (Stripe Tax or a rate table). Details and sources are in the LLC plan doc.
+- **Sales tax on parts — built (Oct 25), confirm with a CPA before going live.** Colorado sales tax is charged on parts
+  and the parts handling charge (labor isn't taxed), at the rate for where the job is: state 2.9% + county + city +
+  RTD + Cultural Facilities District, from DR 1002 (January 2026). The job address is placed inside city limits with
+  the free US Census geocoder; if that fails, Denver-only ZIPs get Denver's 9.15%, and anything else gets a provisional
+  Denver rate and shows up in **Admin → Sales tax → Needs a look**. The tax is kept out of the mechanic's payout, shown
+  on the estimate, the parts approval, the receipt and the receipt email, and given back in proportion to any refund.
+  Admin → Sales tax totals each month by jurisdiction, with a CSV for filing. Questions for the CPA: (1) is the
+  handling charge taxable (`SALES_TAX_ON_HANDLING`, default yes)? (2) register with Colorado and each home-rule city
+  you'll have jobs in (Denver, Aurora, Lakewood, etc. collect their own tax). (3) Rates change Jan 1 and Jul 1:
+  update `src/lib/sales-tax.ts`. Local improvement and metro districts aren't modeled (Commerce City's fire district,
+  some unincorporated Jefferson County areas); those addresses are flagged for review.
 
 - **Stripe's $2 per active mechanic per month:** absorb it, or raise `PROCESSING_FEE_CENTS`? (See
   `docs/research/2026-10-24-costs-and-listings.md`.)

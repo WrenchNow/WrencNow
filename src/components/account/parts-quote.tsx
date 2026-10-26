@@ -25,6 +25,8 @@ export function PartsQuote({
   handlingBps,
   laborMax,
   newMax,
+  partsTax = 0,
+  taxLabel = "",
   approvedAt,
   publishableKey,
 }: {
@@ -33,6 +35,8 @@ export function PartsQuote({
   handlingBps: number;
   laborMax: number;
   newMax: number;
+  partsTax?: number;
+  taxLabel?: string;
   approvedAt: string | null;
   publishableKey: string | null;
 }) {
@@ -102,6 +106,12 @@ export function PartsQuote({
             <dd className="text-right text-cream">{usd(quotedSubtotal)}</dd>
             <dt className="text-ink">Handling ({handlingBps / 100}%)</dt>
             <dd className="text-right text-cream">{usd(handling)}</dd>
+            {partsTax > 0 && (
+              <>
+                <dt className="text-ink">Sales tax on parts{taxLabel ? ` (${taxLabel})` : ""}</dt>
+                <dd className="text-right text-cream">{usd(partsTax)}</dd>
+              </>
+            )}
             <dt className="text-ink">Labor (up to)</dt>
             <dd className="text-right text-cream">{usd(laborMax)}</dd>
             <dt className="font-semibold text-cream">New total, up to</dt>

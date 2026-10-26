@@ -1,10 +1,11 @@
 import "server-only";
 import { after } from "next/server";
 import { BookingError } from "@/lib/booking-error";
-import { partsHandlingBps } from "@/lib/env";
+import { partsHandlingBps, salesTaxOnHandling } from "@/lib/env";
 import { dateTime, money } from "@/lib/format";
 import { notifyBookingParts } from "@/lib/notify";
-import { partsChargeCents, quoteSubtotalCents, topupNeededCents } from "@/lib/parts-math";
+import { partsChargeCents, partsHandlingCents, quoteSubtotalCents, topupNeededCents } from "@/lib/parts-math";
+import { partsSalesTaxCents } from "@/lib/sales-tax";
 import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -64,10 +65,12 @@ export async function quoteSummary(bookingId: string) {
   const purchased = (parts ?? []).filter((p) => p.status === "purchased");
   const partsCost = quoteSubtotalCents(quoted) + purchased.reduce((s, p) => s + (p.receipt_cents ?? 0), 0);
   const partsCharge = partsChargeCents(partsCost, partsHandlingBps());
+  // Colorado sales tax on the parts, at the rate snapshotted for this job's address.
+  const partsTax = partsSalesTaxCents(partsCost, partsHandlingCents(partsCost, partsHandlingBps()), b.tax_rate_mpct, salesTaxOnHandling());
   const laborMax = b.labor_max_cents ?? b.estimated_max_cents;
-  const newMax = laborMax + partsCharge;
+  const newMax = laborMax + partsCharge + partsTax;
   const mainAuthorized = b.hold_cents ?? b.estimated_max_cents; // the original card hold
-  return { booking: b, quoted, partsCost, partsCharge, laborMax, newMax, mainAuthorized };
+  return { booking: b, quoted, partsCost, partsCharge, partsTax, laborMax, newMax, mainAuthorized };
 }
 
 /**
@@ -133,7 +136,7 @@ export async function finalizePartsApproval(bookingId: string, actorId: string |
     action: "booking.parts_approved",
     entity: "booking",
     entity_id: bookingId,
-    data: { parts_charge: s.partsCharge, new_max: s.newMax, approved_at: now, consent: "in-app approval" },
+    data: { parts_charge: s.partsCharge, parts_tax: s.partsTax, new_max: s.newMax, approved_at: now, consent: "in-app approval" },
   });
   after(() => notifyBookingParts(bookingId, "approved"));
 }

@@ -84,16 +84,16 @@ export function BookingWizard({
   const laborMinLocal = service && mechanic.rateCents ? estimateMinCents(mechanic.rateCents, service.min) : 0;
   const laborMaxLocal = service && mechanic.rateCents ? estimateMaxCents(mechanic.rateCents, service.max) : 0;
   // Exact numbers (incl. the parts estimate for this car) come from the server at the review step.
-  const [quote, setQuote] = useState<{ laborMin: number; laborMax: number; partsCharge: number; basis: string; total: number } | null>(null);
+  const [quote, setQuote] = useState<{ laborMin: number; laborMax: number; partsCharge: number; partsTax: number; taxLabel: string; basis: string; total: number } | null>(null);
   useEffect(() => {
     if (step !== 3 || !serviceSlug || !vehicleId) return;
     let live = true;
-    estimateAction(mechanic.id, serviceSlug, vehicleId).then((q) => live && setQuote(q));
+    estimateAction(mechanic.id, serviceSlug, vehicleId, address).then((q) => live && setQuote(q));
     return () => {
       live = false;
     };
-  }, [step, serviceSlug, vehicleId, mechanic.id]);
-  const estMin = (quote?.laborMin ?? laborMinLocal) + (quote?.partsCharge ?? 0);
+  }, [step, serviceSlug, vehicleId, mechanic.id, address]);
+  const estMin = (quote?.laborMin ?? laborMinLocal) + (quote?.partsCharge ?? 0) + (quote?.partsTax ?? 0);
   const estMax = quote?.total ?? laborMaxLocal;
 
   if (services.length === 0) {
@@ -328,7 +328,7 @@ export function BookingWizard({
                 label="Parts"
                 value={
                   quote && quote.partsCharge > 0
-                    ? `about ${money(quote.partsCharge, { whole: true })} (${quote.basis === "mechanic" ? "mechanic's usual price" : `based on ${quote.basis}`})`
+                    ? `about ${money(quote.partsCharge, { whole: true })} + ${money(quote.partsTax, { whole: true })} tax (${quote.basis === "mechanic" ? "mechanic's usual price" : `based on ${quote.basis}`})`
                     : "Quoted in the app before purchase"
                 }
               />
@@ -338,7 +338,9 @@ export function BookingWizard({
               <ul className="mt-2 list-disc space-y-1 pl-5">
                 <li>We place a hold of {money(estMax)} on your card now. You aren&apos;t charged yet.</li>
                 <li>When the job is done, you&apos;re charged the final amount — never more than {money(estMax)}. The rest of the hold is released.</li>
-                <li>Parts are billed at the receipt price plus a small handling charge. Before buying, your mechanic sends an itemized parts list for you to approve in the app, and you&apos;ll see every receipt.</li>
+                <li>
+                  Parts are billed at the receipt price plus a small handling charge and Colorado sales tax for where the job is
+                  {quote?.taxLabel ? ` (${quote.taxLabel})` : ""}. Labor isn&apos;t taxed. Before buying, your mechanic sends an itemized parts list for you to approve in the app, and you&apos;ll see every receipt.</li>
                 <li>Cancel free any time before your mechanic heads out and the full hold is released.</li>
                 <li>
                   Something wrong afterwards? Report it from your booking and we&apos;ll help sort it out —{" "}

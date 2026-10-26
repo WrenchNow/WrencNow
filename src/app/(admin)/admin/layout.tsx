@@ -6,6 +6,7 @@ const NAV = [
   { href: "/admin", label: "Overview" },
   { href: "/admin/mechanics", label: "Mechanics" },
   { href: "/admin/bookings", label: "Bookings" },
+  { href: "/admin/sales-tax", label: "Sales tax" },
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {

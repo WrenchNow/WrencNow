@@ -172,3 +172,14 @@ export async function updateJobIssue(_: FormState, formData: FormData): Promise<
   revalidatePath("/admin");
   return { ok: true, message: "Report updated." };
 }
+
+/** An admin confirmed (or corrected outside the app) the sales tax rate on a flagged booking. */
+export async function markTaxReviewed(_: FormState, formData: FormData): Promise<FormState> {
+  const viewer = await requireAdmin();
+  const id = z.uuid().parse(formData.get("id"));
+  const admin = createAdminClient();
+  await admin.from("bookings").update({ tax_reviewed_at: new Date().toISOString() }).eq("id", id);
+  await admin.from("audit_log").insert({ actor_id: viewer.id, action: "booking.tax_reviewed", entity: "booking", entity_id: id });
+  revalidatePath("/admin/sales-tax");
+  return { ok: true, message: "Marked reviewed." };
+}

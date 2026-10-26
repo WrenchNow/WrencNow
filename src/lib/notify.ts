@@ -2,6 +2,7 @@ import "server-only";
 import { CONTACT_EMAIL } from "@/lib/contact";
 import { siteUrl } from "@/lib/env";
 import { dateTime, money, timeOnly, warrantyLabel } from "@/lib/format";
+import { formatRate } from "@/lib/sales-tax";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
@@ -144,6 +145,7 @@ export async function notifyBooking(bookingId: string, event: BookingEvent) {
           b.labor_cents !== null ? `Labor: ${money(b.labor_cents)}` : null,
           b.parts_cents ? `Parts (receipt price): ${money(b.parts_cents)}` : null,
           b.parts_handling_cents ? `Parts handling: ${money(b.parts_handling_cents)}` : null,
+          b.sales_tax_cents ? `Sales tax on parts (${formatRate(b.tax_rate_mpct)}${b.tax_place ? `, ${b.tax_place}` : ""}): ${money(b.sales_tax_cents)}` : null,
           `Total charged: ${money(b.final_amount_cents)}`,
           b.return_old_parts ? "Old parts: returned to you" : null,
           b.warranty_days ? `${warrantyLabel(b.warranty_days)} offered by your mechanic (not WrenchNow)` : null,

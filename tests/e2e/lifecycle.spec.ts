@@ -65,6 +65,9 @@ test("customer books a mechanic and the card hold is placed", async ({ page }) =
   expect(b.car_location).toBe("driveway");
   expect(b.stripe_payment_intent_id).toMatch(/^pi_/);
   expect(Number(b.platform_fee_cents)).toBe(Math.round((Number(b.estimated_max_cents) * 500) / 10000));
+  // Sales tax rate snapshotted from the job address (offline here, so from the Denver ZIP): 9.15%.
+  expect(b.tax_rate_mpct).toBe(9150);
+  expect(b.tax_source).toBe("zip");
 
   // The customer's card authorizes the hold (Stripe Elements runs in the browser; simulated here) → signed webhook.
   const res = await fetch(`${FAKE}/__test/authorize/${b.stripe_payment_intent_id}`, { method: "POST" });
@@ -104,6 +107,7 @@ test("mechanic accepts, heads out, verifies the arrival code, and completes — 
   expect(b.payment_status).toBe("captured");
   expect(b.final_amount_cents).toBe(5000);
   expect(b.platform_fee_cents).toBe(250); // 5% of labor
+  expect(b.sales_tax_cents).toBe(0); // labor only: no sales tax
   const state = await (await fetch(`${FAKE}/__test/state`)).json();
   const pi = state.payment_intents.find((p: { id: string }) => p.id === b.stripe_payment_intent_id);
   expect(pi.status).toBe("succeeded");

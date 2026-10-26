@@ -7,6 +7,7 @@ import { requireRole } from "@/lib/auth";
 import { CONTACT_EMAIL } from "@/lib/contact";
 import { dateTime, money, warrantyLabel } from "@/lib/format";
 import { mechanicNames } from "@/lib/public-data";
+import { formatRate } from "@/lib/sales-tax";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Receipt" };
@@ -76,6 +77,14 @@ export default async function ReceiptPage({ params }: PageProps<"/account/bookin
                 <td className="py-2 text-right text-cream">{money(b.parts_handling_cents)}</td>
               </tr>
             ) : null}
+            {b.sales_tax_cents ? (
+              <tr>
+                <td className="py-2 text-cream">
+                  Sales tax on parts <span className="text-muted">({formatRate(b.tax_rate_mpct)}{b.tax_place ? `, ${b.tax_place}` : b.tax_county ? `, ${b.tax_county}` : ""})</span>
+                </td>
+                <td className="py-2 text-right text-cream">{money(b.sales_tax_cents)}</td>
+              </tr>
+            ) : null}
             {b.customer_no_show_fee_cents ? (
               <tr>
                 <td className="py-2 text-cream">No-show fee</td>
@@ -106,6 +115,7 @@ export default async function ReceiptPage({ params }: PageProps<"/account/bookin
         <div className="mt-6 space-y-1 text-xs text-muted">
           {b.return_old_parts && <p>Replaced parts were returned to you.</p>}
           {b.warranty_days ? <p>{warrantyLabel(b.warranty_days)} offered by your mechanic (not WrenchNow).</p> : null}
+          {b.sales_tax_cents ? <p>Colorado sales tax is charged on parts only; labor isn&apos;t taxed. WrenchNow collects and remits it.</p> : null}
           <p>Paid by card through WrenchNow. Questions: {CONTACT_EMAIL}</p>
         </div>
       </Card>

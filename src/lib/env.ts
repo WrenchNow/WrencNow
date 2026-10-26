@@ -92,3 +92,11 @@ export function reminderIntervalDays(): number {
   const n = Number(process.env.REMINDER_OIL_DAYS ?? 180);
   return Number.isInteger(n) && n >= 30 && n <= 730 ? n : 180;
 }
+
+/**
+ * Whether the parts handling charge is taxed along with the parts (default yes: it's billed
+ * with tangible goods, so collecting on it is the safe reading until a CPA says otherwise).
+ */
+export function salesTaxOnHandling(): boolean {
+  return process.env.SALES_TAX_ON_HANDLING !== "false";
+}

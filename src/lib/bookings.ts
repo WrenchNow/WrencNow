@@ -13,8 +13,10 @@ import {
   type Actor,
   type BookingStatus,
 } from "@/lib/booking-status";
-import { customerNoShowFeeCents, onboardingFeePerJobCents, partsHandlingBps, platformFeeBps, processingFeeBps, processingFeeFixedCents } from "@/lib/env";
+import { customerNoShowFeeCents, onboardingFeePerJobCents, partsHandlingBps, platformFeeBps, processingFeeBps, processingFeeFixedCents, salesTaxOnHandling } from "@/lib/env";
 import { partsEstimateFor } from "@/lib/parts";
+import { partsSalesTaxCents } from "@/lib/sales-tax";
+import { lookupTax } from "@/lib/tax-lookup";
 import { jobFees, partsChargeCents, partsHandlingCents, planCapture } from "@/lib/parts-math";
 import { geocode } from "@/lib/geocode";
 import { estimateMaxCents, mechanicDeductionsCents } from "@/lib/fees";
@@ -150,7 +152,10 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
   const laborMax = estimateMaxCents(mechanic.hourly_rate_cents, service.est_minutes_max);
   // Parts estimate (cost) from real receipts for similar jobs, else the mechanic's typical price; handling added on top.
   const partsEst = await partsEstimateFor(mechanic.id, service.id, vehicle.make, vehicle.model);
-  const estimate = laborMax + partsChargeCents(partsEst.cents, partsHandlingBps());
+  // Colorado sales tax on parts, at the rate where the job is (labor isn't taxed). Included in the hold.
+  const tax = await lookupTax(input.address, lat, lng);
+  const estHandling = partsHandlingCents(partsEst.cents, partsHandlingBps());
+  const estimate = laborMax + partsChargeCents(partsEst.cents, partsHandlingBps()) + partsSalesTaxCents(partsEst.cents, estHandling, tax.mpct, salesTaxOnHandling());
   const deductions = feesFor(estimate);
   const fee = deductions.platform;
   const vehicleDesc = [vehicle.year, vehicle.make, vehicle.model, vehicle.trim].filter(Boolean).join(" ");
@@ -188,6 +193,13 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
       car_covered: input.carCovered ?? false,
       business_name: businessName,
       warranty_days: mechanic.warranty_days, // the mechanic's own warranty as offered at booking
+      tax_zip: tax.zip,
+      tax_county: tax.county,
+      tax_place: tax.place,
+      tax_rate_mpct: tax.mpct,
+      tax_components: tax.components,
+      tax_source: tax.source,
+      tax_review_note: tax.review,
     })
     .select("id")
     .single();
@@ -393,7 +405,9 @@ async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor
       if ((parts ?? []).some((p) => p.status === "quoted")) throw new BookingError("The customer hasn't approved your parts quote yet.");
       const partsReceipt = (parts ?? []).filter((p) => p.status === "purchased").reduce((sum, p) => sum + (p.receipt_cents ?? 0), 0);
       const handling = partsHandlingCents(partsReceipt, partsHandlingBps());
-      const final = labor + partsReceipt + handling;
+      // Sales tax on parts is collected for the state and kept by the platform for remittance, never paid out.
+      const salesTax = partsSalesTaxCents(partsReceipt, handling, b.tax_rate_mpct, salesTaxOnHandling());
+      const final = labor + partsReceipt + handling + salesTax;
       if (final <= 0) throw new BookingError("Enter what the job cost.");
       if (final > b.estimated_max_cents) throw new BookingError("The total can't be more than the estimate the customer approved.");
       if (!b.stripe_payment_intent_id || !["authorized", "captured"].includes(b.payment_status)) {
@@ -401,6 +415,7 @@ async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor
       }
 
       const fees = jobFees(labor, final, platformFeeBps(), processingFeeBps(), processingFeeFixedCents());
+      fees.processing = Math.max(0, Math.min(fees.processing, final - fees.platform - salesTax)); // tax always fits inside the fee
       const main = await stripe.paymentIntents.retrieve(b.stripe_payment_intent_id);
       const topup = b.topup_payment_intent_id ? await stripe.paymentIntents.retrieve(b.topup_payment_intent_id) : null;
       let captured = final;
@@ -411,11 +426,11 @@ async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor
           p_booking_id: b.id,
           p_per_job_cents: onboardingFeePerJobCents(),
           p_final_cents: final,
-          p_platform_fee_cents: fees.platform + fees.processing,
+          p_platform_fee_cents: fees.platform + fees.processing + salesTax,
         });
         onboarding = claimed ?? 0;
         const topupAuth = topup?.status === "requires_capture" ? topup.amount_capturable : 0;
-        const plan = planCapture(final, main.amount_capturable, topupAuth, fees.platform + fees.processing + onboarding);
+        const plan = planCapture(final, main.amount_capturable, topupAuth, fees.platform + fees.processing + onboarding + salesTax);
         try {
           await stripe.paymentIntents.capture(
             main.id,
@@ -448,6 +463,7 @@ async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor
       update.labor_cents = labor;
       update.parts_cents = partsReceipt;
       update.parts_handling_cents = handling;
+      update.sales_tax_cents = salesTax;
       update.final_amount_cents = captured;
       update.platform_fee_cents = fees.platform;
       update.processing_fee_cents = fees.processing;
