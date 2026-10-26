@@ -10,6 +10,28 @@ key as leaked. Removing it from the files doesn't help, because it's still in gi
    Never put it in code or chat.
 It has been removed from `legacy/index.html` on this branch, and PR #4 removes it from `main`.
 
+## Already set in Netlify (Mon Oct 26)
+These are saved on the Netlify project, ready for the app's first deploy: `NEXT_PUBLIC_SITE_URL`,
+`NEXT_PUBLIC_DEFAULT_TIMEZONE`, `PLATFORM_FEE_BPS`, `FEATURED_PRICE_CENTS`, `ONBOARDING_FEE_TOTAL_CENTS`,
+`ONBOARDING_FEE_PER_JOB_CENTS`, `PROCESSING_FEE_BPS`, `PROCESSING_FEE_CENTS`, `PARTS_HANDLING_BPS`,
+`CUSTOMER_NO_SHOW_FEE_CENTS`, `ISSUE_REPORT_DAYS`, `REMINDER_OIL_DAYS`, `ADMIN_EMAIL`, `CHECKR_API_BASE` (staging),
+and `CRON_SECRET` (random, stored as a secret). The current live site ignores them.
+
+**Still needed in Netlify (from your accounts):**
+- From Supabase: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
+- From Stripe: `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`.
+- From Checkr: `CHECKR_API_KEY`, `CHECKR_PACKAGE`.
+- Optional: `RESEND_API_KEY` + `EMAIL_FROM`, and the Twilio settings.
+
+**Stripe webhook:** the Stripe connection here can read your account but isn't allowed to create webhooks. Add it in
+Stripe → Developers → Webhooks → Add endpoint:
+- **URL:** `https://getwrenchnow.com/api/stripe/webhook`
+- **Events:** `payment_intent.amount_capturable_updated`, `payment_intent.succeeded`, `payment_intent.payment_failed`,
+  `payment_intent.canceled`, `charge.refunded`, `charge.dispute.created`, `checkout.session.completed`,
+  `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`.
+- **Connect events:** add a second endpoint with "Listen to events on connected accounts" turned on, using the same
+  URL and the event `account.updated`. Paste its signing secret into `STRIPE_CONNECT_WEBHOOK_SECRET`.
+
 ## What you need to do (I couldn't do these without your accounts)
 
 1. **Supabase** — create a project at supabase.com. Turn on PostGIS under Database → Extensions.
