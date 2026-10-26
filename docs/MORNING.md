@@ -70,6 +70,11 @@ Stripe → Developers → Webhooks → Add endpoint:
 
 ## Questions for you
 
+- **⚠️ Sales tax on parts:** Colorado taxes installed parts; separately stated labor isn't taxed. As a marketplace
+  that takes payment and a fee, WrenchNow is probably the "marketplace facilitator" that must collect state, RTD and
+  Denver tax on parts, and likely on the handling charge. **The app doesn't collect sales tax yet.** Confirm with a
+  CPA, then I'll add it (Stripe Tax or a rate table). Details and sources are in the LLC plan doc.
+
 - **Stripe's $2 per active mechanic per month:** absorb it, or raise `PROCESSING_FEE_CENTS`? (See
   `docs/research/2026-10-24-costs-and-listings.md`.)
 - **Checkr package:** which one? $50 covers Basic (about $30) but not Essential (about $55–60).
