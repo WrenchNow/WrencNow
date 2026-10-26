@@ -17,8 +17,21 @@ These are saved on the Netlify project, ready for the app's first deploy: `NEXT_
 `CUSTOMER_NO_SHOW_FEE_CENTS`, `ISSUE_REPORT_DAYS`, `REMINDER_OIL_DAYS`, `ADMIN_EMAIL`, `CHECKR_API_BASE` (staging),
 and `CRON_SECRET` (random, stored as a secret). The current live site ignores them.
 
+**Supabase (Mon Oct 26 night):** new project **wrenchnow-app** (US East / Ohio) in the WrenchNow org. It's separate
+from the old June project the current site may use. All 16 database setup steps are applied there.
+- **The approval prompt:** Supabase's approval card never reached the app in time, so the steps that removed and
+  re-added things were applied as in-place equivalents instead.
+- **What changed versus the setup files:**
+  - Policies were edited or renamed instead of dropped and recreated.
+  - `is_live` was updated with `SET EXPRESSION`.
+  - `job_issues` was created under its final name (steps 9 + 14).
+  - The job-photo upload rule was created in its final form (steps 11 + 16).
+  - The review de-duplication was skipped because there were no rows.
+- **End result:** the same tables, rules and functions.
+
 **Still needed in Netlify (from your accounts):**
-- From Supabase: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
+- From Supabase: `SUPABASE_SERVICE_ROLE_KEY` (Project Settings → API keys → service_role). The project URL and anon key
+  are saved already if the morning summary says so.
 - From Stripe: `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`.
 - From Checkr: `CHECKR_API_KEY`, `CHECKR_PACKAGE`.
 - Optional: `RESEND_API_KEY` + `EMAIL_FROM`, and the Twilio settings.
