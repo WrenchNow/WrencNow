@@ -124,3 +124,13 @@ test("no mechanics nearby → customer can send a request to be matched by hand"
   await expect(page.getByText("Request sent")).toBeVisible();
 });
 
+
+test("mechanic can download earnings as CSV; others are redirected", async ({ page, request }) => {
+  const anon = await request.get("/mechanic/earnings/csv", { maxRedirects: 0 });
+  expect([302, 307]).toContain(anon.status());
+  await login(page, USERS.mechanic, "/mechanic/earnings");
+  await expect(page.getByRole("link", { name: "Download all jobs as CSV" })).toBeVisible();
+  const res = await page.request.get("/mechanic/earnings/csv");
+  expect(res.headers()["content-type"]).toContain("text/csv");
+  expect((await res.text()).split("\n")[0]).toBe("date,booking,service,charged,refunded,platform_fee,card_processing,onboarding_fee,your_payout");
+});

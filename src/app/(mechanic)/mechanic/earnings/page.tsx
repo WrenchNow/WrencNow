@@ -54,6 +54,12 @@ export default async function EarningsPage() {
       >
         Your share after the platform fee and card processing. Payouts land in your bank on Stripe&apos;s schedule.
       </PageHeader>
+      <p className="-mt-4 mb-6 text-sm">
+        <a href="/mechanic/earnings/csv" className="font-semibold text-ore hover:underline">
+          Download all jobs as CSV
+        </a>{" "}
+        <span className="text-muted">(for your bookkeeping and taxes)</span>
+      </p>
 
       {m && m.onboarding_fee_total_cents > 0 && (
         <div className="mb-6">

@@ -285,3 +285,13 @@ Zoho) before launch?
 - `docs/WEEKEND_REPORT.md` covers everything done Fri–Sun, the launch checklist, open questions, and what's left
   (items 16–18 weren't reached because of the outage). `docs/MORNING.md` and the PR #2 description were updated to
   match. The hourly autopilot is turned off.
+
+### Mon Oct 26 — earnings CSV (part of item 18)
+- **Download:** mechanics can download all completed jobs as a CSV for bookkeeping and taxes
+  (`/mechanic/earnings/csv`, linked from Earnings). Columns: date, booking, service, charged, refunded, platform fee,
+  card processing, onboarding fee, your payout.
+- **Payout math:** matches how Stripe refunds work. The fees are refunded in proportion, so a refund reduces the
+  payout by the refund minus the fees' share of it.
+- **Security:** only the signed-in mechanic's own jobs are included; everyone else is redirected to log in.
+- **Not done yet:** the per-job breakdown on the Earnings page itself.
+- **Results:** lint ✓, build ✓, vitest 133/133 ✓, Playwright 135 passed ✓.
