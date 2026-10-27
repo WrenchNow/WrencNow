@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Read", "Edit", "Write", "Glob", "Grep", "WebSearch", "WebFetch",
+      "Bash(npm run *)", "Bash(npx playwright *)", "Bash(npx vitest *)",
+      "Bash(npx lighthouse *)", "Bash(git checkout *)", "Bash(git add *)",
+      "Bash(git commit *)", "Bash(git push origin nightly/*)",
+      "Bash(gh pr create *)", "Bash(supabase *)"
+    ],
+    "deny": [
+      "Bash(git push origin main*)", "Bash(git push --force*)",
+      "Bash(netlify deploy --prod*)", "Read(.env)", "Read(.env.local)"
+    ]
+  }
+}

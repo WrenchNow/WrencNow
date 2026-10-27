@@ -1,0 +1,702 @@
+{
+ "terms": {
+  "intro": [
+   {
+    "p": "Please read these terms carefully before using WrenchNow. By using the platform you agree to be bound by these terms."
+   }
+  ],
+  "sections": [
+   {
+    "heading": "1. About WrenchNow",
+    "blocks": [
+     {
+      "p": "WrenchNow (\"WrenchNow,\" \"we,\" \"us,\" or \"our\") operates an online marketplace platform that connects vehicle owners (\"Customers\") with independent, self-employed automotive service providers (\"Mechanics\"). WrenchNow is a technology platform only — we do not employ Mechanics, perform automotive services, or guarantee the quality of any work performed."
+     },
+     {
+      "p": "By accessing or using WrenchNow, you confirm that you are at least 18 years of age, have the legal authority to enter into these Terms, and agree to be bound by them."
+     }
+    ]
+   },
+   {
+    "heading": "2. Marketplace — Not an Employer",
+    "blocks": [
+     {
+      "p": "WrenchNow is a marketplace platform, not an automotive service provider."
+     },
+     {
+      "p": "All Mechanics on the platform are independent contractors, not employees, agents, partners, or representatives of WrenchNow. WrenchNow does not control, direct, or supervise the work performed by any Mechanic."
+     },
+     {
+      "p": "WrenchNow is not responsible for and expressly disclaims liability for:"
+     },
+     {
+      "ul": [
+       "The quality, safety, legality, or fitness of any automotive service performed",
+       "Any damage to your vehicle, property, or person arising from services performed by a Mechanic",
+       "Any injury to you, a Mechanic, or any third party arising from services booked through the platform",
+       "Any misrepresentation by a Mechanic regarding their qualifications, experience, or certifications",
+       "Any dispute between a Customer and a Mechanic",
+       "The actions or omissions of any Mechanic before, during, or after a service appointment"
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "3. Independent Contractor Relationship",
+    "blocks": [
+     {
+      "p": "Mechanics who use WrenchNow are solely responsible for determining how to perform services, providing their own tools and equipment, setting their own schedules, and complying with all applicable laws, regulations, and licensing requirements. Nothing in these Terms creates an employment relationship, agency, partnership, or joint venture between WrenchNow and any Mechanic."
+     }
+    ]
+   },
+   {
+    "heading": "4. Background Checks and Verification",
+    "blocks": [
+     {
+      "p": "WrenchNow may conduct identity verification and background screening on Mechanics who apply to the platform."
+     },
+     {
+      "p": "However, WrenchNow does not guarantee the accuracy or completeness of any background check, and passing a background check does not constitute an endorsement, warranty, or guarantee of a Mechanic's qualifications, character, or conduct."
+     },
+     {
+      "p": "Customers are encouraged to review a Mechanic's profile, ratings, and reviews before booking. Customers use the platform at their own risk."
+     }
+    ]
+   },
+   {
+    "heading": "5. Limitation of Liability",
+    "blocks": [
+     {
+      "p": "To the fullest extent permitted by applicable law, WrenchNow, its officers, directors, employees, agents, and affiliates shall not be liable for any indirect, incidental, special, consequential, punitive, or exemplary damages, including but not limited to damage to your vehicle, property damage, personal injury, loss of data, loss of revenue, or loss of profits, even if WrenchNow has been advised of the possibility of such damages."
+     },
+     {
+      "p": "In no event shall WrenchNow's total liability to you for all claims arising out of or relating to these Terms or your use of the platform exceed the greater of (a) the total fees paid by you to WrenchNow in the twelve months preceding the claim, or (b) one hundred dollars ($100)."
+     },
+     {
+      "p": "Some jurisdictions do not allow the exclusion or limitation of certain damages. In such jurisdictions, WrenchNow's liability is limited to the maximum extent permitted by law."
+     }
+    ]
+   },
+   {
+    "heading": "6. Disclaimer of Warranties",
+    "blocks": [
+     {
+      "p": "THE PLATFORM IS PROVIDED \"AS IS\" AND \"AS AVAILABLE\" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT. WRENCHNOW DOES NOT WARRANT THAT THE PLATFORM WILL BE UNINTERRUPTED, ERROR-FREE, OR FREE OF VIRUSES OR OTHER HARMFUL COMPONENTS."
+     }
+    ]
+   },
+   {
+    "heading": "7. Payment Terms",
+    "blocks": [
+     {
+      "p": "Customers pay for services through the WrenchNow platform. WrenchNow charges a platform fee on each transaction. All payments are processed by Stripe, Inc. and are subject to Stripe's terms and conditions. WrenchNow is not responsible for any errors, delays, or failures in payment processing."
+     },
+     {
+      "p": "Parts: your estimate includes labor and, where available, a parts estimate. Before buying parts, your Mechanic sends an itemized parts list for your approval in the app; your approval is recorded with the date and time. Parts are billed at the receipt price, never more than the amount you approved, plus a handling charge of {{PARTS_HANDLING}} of the parts cost. You can view each receipt in the app."
+     },
+     {
+      "p": "All sales are final unless WrenchNow determines at its sole discretion that a refund is warranted. Disputes regarding payment must be raised within 30 days of the transaction."
+     },
+     {
+      "p": "Customer no-shows: if your Mechanic checks in at the service address and you do not respond within 15 minutes of the later of the check-in time or the booked start time, the booking may be marked as a customer no-show and a no-show fee of {{CUSTOMER_NO_SHOW_FEE}} (never more than your estimate) will be charged to your payment method instead of the job. You can cancel without charge any time before your Mechanic is on the way."
+     },
+     {
+      "p": "Never pay a Mechanic outside WrenchNow. Payments made outside the platform are not protected, and WrenchNow cannot refund them."
+     }
+    ]
+   },
+   {
+    "heading": "8. Dispute Resolution Between Customers and Mechanics",
+    "blocks": [
+     {
+      "p": "WrenchNow provides a dispute mediation process to assist in resolving disagreements between Customers and Mechanics."
+     },
+     {
+      "p": "WrenchNow does not guarantee the outcome of any dispute, does not guarantee the quality of work performed, and does not offer any warranty or guarantee on automotive services booked through the platform."
+     },
+     {
+      "p": "Any resolution is at WrenchNow's sole discretion and is provided as a courtesy only. Customers should raise any concerns directly with the Mechanic in the first instance."
+     }
+    ]
+   },
+   {
+    "heading": "9. Prohibited Conduct",
+    "blocks": [
+     {
+      "p": "You agree not to:"
+     },
+     {
+      "ul": [
+       "Use the platform for any unlawful purpose or in violation of any applicable laws",
+       "Circumvent the platform by arranging payments directly with Mechanics outside of WrenchNow",
+       "Submit false, fraudulent, or misleading information",
+       "Harass, threaten, or harm any Mechanic or other user",
+       "Interfere with the platform's operation or security",
+       "Use the platform if you are under 18 years of age",
+       "Post false or defamatory reviews"
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "10. Reviews and Content",
+    "blocks": [
+     {
+      "p": "By submitting a review or any other content to the platform, you grant WrenchNow a non-exclusive, worldwide, royalty-free licence to use, reproduce, modify, and display that content. You represent that your content is truthful and does not violate any third party's rights. WrenchNow reserves the right to remove any content at its sole discretion."
+     }
+    ]
+   },
+   {
+    "heading": "11. Intellectual Property",
+    "blocks": [
+     {
+      "p": "All content on the WrenchNow platform, including but not limited to text, graphics, logos, icons, and software, is the property of WrenchNow or its licensors and is protected by applicable intellectual property laws. You may not copy, reproduce, distribute, or create derivative works without express written permission."
+     }
+    ]
+   },
+   {
+    "heading": "12. Privacy",
+    "blocks": [
+     {
+      "p": "Your use of the platform is also governed by our Privacy Policy, which is incorporated into these Terms by reference. By using WrenchNow, you consent to the collection and use of your information as described in our Privacy Policy."
+     }
+    ]
+   },
+   {
+    "heading": "13. Indemnification",
+    "blocks": [
+     {
+      "p": "You agree to indemnify, defend, and hold harmless WrenchNow and its officers, directors, employees, agents, and affiliates from and against any and all claims, liabilities, damages, losses, costs, and expenses (including reasonable legal fees) arising out of or relating to your use of the platform, your violation of these Terms, or your violation of any rights of another person or entity."
+     }
+    ]
+   },
+   {
+    "heading": "14. Dispute Resolution and Arbitration",
+    "blocks": [
+     {
+      "p": "Any dispute, claim, or controversy arising out of or relating to these Terms or your use of the platform shall be resolved by binding arbitration administered by a mutually agreed arbitration organisation, rather than in court, except that you may assert claims in small claims court if they qualify."
+     },
+     {
+      "p": "You waive any right to a jury trial and any right to participate in a class action lawsuit or class-wide arbitration."
+     }
+    ]
+   },
+   {
+    "heading": "15. Governing Law",
+    "blocks": [
+     {
+      "p": "These Terms shall be governed by and construed in accordance with the laws of the State of Colorado, without regard to its conflict of law provisions."
+     }
+    ]
+   },
+   {
+    "heading": "16. Changes to Terms",
+    "blocks": [
+     {
+      "p": "WrenchNow reserves the right to modify these Terms at any time. We will provide notice of material changes by updating the \"Last updated\" date at the top of this page. Your continued use of the platform after changes are posted constitutes your acceptance of the revised Terms."
+     }
+    ]
+   },
+   {
+    "heading": "17. Termination",
+    "blocks": [
+     {
+      "p": "WrenchNow reserves the right to suspend or terminate your access to the platform at any time, for any reason, without notice or liability. You may stop using the platform at any time."
+     }
+    ]
+   },
+   {
+    "heading": "18. Severability",
+    "blocks": [
+     {
+      "p": "If any provision of these Terms is found to be unenforceable, the remaining provisions will continue in full force and effect."
+     }
+    ]
+   },
+   {
+    "heading": "19. Entire Agreement",
+    "blocks": [
+     {
+      "p": "These Terms, together with our Privacy Policy and any other policies incorporated by reference, constitute the entire agreement between you and WrenchNow regarding your use of the platform."
+     }
+    ]
+   },
+   {
+    "heading": "20. Contact",
+    "blocks": [
+     {
+      "p": "For questions about these Terms, please contact us at getwrenchnow11@gmail.com."
+     }
+    ]
+   }
+  ]
+ },
+ "privacy": {
+  "intro": [
+   {
+    "p": "WrenchNow is committed to protecting your privacy. This policy explains what data we collect, how we use it, and your rights."
+   }
+  ],
+  "sections": [
+   {
+    "heading": "1. Information We Collect",
+    "blocks": [
+     {
+      "p": "Information you provide directly:"
+     },
+     {
+      "ul": [
+       "Name, email address, and password when you create an account",
+       "Vehicle information (year, make, model) when booking a service",
+       "Location or address when booking a service",
+       "Payment information (processed and stored by Stripe — we never see or store your card number)",
+       "Service descriptions and notes you provide when booking",
+       "Reviews and ratings you submit",
+       "Information you provide when applying as a Mechanic, including professional experience and qualifications"
+      ]
+     },
+     {
+      "p": "Information collected automatically:"
+     },
+     {
+      "ul": [
+       "IP address and general location data",
+       "Browser type and device information",
+       "Pages visited and features used on the platform",
+       "Booking and transaction history"
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "2. How We Use Your Information",
+    "blocks": [
+     {
+      "ul": [
+       "To operate and improve the WrenchNow platform",
+       "To connect you with Mechanics or Customers",
+       "To process payments and send booking confirmations",
+       "To send service reminders and re-engagement communications",
+       "To verify the identity and credentials of Mechanics",
+       "To investigate disputes, fraud, or misuse of the platform",
+       "To comply with legal obligations",
+       "To communicate platform updates, new features, and promotional offers (you may opt out at any time)"
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "3. How We Share Your Information",
+    "blocks": [
+     {
+      "p": "We do not sell your personal information. We share information only in the following circumstances:"
+     },
+     {
+      "p": "With Mechanics:"
+     },
+     {
+      "ul": [
+       "When you book a service, we share your name, vehicle information, and service address with the Mechanic you have selected"
+      ]
+     },
+     {
+      "p": "With Customers:"
+     },
+     {
+      "ul": [
+       "Mechanic profiles including name, location, specialties, ratings, and verified job prices are visible to all users"
+      ]
+     },
+     {
+      "p": "With service providers:"
+     },
+     {
+      "ul": [
+       "We use Supabase (database), Stripe (payments), Checkr (Mechanic background checks), and Resend (email) to operate the platform. These providers process data on our behalf under confidentiality obligations"
+      ]
+     },
+     {
+      "p": "For legal reasons:"
+     },
+     {
+      "ul": [
+       "We may disclose information if required by law, court order, or to protect the rights and safety of WrenchNow, its users, or the public"
+      ]
+     },
+     {
+      "p": "Business transfers:"
+     },
+     {
+      "ul": [
+       "In the event of a merger, acquisition, or sale of assets, your information may be transferred as part of that transaction"
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "4. Data Retention",
+    "blocks": [
+     {
+      "p": "We retain your account information for as long as your account is active or as needed to provide services. Booking records are retained for a minimum of 7 years for legal and tax compliance purposes. You may request deletion of your personal data at any time (subject to legal retention requirements) by emailing getwrenchnow11@gmail.com."
+     }
+    ]
+   },
+   {
+    "heading": "5. Security",
+    "blocks": [
+     {
+      "p": "We use industry-standard security measures to protect your information, including encrypted data transmission (HTTPS), row-level security on our database, and secure third-party payment processing through Stripe. We never store payment card numbers. However, no method of transmission over the internet is completely secure, and we cannot guarantee absolute security."
+     }
+    ]
+   },
+   {
+    "heading": "6. Cookies and Tracking",
+    "blocks": [
+     {
+      "p": "WrenchNow uses essential cookies to keep you signed in and to secure your session. We do not use third-party advertising trackers."
+     }
+    ]
+   },
+   {
+    "heading": "7. Your Rights",
+    "blocks": [
+     {
+      "p": "Depending on your location, you may have the following rights regarding your personal data:"
+     },
+     {
+      "p": "Access:"
+     },
+     {
+      "ul": [
+       "Request a copy of the personal data we hold about you"
+      ]
+     },
+     {
+      "p": "Correction:"
+     },
+     {
+      "ul": [
+       "Request correction of inaccurate data"
+      ]
+     },
+     {
+      "p": "Deletion:"
+     },
+     {
+      "ul": [
+       "Request deletion of your personal data (subject to legal obligations)"
+      ]
+     },
+     {
+      "p": "Portability:"
+     },
+     {
+      "ul": [
+       "Request your data in a machine-readable format"
+      ]
+     },
+     {
+      "p": "Objection:"
+     },
+     {
+      "ul": [
+       "Object to processing of your data for marketing purposes"
+      ]
+     },
+     {
+      "p": "Withdrawal of consent:"
+     },
+     {
+      "ul": [
+       "Withdraw consent for data processing where consent is the legal basis"
+      ]
+     },
+     {
+      "p": "To exercise any of these rights, contact us at getwrenchnow11@gmail.com. We will respond within 30 days."
+     }
+    ]
+   },
+   {
+    "heading": "8. Children's Privacy",
+    "blocks": [
+     {
+      "p": "WrenchNow is not intended for use by persons under the age of 18. We do not knowingly collect personal information from children. If you believe a child has provided us with personal information, please contact us immediately."
+     }
+    ]
+   },
+   {
+    "heading": "9. International Data Transfers",
+    "blocks": [
+     {
+      "p": "Your data may be processed and stored in countries other than your own. By using WrenchNow, you consent to the transfer of your information to countries that may have different data protection laws than your country of residence."
+     }
+    ]
+   },
+   {
+    "heading": "10. Third-Party Links",
+    "blocks": [
+     {
+      "p": "The platform may contain links to third-party websites. We are not responsible for the privacy practices of those websites and encourage you to review their privacy policies."
+     }
+    ]
+   },
+   {
+    "heading": "11. GDPR — Users in the European Economic Area",
+    "blocks": [
+     {
+      "p": "If you are located in the EEA, our legal basis for processing your personal data is: (a) performance of a contract when we process data to provide our services; (b) legitimate interests when we improve the platform and prevent fraud; (c) compliance with legal obligations; and (d) consent where you have provided it. You have the right to lodge a complaint with your local data protection authority."
+     }
+    ]
+   },
+   {
+    "heading": "12. CCPA — Users in California",
+    "blocks": [
+     {
+      "p": "California residents have the right to know what personal information is collected, to request deletion of personal information, and to opt out of the sale of personal information. WrenchNow does not sell personal information. To exercise your rights under the CCPA, contact us at getwrenchnow11@gmail.com."
+     }
+    ]
+   },
+   {
+    "heading": "13. Changes to This Policy",
+    "blocks": [
+     {
+      "p": "We may update this Privacy Policy from time to time. We will notify you of material changes by updating the \"Last updated\" date. Your continued use of the platform constitutes acceptance of the revised policy."
+     }
+    ]
+   },
+   {
+    "heading": "14. Contact",
+    "blocks": [
+     {
+      "p": "For privacy-related questions or requests, contact us at getwrenchnow11@gmail.com."
+     }
+    ]
+   }
+  ]
+ },
+ "mechanicAgreement": {
+  "intro": [
+   {
+    "p": "By submitting an application to join WrenchNow and by performing any services through the platform, you (\"Mechanic\") agree to this Independent Contractor Agreement with WrenchNow (\"WrenchNow\")."
+   }
+  ],
+  "sections": [
+   {
+    "heading": "1. Independent Contractor Status",
+    "blocks": [
+     {
+      "p": "You are an independent contractor, not an employee of WrenchNow."
+     },
+     {
+      "p": "This Agreement does not create an employment relationship, agency, partnership, or joint venture. You have no authority to bind WrenchNow to any contract or obligation."
+     },
+     {
+      "p": "As an independent contractor, you are solely responsible for:"
+     },
+     {
+      "ul": [
+       "All taxes arising from payments received through WrenchNow, including self-employment tax",
+       "Obtaining and maintaining all required licences, certifications, and permits to perform automotive services in your jurisdiction",
+       "Providing your own tools, equipment, and supplies",
+       "Setting your own working hours and schedule",
+       "Determining how services are performed, subject to customer requirements",
+       "Complying with all applicable laws and regulations"
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "2. Qualifications and Representations",
+    "blocks": [
+     {
+      "p": "By applying to WrenchNow, you represent and warrant that:"
+     },
+     {
+      "ul": [
+       "You are at least 18 years of age",
+       "You have the legal right to work in the jurisdiction where you will provide services",
+       "All information you provide in your application is accurate and complete",
+       "You hold all licences, certifications, and qualifications required by applicable law to perform the services you offer",
+       "You have not been convicted of a crime that would reasonably disqualify you from working with members of the public",
+       "You are in good health and physically capable of performing automotive services safely",
+       "You will maintain the accuracy of your profile information at all times"
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "3. Insurance Requirements",
+    "blocks": [
+     {
+      "p": "You are required to maintain, at your own expense, adequate insurance coverage to protect yourself and your customers, including:"
+     },
+     {
+      "ul": [
+       "General liability insurance (recommended minimum: $1,000,000 per occurrence)",
+       "Garage keeper's liability or on-hook towing insurance if applicable",
+       "Workers' compensation insurance if required by your jurisdiction",
+       "Any other insurance required by applicable law"
+      ]
+     },
+     {
+      "p": "WrenchNow does not provide insurance coverage for Mechanics or their work. WrenchNow is not responsible for any claims, losses, or damages arising from your failure to maintain adequate insurance."
+     }
+    ]
+   },
+   {
+    "heading": "4. Quality of Work",
+    "blocks": [
+     {
+      "p": "You agree to:"
+     },
+     {
+      "ul": [
+       "Perform all services in a professional, workmanlike manner consistent with industry standards",
+       "Use appropriate parts and materials for each job",
+       "Communicate clearly with customers about the scope, cost, and timeline of work before beginning",
+       "Obtain customer approval before performing any work beyond the original agreed scope",
+       "Leave the customer's vehicle and property in the same or better condition than found",
+       "Respond promptly to booking notifications and customer communications",
+       "Arrive within the agreed time window or notify the customer immediately of any delay"
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "5. Prohibited Conduct",
+    "blocks": [
+     {
+      "p": "You agree not to:"
+     },
+     {
+      "ul": [
+       "Perform services while impaired by alcohol, drugs, or any substance",
+       "Misrepresent your qualifications, experience, or the services you provide",
+       "Charge amounts beyond those agreed with the customer and disclosed on the platform",
+       "Circumvent the WrenchNow platform by arranging direct payments with customers outside the platform",
+       "Harass, intimidate, or behave inappropriately toward any customer",
+       "Share customer personal information with any third party",
+       "Use WrenchNow for any unlawful purpose",
+       "Damage a customer's vehicle, property, or any third-party property intentionally or through gross negligence",
+       "Solicit customers to use your services outside the WrenchNow platform for 12 months after your last booking through WrenchNow"
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "6. Platform Fee and Payments",
+    "blocks": [
+     {
+      "p": "WrenchNow charges a platform fee on each completed transaction. The current platform fee is {{PLATFORM_FEE_PERCENT}} of the total job value. This fee is subject to change with 30 days' notice."
+     },
+     {
+      "p": "Card processing: a card processing fee of {{PROCESSING_FEE}} of each payment is deducted from your share. It covers the card and payout costs that Stripe charges WrenchNow."
+     },
+     {
+      "p": "Onboarding fee: WrenchNow pays for your background check when you apply, and you pay nothing up front. In return, you agree that WrenchNow will keep an onboarding fee of {{ONBOARDING_PER_JOB}} from your share of each completed job, in addition to the platform fee, until {{ONBOARDING_TOTAL}} in total has been collected. The onboarding fee is never more than your share of a job. If a job is fully refunded to the customer, the amount taken from it is credited back. If you never complete a paid job, you owe nothing. Each deduction is shown with the job in your earnings."
+     },
+     {
+      "p": "Payments are processed through Stripe Connect. You are required to maintain a valid Stripe Connect account to receive payments. WrenchNow is not responsible for delays or failures in payment processing caused by Stripe or by errors in your account information."
+     },
+     {
+      "p": "Parts: before buying parts for a job, you must send the customer an itemized parts quote through WrenchNow and receive their approval in the app. You must upload a genuine receipt for each part and may not charge more than the receipt amount or the approved quote. A handling charge of {{PARTS_HANDLING}} of the parts cost is added for you. Altered or false receipts are grounds for removal from the platform."
+     }
+    ]
+   },
+   {
+    "heading": "7. Liability and Indemnification",
+    "blocks": [
+     {
+      "p": "You are solely responsible for any damage, injury, loss, or claim arising from the services you perform through WrenchNow."
+     },
+     {
+      "p": "WrenchNow assumes no liability for your work, your vehicle, your tools, or your conduct."
+     },
+     {
+      "p": "You agree to indemnify, defend, and hold harmless WrenchNow and its officers, directors, employees, and agents from and against any and all claims, liabilities, damages, losses, costs, and expenses (including reasonable legal fees) arising out of or relating to:"
+     },
+     {
+      "ul": [
+       "Any service you perform or fail to perform",
+       "Any damage to a customer's vehicle or property",
+       "Any personal injury caused by you or arising from your work",
+       "Your violation of this Agreement or any applicable law",
+       "Your misrepresentation of your qualifications or the services you provide"
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "8. Ratings and Reviews",
+    "blocks": [
+     {
+      "p": "Customers may rate and review your services after each completed job. WrenchNow may display these ratings publicly on your profile. WrenchNow reserves the right to remove any review that violates its policies. You may not solicit, incentivise, or manipulate reviews in any way."
+     },
+     {
+      "p": "WrenchNow may suspend or remove Mechanics whose average rating falls below acceptable thresholds as determined by WrenchNow in its sole discretion."
+     }
+    ]
+   },
+   {
+    "heading": "9. Termination",
+    "blocks": [
+     {
+      "p": "WrenchNow may suspend or terminate your access to the platform at any time, for any reason, including but not limited to:"
+     },
+     {
+      "ul": [
+       "Violation of this Agreement or WrenchNow's Terms of Service",
+       "Customer complaints or consistently low ratings",
+       "Fraudulent or illegal conduct",
+       "Failure to maintain required licences or insurance",
+       "Any conduct that WrenchNow determines, in its sole discretion, is harmful to customers, the platform, or WrenchNow's reputation"
+      ]
+     },
+     {
+      "p": "You may terminate this Agreement at any time by ceasing to use the platform."
+     }
+    ]
+   },
+   {
+    "heading": "10. Confidentiality",
+    "blocks": [
+     {
+      "p": "You agree to keep confidential all customer personal information accessed through the platform, including names, addresses, vehicle information, and contact details. You may not use customer information for any purpose other than performing the booked service."
+     }
+    ]
+   },
+   {
+    "heading": "11. Dispute Resolution",
+    "blocks": [
+     {
+      "p": "Any dispute between you and WrenchNow arising out of this Agreement shall be resolved by binding arbitration on an individual basis. You waive any right to participate in class action proceedings."
+     }
+    ]
+   },
+   {
+    "heading": "12. Governing Law",
+    "blocks": [
+     {
+      "p": "This Agreement shall be governed by the laws of the State of Colorado."
+     }
+    ]
+   },
+   {
+    "heading": "13. Entire Agreement",
+    "blocks": [
+     {
+      "p": "This Agreement, together with WrenchNow's Terms of Service and Privacy Policy, constitutes the entire agreement between you and WrenchNow regarding your participation as a Mechanic on the platform."
+     }
+    ]
+   },
+   {
+    "heading": "14. Contact",
+    "blocks": [
+     {
+      "p": "For questions about this Agreement, contact getwrenchnow11@gmail.com."
+     }
+    ]
+   }
+  ]
+ }
+}
