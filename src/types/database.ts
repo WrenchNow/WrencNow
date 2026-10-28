@@ -794,6 +794,7 @@ export type Database = {
           has_transport: boolean;
           hourly_rate_cents: number | null;
           id: string;
+          insurance_auto_check: Json | null;
           insurance_doc_path: string | null;
           insurance_expires_on: string | null;
           insurance_pending_expires_on: string | null;
@@ -849,6 +850,7 @@ export type Database = {
           has_transport?: boolean;
           hourly_rate_cents?: number | null;
           id: string;
+          insurance_auto_check?: Json | null;
           insurance_doc_path?: string | null;
           insurance_expires_on?: string | null;
           insurance_pending_expires_on?: string | null;
@@ -903,6 +905,7 @@ export type Database = {
           has_transport?: boolean;
           hourly_rate_cents?: number | null;
           id?: string;
+          insurance_auto_check?: Json | null;
           insurance_doc_path?: string | null;
           insurance_expires_on?: string | null;
           insurance_pending_expires_on?: string | null;

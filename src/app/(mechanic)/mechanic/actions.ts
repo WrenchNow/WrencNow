@@ -14,6 +14,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { startCheckIfReady } from "@/lib/onboarding";
 import { recordJobPhoto, removeJobPhoto } from "@/lib/job-photos";
+import { autoCheckInsurance } from "@/lib/insurance-auto";
 
 export type FormState = { ok?: boolean; error?: string; message?: string };
 
@@ -346,8 +347,19 @@ export async function submitInsurance(input: z.input<typeof insuranceSchema>): P
     .eq("id", viewer.id);
   if (error) return { error: "Couldn't save your insurance details. Please try again." };
   await admin.from("audit_log").insert({ actor_id: viewer.id, action: "mechanic.insurance_submitted", entity: "mechanic", entity_id: viewer.id });
+  // Certificates that clearly match what was typed are verified on the spot; the rest wait for a person.
+  const auto = await autoCheckInsurance(viewer.id).catch((e) => {
+    console.error("autoCheckInsurance failed", viewer.id, e);
+    return "needs_review" as const;
+  });
   revalidatePath("/mechanic", "layout");
-  return { ok: true, message: renewing ? "Renewal submitted. You stay live while we review it." : "Insurance submitted. We'll verify it shortly." };
+  if (auto === "verified") return { ok: true, message: `Insurance verified — your certificate matches. Good through ${d.expires_on}.` };
+  return {
+    ok: true,
+    message: renewing
+      ? "Renewal submitted. You stay live while we review it."
+      : "Insurance submitted. We couldn't confirm every detail automatically, so a person will check it — usually within a day.",
+  };
 }
 
 export async function checkIn(bookingId: string, lat: number, lng: number): Promise<FormState> {

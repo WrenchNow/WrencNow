@@ -102,6 +102,15 @@ export default async function AdminMechanicsPage({ searchParams }: PageProps<"/a
                       ) : (
                         <p className="mt-1 text-muted">Certificate file unavailable.</p>
                       )}
+                      {Array.isArray((m.insurance_auto_check as { checks?: unknown } | null)?.checks) && (
+                        <ul className="mt-2 space-y-0.5 text-xs">
+                          {((m.insurance_auto_check as { checks: { key: string; ok: boolean; note: string }[] }).checks).map((c) => (
+                            <li key={c.key} className={c.ok ? "text-ok" : "text-warn"}>
+                              {c.ok ? "✓" : "✗"} {c.note}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                       <div className="mt-3">
                         <InsuranceReviewForm id={m.id} pendingExpiry={m.insurance_pending_expires_on} />
                       </div>
