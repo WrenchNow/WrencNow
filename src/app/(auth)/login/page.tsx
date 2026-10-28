@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Notice } from "@/components/ui/feedback";
 import { Container } from "@/components/ui/layout";
 import { getViewer, homeFor, safeNext } from "@/lib/auth";
+import { googleAuthEnabled } from "@/lib/env";
 
 export const metadata: Metadata = { title: "Log in" };
 
@@ -23,10 +24,14 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         <p className="mt-1 text-sm text-muted">Log in to manage your bookings.</p>
         <div className="mt-6 flex flex-col gap-4">
           {sp.error && <Notice tone="danger">That sign-in didn&apos;t work. Please try again.</Notice>}
-          <GoogleButton next={next} />
-          <div className="flex items-center gap-3 text-xs text-muted">
-            <span className="h-px flex-1 bg-line-strong" /> or <span className="h-px flex-1 bg-line-strong" />
-          </div>
+          {googleAuthEnabled() && (
+            <>
+              <GoogleButton next={next} />
+              <div className="flex items-center gap-3 text-xs text-muted">
+                <span className="h-px flex-1 bg-line-strong" /> or <span className="h-px flex-1 bg-line-strong" />
+              </div>
+            </>
+          )}
           <LoginForm next={next} />
         </div>
         <p className="mt-6 text-center text-sm text-muted">

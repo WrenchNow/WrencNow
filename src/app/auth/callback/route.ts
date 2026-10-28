@@ -19,5 +19,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${origin}${next === "/" ? (profile.role === "mechanic" ? "/mechanic/dashboard" : profile.role === "admin" ? "/admin" : "/account") : next}`);
     }
   }
+  // An expired or reused password-reset link lands on the reset page, which offers a fresh link.
+  if (next === "/reset-password") return NextResponse.redirect(`${origin}/reset-password`);
   return NextResponse.redirect(`${origin}/login?error=callback`);
 }

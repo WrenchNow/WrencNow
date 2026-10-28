@@ -9,6 +9,14 @@ export function supabaseConfigured(): boolean {
   return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 }
 
+/**
+ * Google sign-in shows only once the Google provider is enabled in Supabase
+ * (otherwise Supabase answers "Unsupported provider"). See docs/AUTH_SETUP.md.
+ */
+export function googleAuthEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED === "true";
+}
+
 export function stripeConfigured(): boolean {
   return Boolean(process.env.STRIPE_SECRET_KEY && process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 }
@@ -41,16 +49,24 @@ export function customerNoShowFeeCents(): number {
   return Number.isInteger(n) && n > 0 ? n : 2500;
 }
 
-/** Total onboarding fee (covers the background check), collected from the mechanic's first jobs. */
+/**
+ * Optional background check fee, paid up front by mechanics who want the "Background checked" badge.
+ * (Env name kept from the earlier pay-from-first-jobs model so existing settings carry over.)
+ */
 export function onboardingFeeTotalCents(): number {
   const n = Number(process.env.ONBOARDING_FEE_TOTAL_CENTS || 5000);
   return Number.isInteger(n) && n >= 0 ? n : 5000;
 }
 
-/** How much of the onboarding fee is kept from each completed job until it's paid off. */
+/** How much of the background check fee is refunded per completed job until it's all back. */
 export function onboardingFeePerJobCents(): number {
   const n = Number(process.env.ONBOARDING_FEE_PER_JOB_CENTS || 1000);
   return Number.isInteger(n) && n > 0 ? n : 1000;
+}
+
+/** Number of completed jobs over which the check fee is refunded (e.g. $50 / $10 = 5). */
+export function checkFeeRefundJobs(): number {
+  return Math.ceil(onboardingFeeTotalCents() / onboardingFeePerJobCents());
 }
 
 /**

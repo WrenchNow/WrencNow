@@ -1,0 +1,12 @@
+<!-- WrenchNow auth email. Paste into Supabase → Authentication → Emails → Templates. -->
+<div style="background:#0e0e0c;padding:32px 16px;font-family:Barlow,Helvetica,Arial,sans-serif;color:#f0ebe0">
+  <div style="max-width:520px;margin:0 auto;background:#161614;border:1px solid #2a2a26;border-radius:12px;padding:28px">
+    <p style="margin:0 0 20px;font-size:22px;font-weight:800;letter-spacing:.5px;text-transform:uppercase">Wrench<span style="color:#f25a00">Now</span></p>
+    <h1 style="margin:0 0 12px;font-size:24px;line-height:1.2;text-transform:uppercase">Confirm your email</h1>
+    <p style="margin:0 0 24px;font-size:15px;line-height:1.55;color:#c8c2b5">Thanks for joining WrenchNow. Tap below to confirm {{ .Email }} and finish setting up your account.</p>
+    <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#f25a00;color:#ffffff;font-weight:700;font-size:15px;text-decoration:none;padding:13px 22px;border-radius:8px">Confirm my email</a>
+    <p style="margin:24px 0 0;font-size:13px;line-height:1.5;color:#8f8b80">Didn't sign up? You can ignore this email and no account will be created.</p>
+    <p style="margin:16px 0 0;font-size:12px;line-height:1.5;color:#8f8b80">If the button doesn't work, paste this link into your browser:<br><span style="word-break:break-all;color:#c8c2b5">{{ .ConfirmationURL }}</span></p>
+  </div>
+  <p style="max-width:520px;margin:16px auto 0;font-size:12px;color:#6f6a63;text-align:center">WrenchNow · Mobile mechanics who come to you · getwrenchnow.com</p>
+</div>

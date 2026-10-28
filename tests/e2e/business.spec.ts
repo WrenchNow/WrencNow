@@ -42,7 +42,8 @@ test("customer adds a business, tags a job, and sees it on the monthly statement
   await page.goto("/signup");
   await page.getByLabel("Your name").fill("E2E Fleet");
   await page.getByLabel("Email address").fill(email);
-  await page.getByLabel("Password").fill("e2e-password-123");
+  await page.getByLabel(/^Password/).fill("e2e-password-123");
+  await page.getByLabel(/^Confirm password/).fill("e2e-password-123");
   await page.getByLabel(/I agree to the/).check();
   await page.getByRole("button", { name: "Create my account" }).click();
   await expect(page).toHaveURL(/\/account$/);
