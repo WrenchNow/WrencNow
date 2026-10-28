@@ -507,6 +507,28 @@ run("deductions from later payouts (e.g. an unhonored warranty)", () => {
     });
   });
 
+  it("a partial refund puts its share of a recovered deduction back to be recovered again", async () => {
+    await tx(async (q) => {
+      await q("insert into public.mechanic_deductions (mechanic_id, reason, amount_cents) values ($1, 'Warranty refund', 3000)", [ids["mechanic.basic"]]);
+      const a = await insertBooking(q, ids["mechanic.basic"], "oil-change", future(1));
+      expect(await claim(q, a, 5000)).toBe(3000);
+      await q("update public.bookings set deduction_cents = 3000 where id = $1", [a]);
+      expect((await q("select public.release_deductions_partial($1, 1000) as r", [a])).rows[0].r).toBe(1000);
+      expect((await q("select recovered_cents as r from public.mechanic_deductions where mechanic_id = $1", [ids["mechanic.basic"]])).rows[0].r).toBe(2000);
+      expect((await q("select deduction_cents as d from public.bookings where id = $1", [a])).rows[0].d).toBe(2000);
+    });
+  });
+
+  it("allows only one warranty refund deduction per problem report", async () => {
+    await expect(
+      tx(async (q) => {
+        const b = await insertBooking(q, ids["mechanic.basic"], "oil-change", future(1));
+        const issue = (await q("insert into public.job_issues (booking_id, customer_id, mechanic_id, description) values ($1, $2, $3, 'Brakes squeal again') returning id", [b, ids["customer"], ids["mechanic.basic"]])).rows[0].id;
+        for (let i = 0; i < 2; i++) await q("insert into public.mechanic_deductions (mechanic_id, issue_id, reason, amount_cents) values ($1, $2, 'Warranty refund', 1000)", [ids["mechanic.basic"], issue]);
+      }),
+    ).rejects.toThrow(/duplicate key|unique/);
+  });
+
   it("mechanics see their own deductions but can't create or change them", async () => {
     await tx(async (q) => {
       await q("insert into public.mechanic_deductions (mechanic_id, reason, amount_cents) values ($1, 'Warranty refund', 3000)", [ids["mechanic.basic"]]);

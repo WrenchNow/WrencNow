@@ -106,6 +106,11 @@ async function onCharge(admin: Admin, event: Stripe.Event) {
   if (event.type === "charge.refunded") {
     // One ledger row per refund (keyed by refund id), so partial refunds aren't double-counted.
     const refunds = await getStripe().refunds.list({ charge: charge.id, limit: 100 });
+    // Warranty refunds are paid by WrenchNow (no transfer reversal) and recovered later as a deduction,
+    // so they don't undo what this job paid toward fees or earlier deductions.
+    const platformFunded = refunds.data
+      .filter((r) => (r.status === "succeeded" || r.status === "pending") && r.metadata?.kind === "warranty_refund")
+      .reduce((s, r) => s + r.amount, 0);
     const rows = refunds.data
       .filter((r) => r.status === "succeeded" || r.status === "pending")
       .map((r) => ({ booking_id: b.id, mechanic_id: b.mechanic_id, type: "refund" as const, amount_cents: -r.amount, stripe_object_id: r.id }));
@@ -124,8 +129,10 @@ async function onCharge(admin: Admin, event: Stripe.Event) {
         ...(b.payment_status === "disputed" ? {} : { payment_status: full ? "refunded" : "partially_refunded" }),
       })
       .eq("id", b.id);
-    // A fully refunded job doesn't count toward the mechanic's onboarding fee, and gives back any deduction it recovered.
-    if (full) {
+    // A job the mechanic fully refunded (transfer reversed) doesn't count toward the old onboarding fee,
+    // and gives back any deduction it recovered.
+    const mechanicFundedFull = refunded - platformFunded >= (b.final_amount_cents ?? charge.amount_captured);
+    if (mechanicFundedFull) {
       await admin.rpc("release_onboarding_fee", { p_booking_id: b.id });
       await admin.rpc("release_deductions", { p_booking_id: b.id });
     }

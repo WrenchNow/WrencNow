@@ -458,10 +458,11 @@ async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor
       let captured = final;
       let deduction = 0;
       if (main.status === "requires_capture") {
-        // Money refunded to a customer on this mechanic's behalf (e.g. an unhonored warranty) comes out of their share.
+        // Money refunded to a customer on this mechanic's behalf (e.g. an unhonored warranty) comes out of their
+        // labor share — never out of the parts money they already spent.
         const { data: claimed } = await admin.rpc("claim_deductions", {
           p_booking_id: b.id,
-          p_available_cents: Math.max(final - fees.platform - fees.processing - salesTax, 0),
+          p_available_cents: Math.max(labor + handling - fees.platform - fees.processing, 0),
         });
         deduction = claimed ?? 0;
         const topupAuth = topup?.status === "requires_capture" ? topup.amount_capturable : 0;

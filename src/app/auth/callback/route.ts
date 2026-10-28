@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { safeNext } from "@/lib/auth";
+import { RESET_COOKIE, RESET_COOKIE_OPTIONS } from "@/lib/password-reset";
 import { createClient } from "@/lib/supabase/server";
 
 // Handles OAuth sign-in and email confirmation links.
@@ -12,6 +13,11 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient();
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error && data.user) {
+      if (next === "/reset-password") {
+        const res = NextResponse.redirect(`${origin}/reset-password`);
+        res.cookies.set(RESET_COOKIE, "1", RESET_COOKIE_OPTIONS);
+        return res;
+      }
       const { data: profile } = await supabase.from("profiles").select("role").eq("id", data.user.id).maybeSingle();
       if (!profile?.role) {
         return NextResponse.redirect(`${origin}/onboarding/role?next=${encodeURIComponent(next)}`);

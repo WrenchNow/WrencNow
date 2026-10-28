@@ -59,6 +59,10 @@ paste the body from the repo file (open the file on GitHub → **Raw** → copy 
 | Change email address | `Confirm your new WrenchNow email` | `supabase/templates/email_change.html` |
 | Magic link | `Your WrenchNow sign-in link` | `supabase/templates/magic_link.html` |
 
+The templates link to `/auth/confirm` with a one-time token, so a reset link works even if it's opened on a different
+phone or computer than the one that asked for it (this needs the Site URL from step 1). Until you paste them in,
+Supabase's default emails still work, but only in the same browser that asked.
+
 Test: on getwrenchnow.com click **Log in → Forgot password?**, enter your email, and check the email comes from
 `WrenchNow <no-reply@getwrenchnow.com>` with the orange button.
 

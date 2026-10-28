@@ -29,8 +29,9 @@ export default async function EarningsPage() {
   ]);
 
   // Warranty refunds WrenchNow paid itself don't reduce that job here; they show as a deduction on a later job instead.
+  const { data: platformRefunds } = await supabase.from("mechanic_deductions").select("booking_id, amount_cents").eq("mechanic_id", viewer.id).not("booking_id", "is", null);
   const platformRefunded = new Map<string, number>();
-  for (const d of deductions ?? []) if (d.booking_id) platformRefunded.set(d.booking_id, (platformRefunded.get(d.booking_id) ?? 0) + d.amount_cents);
+  for (const d of platformRefunds ?? []) platformRefunded.set(d.booking_id!, (platformRefunded.get(d.booking_id!) ?? 0) + d.amount_cents);
   const rows = (jobs ?? []).map((j) => {
     const gross = j.final_amount_cents ?? 0;
     const fee = (j.platform_fee_cents ?? 0) + (j.processing_fee_cents ?? 0);

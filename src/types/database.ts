@@ -1492,6 +1492,7 @@ export type Database = {
       refresh_mechanic_stats: { Args: { mid: string }; Returns: undefined };
       release_check_fee_refund: { Args: { p_booking_id: string }; Returns: undefined };
       release_deductions: { Args: { p_booking_id: string }; Returns: undefined };
+      release_deductions_partial: { Args: { p_booking_id: string; p_cents: number }; Returns: number };
       release_onboarding_fee: { Args: { p_booking_id: string }; Returns: number };
       search_mechanics: {
         Args: { lat: number; lng: number; max_results?: number; service_slug?: string };

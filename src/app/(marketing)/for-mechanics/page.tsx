@@ -13,7 +13,7 @@ import { SKILL_TIERS, TIER_DESCRIPTION, TIER_LABEL } from "@/lib/tiers";
 
 export const metadata: Metadata = {
   title: "For mechanics",
-  description: "Keep about $91 of every $100 you bill. Set your own rate and schedule — customers come to you through WrenchNow, no shop overhead.",
+  description: "Keep more of every job you bill. Set your own rate and schedule — customers come to you through WrenchNow, no shop overhead.",
 };
 
 const EXAMPLE_JOB_CENTS = 10000;

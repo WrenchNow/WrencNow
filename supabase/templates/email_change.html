@@ -4,9 +4,9 @@
     <p style="margin:0 0 20px;font-size:22px;font-weight:800;letter-spacing:.5px;text-transform:uppercase">Wrench<span style="color:#f25a00">Now</span></p>
     <h1 style="margin:0 0 12px;font-size:24px;line-height:1.2;text-transform:uppercase">Confirm your new email</h1>
     <p style="margin:0 0 24px;font-size:15px;line-height:1.55;color:#c8c2b5">Tap below to confirm {{ .NewEmail }} as the email for your WrenchNow account.</p>
-    <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#f25a00;color:#ffffff;font-weight:700;font-size:15px;text-decoration:none;padding:13px 22px;border-radius:8px">Confirm new email</a>
+    <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email_change&next=/" style="display:inline-block;background:#f25a00;color:#ffffff;font-weight:700;font-size:15px;text-decoration:none;padding:13px 22px;border-radius:8px">Confirm new email</a>
     <p style="margin:24px 0 0;font-size:13px;line-height:1.5;color:#8f8b80">Didn't ask for this? Ignore this email and nothing changes.</p>
-    <p style="margin:16px 0 0;font-size:12px;line-height:1.5;color:#8f8b80">If the button doesn't work, paste this link into your browser:<br><span style="word-break:break-all;color:#c8c2b5">{{ .ConfirmationURL }}</span></p>
+    <p style="margin:16px 0 0;font-size:12px;line-height:1.5;color:#8f8b80">If the button doesn't work, paste this link into your browser:<br><span style="word-break:break-all;color:#c8c2b5">{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email_change&next=/</span></p>
   </div>
   <p style="max-width:520px;margin:16px auto 0;font-size:12px;color:#6f6a63;text-align:center">WrenchNow · Mobile mechanics who come to you · getwrenchnow.com</p>
 </div>

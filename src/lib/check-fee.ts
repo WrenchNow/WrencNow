@@ -26,6 +26,14 @@ export async function recordCheckFeePayment(session: Stripe.Checkout.Session): P
     .select("id");
   if (updated?.length) {
     await admin.from("audit_log").insert({ actor_id: mechanicId, action: "mechanic.check_fee_paid", entity: "mechanic", entity_id: mechanicId, data: { payment_intent: piId, amount: session.amount_total } });
+  } else {
+    // Paid twice (two tabs, back button): give the extra payment straight back.
+    const { data: m } = await admin.from("mechanics").select("check_fee_payment_intent_id").eq("id", mechanicId).single();
+    if (m?.check_fee_payment_intent_id && m.check_fee_payment_intent_id !== piId) {
+      await getStripe().refunds.create({ payment_intent: piId, metadata: { kind: "check_fee_duplicate", mechanic_id: mechanicId } }, { idempotencyKey: `check-fee-duplicate-${piId}` });
+      await admin.from("audit_log").insert({ action: "mechanic.check_fee_duplicate_refunded", entity: "mechanic", entity_id: mechanicId, data: { payment_intent: piId } });
+      return true;
+    }
   }
   await startCheckIfReady(mechanicId);
   return true;
@@ -59,4 +67,37 @@ export async function refundCheckFeeInstallment(bookingId: string): Promise<numb
     await admin.rpc("release_check_fee_refund", { p_booking_id: bookingId });
     return 0;
   }
+}
+
+/**
+ * Daily sweep (from the cron route): retries check-fee refunds that failed or never ran, so a mechanic
+ * who stops after a few jobs still gets back what they earned. Safe to run any number of times.
+ */
+export async function retryCheckFeeRefunds(): Promise<{ retried: number; refunded: number }> {
+  const admin = createAdminClient();
+  const { data: owed } = await admin.from("mechanics").select("id, check_fee_paid_cents, check_fee_refunded_cents").gt("check_fee_paid_cents", 0).limit(2000);
+  let retried = 0;
+  let refunded = 0;
+  for (const m of owed ?? []) {
+    const { data: rows } = await admin.from("check_fee_refunds").select("booking_id, stripe_refund_id").eq("mechanic_id", m.id);
+    const pending = (rows ?? []).filter((r) => !r.stripe_refund_id).map((r) => r.booking_id);
+    const claimed = new Set((rows ?? []).map((r) => r.booking_id));
+    let candidates: string[] = pending;
+    if (m.check_fee_refunded_cents < m.check_fee_paid_cents && claimed.size < checkFeeRefundJobs()) {
+      const { data: jobs } = await admin
+        .from("bookings")
+        .select("id")
+        .eq("mechanic_id", m.id)
+        .eq("status", "completed")
+        .in("payment_status", ["captured", "partially_refunded"])
+        .order("completed_at")
+        .limit(50);
+      candidates = [...pending, ...(jobs ?? []).map((j) => j.id).filter((id) => !claimed.has(id))];
+    }
+    for (const bookingId of candidates) {
+      retried++;
+      refunded += await refundCheckFeeInstallment(bookingId);
+    }
+  }
+  return { retried, refunded };
 }

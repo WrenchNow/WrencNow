@@ -1,9 +1,11 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { homeFor, safeNext } from "@/lib/auth";
 import { googleAuthEnabled, siteUrl, supabaseConfigured } from "@/lib/env";
+import { RESET_COOKIE } from "@/lib/password-reset";
 import { createClient } from "@/lib/supabase/server";
 
 export type AuthState = { error?: string; message?: string; fields?: Record<string, string> };
@@ -106,6 +108,9 @@ export async function resetPassword(_: AuthState, formData: FormData): Promise<A
   const parsed = resetSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0]!.message };
 
+  // Only right after opening a reset link — not from any signed-in session.
+  const jar = await cookies();
+  if (jar.get(RESET_COOKIE)?.value !== "1") return { error: "This reset link has expired. Request a new one." };
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return { error: "This reset link has expired. Request a new one." };
@@ -114,6 +119,7 @@ export async function resetPassword(_: AuthState, formData: FormData): Promise<A
     const msg = /different from the old/i.test(error.message) ? "Choose a password you haven't used here before." : "We couldn't update your password. Please try again.";
     return { error: msg };
   }
+  jar.delete(RESET_COOKIE);
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", auth.user.id).maybeSingle();
   redirect(`${homeFor(profile?.role)}?password=updated`);
 }

@@ -77,6 +77,10 @@ export async function refundBooking(_: FormState, formData: FormData): Promise<F
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Refund failed." };
   }
+  // refund_application_fee handed back this refund's share of any deduction recovered on the job: owe it again.
+  if (b.deduction_cents > 0 && b.final_amount_cents) {
+    await admin.rpc("release_deductions_partial", { p_booking_id: id, p_cents: Math.round((b.deduction_cents * amount) / b.final_amount_cents) });
+  }
   await admin.from("audit_log").insert({ actor_id: viewer.id, action: "booking.refund", entity: "booking", entity_id: id, data: { amount } });
   revalidatePath("/admin/bookings");
   return { ok: true, message: "Refund sent. The booking updates when Stripe confirms." };
@@ -200,31 +204,39 @@ export async function warrantyRefund(_: FormState, formData: FormData): Promise<
     .safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0]!.message };
   const admin = createAdminClient();
-  const { data: issue } = await admin.from("job_issues").select("id, booking_id, customer_id, mechanic_id").eq("id", parsed.data.id).single();
+  const { data: issue } = await admin.from("job_issues").select("id, booking_id, customer_id, mechanic_id, status").eq("id", parsed.data.id).single();
   if (!issue) return { error: "Report not found." };
+  if (!["open", "mechanic_contacted"].includes(issue.status)) return { error: "This report is already closed." };
+  const { count: already } = await admin.from("mechanic_deductions").select("id", { count: "exact", head: true }).eq("issue_id", issue.id);
+  if (already) return { error: "This report already has a warranty refund." };
   const { data: b } = await admin.from("bookings").select("*").eq("id", issue.booking_id).single();
   if (!b?.stripe_payment_intent_id || !["captured", "partially_refunded"].includes(b.payment_status)) return { error: "Only paid jobs can be refunded." };
   if (!b.warranty_days) return { error: "This job had no mechanic warranty. Use a normal refund from Bookings instead." };
-  const remaining = (b.final_amount_cents ?? 0) - b.refunded_cents;
   const amount = Math.round(parsed.data.amount * 100);
-  if (amount <= 0 || amount > remaining) return { error: `Refund must be between $0.01 and ${(remaining / 100).toFixed(2)}.` };
-
-  const refundIds: string[] = [];
-  let refunded = 0;
+  const stripe = getStripe();
+  const charges: Refundable[] = [];
   try {
-    const stripe = getStripe();
     const ids = [b.topup_payment_intent_id, b.stripe_payment_intent_id].filter((x): x is string => Boolean(x));
-    const charges: Refundable[] = [];
     for (const piId of ids) {
       const pi = await stripe.paymentIntents.retrieve(piId, { expand: ["latest_charge"] });
       const charge = pi.latest_charge && typeof pi.latest_charge !== "string" ? pi.latest_charge : null;
       if (pi.status === "succeeded" && charge) charges.push({ id: piId, refundable: charge.amount_captured - charge.amount_refunded });
     }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Couldn't reach Stripe." };
+  }
+  // What Stripe says is still refundable right now (not the DB, which waits on the webhook).
+  const remaining = charges.reduce((s, c) => s + c.refundable, 0);
+  if (amount <= 0 || amount > remaining) return { error: `Refund must be between $0.01 and ${(remaining / 100).toFixed(2)}.` };
+
+  const refundIds: string[] = [];
+  let refunded = 0;
+  try {
     for (const part of planRefund(amount, charges)) {
       // Paid by the platform now (no reverse transfer); recovered from the mechanic's next jobs.
       const refund = await stripe.refunds.create(
         { payment_intent: part.id, amount: part.amount, reverse_transfer: false, refund_application_fee: false, metadata: { booking_id: b.id, issue_id: issue.id, kind: "warranty_refund", by: viewer.id } },
-        { idempotencyKey: `warranty-refund-${issue.id}-${b.refunded_cents}-${part.id}-${part.amount}` },
+        { idempotencyKey: `warranty-refund-${issue.id}-${part.id}` }, // one warranty refund per report and charge
       );
       refundIds.push(refund.id);
       refunded += part.amount;
@@ -233,7 +245,7 @@ export async function warrantyRefund(_: FormState, formData: FormData): Promise<
     if (!refundIds.length) return { error: e instanceof Error ? e.message : "Refund failed." };
     console.error("warrantyRefund partially failed", issue.id, e);
   }
-  await admin.from("mechanic_deductions").insert({
+  const { error: dedErr } = await admin.from("mechanic_deductions").insert({
     mechanic_id: issue.mechanic_id,
     booking_id: b.id,
     issue_id: issue.id,
@@ -242,6 +254,10 @@ export async function warrantyRefund(_: FormState, formData: FormData): Promise<
     stripe_refund_id: refundIds[0] ?? null,
     created_by: viewer.id,
   });
+  if (dedErr) {
+    console.error("warrantyRefund: deduction not recorded", issue.id, refunded, dedErr);
+    await admin.from("audit_log").insert({ actor_id: viewer.id, action: "issue.warranty_deduction_failed", entity: "job_issue", entity_id: issue.id, data: { amount: refunded, refunds: refundIds } });
+  }
   await admin
     .from("job_issues")
     .update({ status: "resolved", resolution: `Refunded ${(refunded / 100).toFixed(2)}: ${parsed.data.note}`, updated_at: new Date().toISOString() })

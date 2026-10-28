@@ -1,4 +1,16 @@
+import { checkFeeRefundJobs, onboardingFeePerJobCents, onboardingFeeTotalCents, platformFeeBps, processingFeeBps, processingFeeFixedCents } from "@/lib/env";
+import { processingLabel } from "@/lib/fee-copy";
+import { mechanicDeductionsCents } from "@/lib/fees";
+import { money } from "@/lib/format";
+
 export type Faq = { q: string; a: string };
+
+/** Fees come from env (PLATFORM_FEE_BPS etc.), so this answer is built, never hard-coded. */
+function joinCostAnswer(): string {
+  const bps = platformFeeBps();
+  const fees = mechanicDeductionsCents(10000, bps, processingFeeBps(), processingFeeFixedCents());
+  return `No monthly fee to be listed. On each completed job WrenchNow keeps a ${bps / 100}% platform fee and card processing (${processingLabel()}) comes out — on a $100 job you keep ${money(10000 - fees.platform - fees.processing)}. The rest is paid out to your bank through Stripe. The background check is optional: it costs ${money(onboardingFeeTotalCents(), { whole: true })} up front and you get ${money(onboardingFeePerJobCents(), { whole: true })} back on each of your first ${checkFeeRefundJobs()} completed jobs.`;
+}
 
 export const CUSTOMER_FAQ: Faq[] = [
   {
@@ -46,7 +58,7 @@ export const CUSTOMER_FAQ: Faq[] = [
 export const MECHANIC_FAQ: Faq[] = [
   {
     q: "What does it cost to join?",
-    a: "No monthly fee to be listed. On each completed job WrenchNow keeps a 5% platform fee and card processing (3.2% + 55¢) comes out — on a $100 job you keep $91.25. The rest is paid out to your bank through Stripe. The background check is optional: it costs $50 up front and you get $10 back on each of your first 5 completed jobs.",
+    a: joinCostAnswer(),
   },
   {
     q: "What do I need to get started?",
