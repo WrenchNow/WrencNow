@@ -57,11 +57,11 @@ The standard certificate (ACORD 25) says on its face that it is "issued as a mat
 | **Read the PDF automatically**: Google Document AI Form Parser | about $30 per 1,000 pages ([aiproductivity.ai](https://aiproductivity.ai/blog/document-ai-cost-comparison/)) | Yes |
 | AWS Textract (forms) | about $0.05/page ([AWS](https://aws.amazon.com/textract/pricing/)) | Yes |
 | An AI model reading the PDF | Billed by usage; flexible with messy scans | Yes (any of these three works) |
-| Certificial | Basic COI tracking free; Professional $49 ([Capterra via search](https://www.capterra.com/p/234580/myCOI/reviews/Capterra___4686784/), [G2](https://www.g2.com/products/certificial/pricing)) | Worth a trial |
+| Certificial | Free plan for a handful of vendors (one competitor says up to 5), custom pricing beyond; one listing shows a $49 Professional tier. Not confirmed on Certificial's site ([BCS comparison](https://www.getbcs.com/bcs-vs-certificial), [G2](https://www.g2.com/products/certificial/pricing)) | Worth a trial |
 | TrustLayer | Free up to 50 vendors, then about $10/vendor/month (one aggregator) ([FitGap](https://us.fitgap.com/products/058460/trustlayer)) | Worth a trial |
 | Billy | 30-day trial, up to 25 vendors ([Procore](https://marketplace.procore.com/apps/billy-insurance-compliance)) | Built for construction |
 | Jones | Annual, per record; competitor reports a $3,500 setup fee ([G2](https://www.g2.com/products/jones/pricing), [BCS](https://www.getbcs.com/bcs-vs-jones)) | Later |
-| myCOI | Sales-led; estimated $5,000–10,000/yr ([xpay](https://www.xpay.sh/saas-pricing/mycoi-software/), [Vertikal](https://vertikalrms.com/article/how-much-does-coi-tracking-software-cost-2025-pricing-guide/)) | Later |
+| myCOI | Sales-led; third-party estimates around $5,000–10,000/yr ([xpay](https://www.xpay.sh/saas-pricing/mycoi-software/), [Vertikal](https://vertikalrms.com/article/how-much-does-coi-tracking-software-cost-2025-pricing-guide/)) | Later |
 | Evident | Quote-based, priced by number of verified parties ([Gartner](https://www.gartner.com/reviews/product/evident-insurance-verification)) | Later |
 | Insurer data APIs (Axle, Canopy Connect) | Pull policy data directly from carriers, mainly personal auto and home ([Axle](https://axle.insure/product/verification), [Canopy](https://www.usecanopy.com/solutions/insurance-carriers)) | Not a fit for business policies yet |
 
