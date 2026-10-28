@@ -7,11 +7,11 @@ export const CUSTOMER_FAQ: Faq[] = [
   },
   {
     q: "Are these mechanics actually any good?",
-    a: "Every mechanic passes a background check and we review their experience before they can take jobs. Basic-tier mechanics can only take simple jobs like oil changes and batteries; complex work is limited to certified mechanics. Reviews come only from customers with a completed booking.",
+    a: "We review every mechanic's profile, experience and insurance before they can take jobs. Mechanics who pass our background check get a “Background checked” badge, and if a mechanic hasn't, you're told before you book. Basic-tier mechanics can only take simple jobs like oil changes and batteries; complex work is limited to certified mechanics. Reviews come only from customers with a completed booking.",
   },
   {
     q: "What if I have no idea what's wrong with my car?",
-    a: "Most people don't — that's fine. Describe what you're noticing (“weird noise,” “won't start,” “yellow light on”) and book a diagnosis. Your mechanic figures it out on-site and explains it in plain English before touching anything.",
+    a: "Most people don't — that's fine. Use “Not sure what's wrong?” on the Find a mechanic page: describe what you're noticing (“weird noise,” “won't start,” “yellow light on”) and we'll show the likely causes and what to book. Your mechanic reads your description before they come. You can also book an in-person estimate visit — some mechanics do them free — and get a written estimate before any work.",
   },
   {
     q: "When am I charged?",
@@ -35,7 +35,7 @@ export const CUSTOMER_FAQ: Faq[] = [
   },
   {
     q: "What if the problem comes back?",
-    a: "Contact your mechanic first — they're independent professionals who stand behind their work. If that doesn't resolve it, WrenchNow can help mediate.",
+    a: "Use “Report a problem” on your booking. Many mechanics offer their own warranty — their profile and your receipt say how long it lasts and whether it covers labor, parts, or both. If a mechanic doesn't honor their warranty, WrenchNow can refund you and take it out of the mechanic's next payout.",
   },
   {
     q: "Where do you operate?",
@@ -46,11 +46,11 @@ export const CUSTOMER_FAQ: Faq[] = [
 export const MECHANIC_FAQ: Faq[] = [
   {
     q: "What does it cost to join?",
-    a: "Nothing up front. On each completed job WrenchNow keeps a 5% platform fee and card processing (3.2% + 55¢) comes out, and your $50 background check is covered by $10 from each of your first 5 jobs — taken automatically, nothing to pay or track. The rest is paid out to your bank through Stripe.",
+    a: "No monthly fee to be listed. On each completed job WrenchNow keeps a 5% platform fee and card processing (3.2% + 55¢) comes out — on a $100 job you keep $91.25. The rest is paid out to your bank through Stripe. The background check is optional: it costs $50 up front and you get $10 back on each of your first 5 completed jobs.",
   },
   {
     q: "What do I need to get started?",
-    a: "A valid driver's license, your own tools and transportation, a profile photo, liability insurance (we verify your certificate and you renew it before it expires), and a smartphone. You'll also need to pass a background check and connect a bank account through Stripe.",
+    a: "A valid driver's license, your own tools and transportation, a profile photo, liability insurance (we verify your certificate and you renew it before it expires), and a smartphone. You'll also need to connect a bank account through Stripe.",
   },
   {
     q: "I'm newer to the trade. Can I still join?",

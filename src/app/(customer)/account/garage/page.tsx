@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { deleteVehicle } from "@/app/(customer)/account/actions";
 import { VehicleCareForm, VehicleForm } from "@/components/account/forms";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/layout";
@@ -21,7 +21,7 @@ export default async function GaragePage() {
     supabase.from("vehicles").select("*").eq("owner_id", viewer.id).order("created_at"),
     supabase
       .from("bookings")
-      .select("id, vehicle_id, mechanic_id, completed_at, final_amount_cents, odometer, warranty_days, services(name)")
+      .select("id, vehicle_id, mechanic_id, completed_at, final_amount_cents, odometer, warranty_days, warranty_covers, services(name)")
       .eq("customer_id", viewer.id)
       .eq("status", "completed")
       .not("vehicle_id", "is", null)
@@ -39,7 +39,7 @@ export default async function GaragePage() {
 
   return (
     <>
-      <PageHeader eyebrow="Garage" title="Your vehicles">
+      <PageHeader eyebrow="My Garage" title="Your vehicles">
         Save your cars once and pick them in a tap when you book. Every job done through WrenchNow is kept here as your service history.
       </PageHeader>
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
@@ -58,12 +58,17 @@ export default async function GaragePage() {
                         {v.mileage !== null ? `${v.mileage.toLocaleString("en-US")} miles${v.mileage_updated_at ? ` as of ${shortDate(v.mileage_updated_at)}` : ""}` : "Mileage not added"}
                       </p>
                     </div>
+                    <div className="flex flex-wrap gap-2">
+                    <ButtonLink href={`/search?vehicle=${v.id}#find`} size="sm">
+                      Find a mechanic for this car
+                    </ButtonLink>
                     <form action={deleteVehicle}>
                       <input type="hidden" name="id" value={v.id} />
                       <Button type="submit" variant="subtle" size="sm" aria-label={`Remove ${label}`}>
                         Remove
                       </Button>
                     </form>
+                    </div>
                   </div>
 
                   <h3 className="mt-5 text-sm font-semibold tracking-wider text-muted uppercase">Service history</h3>
@@ -90,6 +95,7 @@ export default async function GaragePage() {
                                 {j.completed_at && days > 0 && (
                                   <span className={`block text-xs ${covered ? "text-ok" : "text-muted"}`}>
                                     {covered ? "Mechanic's warranty until" : "Mechanic's warranty ended"} {shortDate(windowEndsAt(j.completed_at, days).toISOString())}
+                                    {j.warranty_covers ? ` (${j.warranty_covers === "both" ? "labor and parts" : j.warranty_covers})` : ""}
                                   </span>
                                 )}
                               </span>

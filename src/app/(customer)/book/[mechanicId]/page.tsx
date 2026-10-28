@@ -36,11 +36,24 @@ export default async function BookPage({ params, searchParams }: PageProps<"/boo
         Four quick steps. You won&apos;t be charged until the job is done.
       </PageHeader>
       <BookingWizard
-        mechanic={{ id: m.id, name: m.display_name ?? "your mechanic", rateCents: m.hourly_rate_cents ?? 0 }}
-        services={m.services.map((s) => ({ slug: s.slug, name: s.name, icon: s.icon, min: s.est_minutes_min, max: s.est_minutes_max, needsLift: s.needs_lift }))}
+        mechanic={{
+          id: m.id,
+          name: m.display_name ?? "your mechanic",
+          rateCents: m.hourly_rate_cents ?? 0,
+          verified: Boolean(m.check_clear),
+          estimateFeeCents: m.estimateVisit?.feeCents ?? null,
+        }}
+        services={[
+          ...(m.estimateVisit
+            ? [{ slug: "estimate-visit", name: "In-person estimate (not sure what it needs)", icon: "📋", min: 30, max: 60, estimateVisit: true }]
+            : []),
+          ...m.services.map((s) => ({ slug: s.slug, name: s.name, icon: s.icon, min: s.est_minutes_min, max: s.est_minutes_max, needsLift: s.needs_lift })),
+        ]}
         vehicles={(vehicles ?? []).map((v) => ({ id: v.id, label: [v.year, v.make, v.model, v.trim].filter(Boolean).join(" "), nickname: v.nickname }))}
         busy={busy ?? []}
         initialService={typeof sp.service === "string" ? sp.service : ""}
+        initialProblem={typeof sp.problem === "string" ? sp.problem.slice(0, 2000) : ""}
+        initialVehicle={typeof sp.vehicle === "string" ? sp.vehicle : ""}
         publishableKey={stripeConfigured() ? process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY! : null}
         initialPhone={viewer.profile.phone ?? ""}
         noShowFeeLabel={money(customerNoShowFeeCents(), { whole: true })}

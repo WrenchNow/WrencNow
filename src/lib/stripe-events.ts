@@ -79,8 +79,10 @@ async function onPaymentIntent(admin: Admin, event: Stripe.Event) {
         .in("status", ["requested", "accepted", "en_route"])
         .select("id");
       if (!ended?.length) {
-        const { data: b } = await admin.from("bookings").select("status").eq("id", bookingId).maybeSingle();
-        if (b?.status === "in_progress") {
+        const { data: b } = await admin.from("bookings").select("status, is_estimate_visit, estimate_fee_cents").eq("id", bookingId).maybeSingle();
+        // A free estimate visit releases its no-show hold on purpose when the visit is done.
+        const freeEstimate = b?.is_estimate_visit && (b.estimate_fee_cents ?? 0) === 0;
+        if (b?.status === "in_progress" && !freeEstimate) {
           await admin.from("audit_log").insert({ action: "booking.hold_released_in_progress", entity: "booking", entity_id: bookingId, data: { payment_intent: pi.id } });
         }
       }
@@ -122,8 +124,11 @@ async function onCharge(admin: Admin, event: Stripe.Event) {
         ...(b.payment_status === "disputed" ? {} : { payment_status: full ? "refunded" : "partially_refunded" }),
       })
       .eq("id", b.id);
-    // A fully refunded job doesn't count toward the mechanic's onboarding fee.
-    if (full) await admin.rpc("release_onboarding_fee", { p_booking_id: b.id });
+    // A fully refunded job doesn't count toward the mechanic's onboarding fee, and gives back any deduction it recovered.
+    if (full) {
+      await admin.rpc("release_onboarding_fee", { p_booking_id: b.id });
+      await admin.rpc("release_deductions", { p_booking_id: b.id });
+    }
     if (refunded > 0) await notifyRefund(b.id, refunded);
   }
 }
@@ -184,6 +189,11 @@ async function onSubscription(admin: Admin, event: Stripe.Event) {
 
 async function onCheckoutCompleted(admin: Admin, event: Stripe.Event) {
   const session = event.data.object as Stripe.Checkout.Session;
+  if (session.metadata?.kind === "check_fee") {
+    const { recordCheckFeePayment } = await import("@/lib/check-fee");
+    await recordCheckFeePayment(session);
+    return;
+  }
   const mechanicId = session.metadata?.mechanic_id;
   if (session.mode !== "subscription" || !mechanicId) return;
   const customerId = typeof session.customer === "string" ? session.customer : session.customer?.id;

@@ -413,60 +413,109 @@ run("insurance", () => {
   });
 });
 
-run("onboarding fee ($10 a job until $50)", () => {
+run("optional background check", () => {
   type Q = (sql: string, params?: unknown[]) => Promise<pg.QueryResult>;
-  const claim = (q: Q, id: string, final = 6000, fee = 300) =>
-    q("select public.claim_onboarding_fee($1, 1000, $2, $3) as a", [id, final, fee]).then((r) => r.rows[0].a as number);
-  const collected = (q: Q) =>
-    q("select onboarding_fee_collected_cents as c from public.mechanics where id = $1", [ids["mechanic.basic"]]).then((r) => r.rows[0].c as number);
+  const basic = () => ids["mechanic.basic"];
+  async function completed(q: Q, day: number) {
+    const id = await insertBooking(q, basic(), "oil-change", future(day));
+    await q("update public.bookings set payment_status = 'authorized' where id = $1", [id]);
+    for (const st of ["accepted", "en_route"]) await q("update public.bookings set status = $2 where id = $1", [id, st]);
+    await verifiedCode(q, id);
+    await q("update public.bookings set status = 'in_progress' where id = $1", [id]);
+    await q("update public.bookings set status = 'completed', payment_status = 'captured', final_amount_cents = 5000 where id = $1", [id]);
+    return id;
+  }
+  const claim = (q: Q, id: string) => q("select public.claim_check_fee_refund($1, 1000, 5) as a", [id]).then((r) => r.rows[0].a as number);
+  const paid = (q: Q) => q("update public.mechanics set check_fee_paid_cents = 5000, check_fee_payment_intent_id = 'pi_test_fee' where id = $1", [basic()]);
 
-  it("takes $10 from each of the first 5 jobs, then stops", async () => {
+  it("unverified mechanics stay live, but customers must acknowledge it to book", async () => {
     await tx(async (q) => {
+      await q("update public.mechanics set check_status = 'not_started' where id = $1", [basic()]);
+      expect((await q("select is_live from public.mechanics where id = $1", [basic()])).rows[0].is_live).toBe(true);
+      await expect(insertBooking(q, basic(), "oil-change", future(1))).rejects.toThrow(/acknowledge/);
+    });
+    await tx(async (q) => {
+      await q("update public.mechanics set check_status = 'not_started' where id = $1", [basic()]);
+      const r = await q(
+        `insert into public.bookings (customer_id, mechanic_id, service_id, vehicle_desc, address, scheduled_start, scheduled_end, hourly_rate_cents, estimated_max_cents, unverified_ack_at)
+         values ($1, $2, $3, 'Car', '1 Test St', $4, $4::timestamptz + interval '1 hour', 9000, 9000, now()) returning id`,
+        [ids["customer"], basic(), services["oil-change"], future(2)],
+      );
+      expect(r.rows[0].id).toBeTruthy();
+    });
+  });
+
+  it("a flagged background check takes the mechanic off the platform", async () => {
+    await tx(async (q) => {
+      await q("update public.mechanics set check_status = 'consider' where id = $1", [basic()]);
+      expect((await q("select is_live from public.mechanics where id = $1", [basic()])).rows[0].is_live).toBe(false);
+    });
+  });
+
+  it("refunds $10 of the check fee on each of the first 5 completed jobs, then stops", async () => {
+    await tx(async (q) => {
+      await paid(q);
       const amounts: number[] = [];
-      for (let day = 1; day <= 6; day++) amounts.push(await claim(q, await insertBooking(q, ids["mechanic.basic"], "oil-change", future(day))));
+      for (let day = 1; day <= 6; day++) amounts.push(await claim(q, await completed(q, day)));
       expect(amounts).toEqual([1000, 1000, 1000, 1000, 1000, 0]);
-      expect(await collected(q)).toBe(5000);
+      expect((await q("select check_fee_refunded_cents as c from public.mechanics where id = $1", [basic()])).rows[0].c).toBe(5000);
     });
   });
 
-  it("never takes more than the mechanic's share of a small job", async () => {
+  it("refunds nothing to mechanics who didn't pay, or before a job is completed", async () => {
     await tx(async (q) => {
-      const id = await insertBooking(q, ids["mechanic.basic"], "oil-change", future(1));
-      expect(await claim(q, id, 800, 40)).toBe(760); // $8 job, $0.40 platform fee → at most $7.60
-      expect(await collected(q)).toBe(760);
+      expect(await claim(q, await completed(q, 1))).toBe(0);
+      await paid(q);
+      expect(await claim(q, await insertBooking(q, basic(), "oil-change", future(2)))).toBe(0);
     });
   });
 
-  it("is idempotent per job (a retried capture doesn't charge twice)", async () => {
+  it("is idempotent per job, and a failed refund can be released and retried", async () => {
     await tx(async (q) => {
-      const id = await insertBooking(q, ids["mechanic.basic"], "oil-change", future(1));
+      await paid(q);
+      const id = await completed(q, 1);
       expect(await claim(q, id)).toBe(1000);
       expect(await claim(q, id)).toBe(1000);
-      expect(await collected(q)).toBe(1000);
+      await q("select public.release_check_fee_refund($1)", [id]);
+      expect((await q("select check_fee_refunded_cents as c from public.mechanics where id = $1", [basic()])).rows[0].c).toBe(0);
+      expect(await claim(q, id)).toBe(1000);
     });
   });
 
-  it("gives the installment back when a capture fails or the job is fully refunded", async () => {
+  it("users can't call the refund functions or mark their fee paid", async () => {
+    await expect(tx((q) => q("select public.claim_check_fee_refund(gen_random_uuid(), 1000, 5)"), asUser(basic()))).rejects.toThrow(/permission denied/);
+    await expect(tx((q) => q("update public.mechanics set check_fee_paid_cents = 5000 where id = auth.uid()"), asUser(basic()))).rejects.toThrow(/permission denied/);
+  });
+});
+
+run("deductions from later payouts (e.g. an unhonored warranty)", () => {
+  type Q = (sql: string, params?: unknown[]) => Promise<pg.QueryResult>;
+  const claim = (q: Q, id: string, available: number) => q("select public.claim_deductions($1, $2) as a", [id, available]).then((r) => r.rows[0].a as number);
+
+  it("recovers oldest-first from the mechanic's next jobs, never more than each job's share", async () => {
     await tx(async (q) => {
-      const id = await insertBooking(q, ids["mechanic.basic"], "oil-change", future(1));
-      await claim(q, id);
-      expect((await q("select public.release_onboarding_fee($1) as a", [id])).rows[0].a).toBe(1000);
-      expect(await collected(q)).toBe(0);
+      await q("insert into public.mechanic_deductions (mechanic_id, reason, amount_cents) values ($1, 'Warranty refund', 3000)", [ids["mechanic.basic"]]);
+      const a = await insertBooking(q, ids["mechanic.basic"], "oil-change", future(1));
+      const b = await insertBooking(q, ids["mechanic.basic"], "oil-change", future(2));
+      const c = await insertBooking(q, ids["mechanic.basic"], "oil-change", future(3));
+      expect(await claim(q, a, 2000)).toBe(2000);
+      expect(await claim(q, a, 2000)).toBe(2000); // idempotent
+      expect(await claim(q, b, 5000)).toBe(1000);
+      expect(await claim(q, c, 5000)).toBe(0);
+      await q("select public.release_deductions($1)", [b]);
+      expect((await q("select recovered_cents as r from public.mechanic_deductions where mechanic_id = $1", [ids["mechanic.basic"]])).rows[0].r).toBe(2000);
     });
   });
 
-  it("collects nothing once waived (total lowered to what's collected)", async () => {
+  it("mechanics see their own deductions but can't create or change them", async () => {
     await tx(async (q) => {
-      await q("update public.mechanics set onboarding_fee_total_cents = 0 where id = $1", [ids["mechanic.basic"]]);
-      expect(await claim(q, await insertBooking(q, ids["mechanic.basic"], "oil-change", future(1)))).toBe(0);
+      await q("insert into public.mechanic_deductions (mechanic_id, reason, amount_cents) values ($1, 'Warranty refund', 3000)", [ids["mechanic.basic"]]);
+      await q(`select set_config('request.jwt.claims', $1, true)`, [JSON.stringify({ sub: ids["mechanic.basic"], role: "authenticated" })]);
+      await q("set local role authenticated");
+      expect((await q("select count(*)::int as n from public.mechanic_deductions")).rows[0].n).toBe(1);
+      await expect(q("update public.mechanic_deductions set recovered_cents = amount_cents")).rejects.toThrow(/permission denied/);
     });
-  });
-
-  it("users can't call the fee functions or edit their fee", async () => {
-    await expect(tx((q) => q("select public.claim_onboarding_fee(gen_random_uuid(), 1000, 0, 0)"), asUser(ids["mechanic.basic"]))).rejects.toThrow(/permission denied/);
-    await expect(
-      tx((q) => q("update public.mechanics set onboarding_fee_total_cents = 0 where id = auth.uid()"), asUser(ids["mechanic.basic"])),
-    ).rejects.toThrow(/permission denied/);
+    await expect(tx((q) => q("select count(*) from public.mechanic_deductions"), asUser(ids["mechanic.certified"])).then((r) => r.rows[0].count)).resolves.toBe("0");
   });
 });
 

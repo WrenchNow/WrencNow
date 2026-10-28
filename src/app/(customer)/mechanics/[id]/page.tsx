@@ -8,7 +8,7 @@ import { Badge, EmptyState } from "@/components/ui/feedback";
 import { Container } from "@/components/ui/layout";
 import { estimateMaxCents, estimateMinCents } from "@/lib/fees";
 import { dealerLaborRateCents } from "@/lib/env";
-import { money, shortDate, warrantyLabel } from "@/lib/format";
+import { money, shortDate, warrantySummary } from "@/lib/format";
 import { getPublicMechanic } from "@/lib/public-data";
 import { TIER_LABEL } from "@/lib/tiers";
 
@@ -24,7 +24,17 @@ export default async function MechanicProfilePage({ params, searchParams }: Page
   const m = await getPublicMechanic(id);
   if (!m) notFound();
   const selected = typeof sp.service === "string" ? sp.service : "";
-  const bookHref = `/book/${m.id}${selected ? `?service=${encodeURIComponent(selected)}` : ""}`;
+  // Carry the customer's chosen car (from My Garage or an estimate) and problem description into booking.
+  const carry = new URLSearchParams();
+  if (typeof sp.vehicle === "string" && /^[0-9a-f-]{36}$/i.test(sp.vehicle)) carry.set("vehicle", sp.vehicle);
+  if (typeof sp.problem === "string" && sp.problem.trim()) carry.set("problem", sp.problem.slice(0, 2000));
+  const withCarry = (service?: string) => {
+    const q = new URLSearchParams(carry);
+    if (service) q.set("service", service);
+    const qs = q.toString();
+    return `/book/${m.id}${qs ? `?${qs}` : ""}`;
+  };
+  const bookHref = withCarry(selected || undefined);
   const dealerRate = dealerLaborRateCents();
 
   return (
@@ -39,10 +49,10 @@ export default async function MechanicProfilePage({ params, searchParams }: Page
                 {TIER_LABEL[m.skill_tier]} mechanic{m.city ? ` · ${m.city}` : ""} · covers {m.service_radius_miles} mi
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
-                {m.check_clear && <Badge tone="ok">✓ Background checked</Badge>}
+                {m.check_clear ? <Badge tone="ok">✓ Background checked</Badge> : <Badge tone="warn">Not background checked</Badge>}
                 {m.featured && <Badge tone="warn">Sponsored</Badge>}
                 {m.online && <Badge tone="ok">● Online now</Badge>}
-                {m.warranty_days > 0 && <Badge tone="info">🛡 {warrantyLabel(m.warranty_days)} from this mechanic</Badge>}
+                {m.warranty_days > 0 && <Badge tone="info">🛡 {warrantySummary(m.warranty_days, m.warranty_covers)} from this mechanic</Badge>}
               </div>
             </div>
           </div>
@@ -89,8 +99,45 @@ export default async function MechanicProfilePage({ params, searchParams }: Page
             </section>
           )}
 
+          {m.warranty_days > 0 && (
+            <section className="mt-10 rounded-[var(--radius-card)] border border-info/25 bg-info-dim p-4">
+              <h2 className="text-lg font-bold text-cream uppercase">🛡 This mechanic&apos;s warranty</h2>
+              <p className="mt-1 text-sm text-ink">
+                {warrantySummary(m.warranty_days, m.warranty_covers)}
+                {m.warranty_covers === "labor" ? " — if the repair fails, they redo the work at no labor charge. Parts are covered by the parts maker's own warranty, if any." : ""}
+                {m.warranty_covers === "parts" ? " — if a part they installed fails, they replace the part. Labor to reinstall isn't included." : ""}
+                {m.warranty_covers === "both" ? " — if the repair fails, they replace the parts and redo the work at no charge." : ""}
+              </p>
+              <p className="mt-2 text-xs text-muted">Offered by the mechanic, not WrenchNow. Starts the day the job is completed. Use &ldquo;Report a problem&rdquo; on your booking to make a claim.</p>
+            </section>
+          )}
+
+          {!m.check_clear && (
+            <section className="mt-10 rounded-[var(--radius-card)] border border-warn/25 bg-warn-dim p-4">
+              <h2 className="text-lg font-bold text-cream uppercase">Not background checked</h2>
+              <p className="mt-1 text-sm text-ink">
+                This mechanic hasn&apos;t completed WrenchNow&apos;s optional background check. Their insurance and payout account are verified and they were approved by
+                WrenchNow, but no criminal or driving record check has been done. You&apos;ll be asked to confirm this before you book.
+              </p>
+            </section>
+          )}
+
           <section className="mt-10">
             <h2 className="text-2xl font-bold uppercase">Services & estimates</h2>
+            {m.estimateVisit && (
+              <div className="mt-4 flex flex-col gap-3 rounded-[var(--radius-card)] border border-ore/30 bg-ore-dim p-4 sm:flex-row sm:items-center sm:justify-between">
+                <span>
+                  <span className="block font-semibold text-cream">📋 In-person estimate visit</span>
+                  <span className="block text-sm text-ink">Not sure what it needs? They come out, look at the car, and write you an estimate. No repair on this visit.</span>
+                </span>
+                <span className="flex items-center gap-3">
+                  <span className="font-display text-2xl font-bold text-cream">{m.estimateVisit.feeCents === 0 ? "Free" : money(m.estimateVisit.feeCents, { whole: true })}</span>
+                  <ButtonLink href={withCarry("estimate-visit")} size="sm">
+                    Book estimate
+                  </ButtonLink>
+                </span>
+              </div>
+            )}
             {m.services.length > 0 ? (
               <ul className="mt-4 divide-y divide-line rounded-[var(--radius-card)] border border-line bg-surface">
                 {m.services.map((s) => (
@@ -113,7 +160,7 @@ export default async function MechanicProfilePage({ params, searchParams }: Page
                           </span>
                         )}
                       </span>
-                      <ButtonLink href={`/book/${m.id}?service=${s.slug}`} size="sm" variant="subtle">
+                      <ButtonLink href={withCarry(s.slug)} size="sm" variant="subtle">
                         Book
                       </ButtonLink>
                     </span>

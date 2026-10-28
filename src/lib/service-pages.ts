@@ -32,7 +32,7 @@ export function serviceFaq(s: ServicePage) {
     },
     {
       q: "Who does the work?",
-      a: "Independent mechanics who have passed a background check and shown current proof of insurance. Mechanics can only take jobs their skill tier covers.",
+      a: "Independent mechanics reviewed by WrenchNow who have shown current proof of insurance. Background-checked mechanics carry a badge on their profile. Mechanics can only take jobs their skill tier covers.",
     },
     {
       q: "What if something goes wrong?",

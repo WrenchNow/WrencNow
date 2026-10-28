@@ -6,7 +6,8 @@ import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { BookingError, checkInAtAddress, transitionBooking } from "@/lib/bookings";
 import { recordPartReceipt, removePart, sendPartsQuote } from "@/lib/parts";
-import { featuredPriceCents, onboardingFeeTotalCents, siteUrl, stripeConfigured } from "@/lib/env";
+import { featuredPriceCents, onboardingFeePerJobCents, onboardingFeeTotalCents, siteUrl, stripeConfigured } from "@/lib/env";
+import { money } from "@/lib/format";
 import { geocode } from "@/lib/geocode";
 import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -39,6 +40,9 @@ const profileSchema = z.object({
   base_location: z.string().trim().min(3, "Enter your base ZIP or address").max(200),
   service_radius_miles: z.coerce.number().int().min(1).max(100),
   warranty_days: z.coerce.number().pipe(z.union([z.literal(0), z.literal(30), z.literal(90), z.literal(180), z.literal(365)])),
+  warranty_covers: z.enum(["labor", "parts", "both"]).default("labor"),
+  estimate_mode: z.enum(["none", "free", "paid"]).default("none"),
+  estimate_fee: z.string().optional(),
   has_tools: z.literal("on", { error: "You need your own tools to work on WrenchNow" }),
   has_transport: z.literal("on", { error: "You need reliable transportation to reach customers" }),
 });
@@ -48,6 +52,13 @@ export async function saveMechanicProfile(_: FormState, formData: FormData): Pro
   const parsed = profileSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0]!.message };
   const d = parsed.data;
+  let estimateFeeCents: number | null = null;
+  if (d.estimate_mode === "free") estimateFeeCents = 0;
+  if (d.estimate_mode === "paid") {
+    const fee = Number(d.estimate_fee ?? "");
+    if (!Number.isFinite(fee) || fee < 1 || fee > 500) return { error: "Enter an estimate fee between $1 and $500, or offer free estimates." };
+    estimateFeeCents = Math.round(fee * 100);
+  }
 
   const point = await geocode(d.base_location);
   if (!point) return { error: "We couldn't find that location. Try a 5-digit ZIP or full street address." };
@@ -66,6 +77,8 @@ export async function saveMechanicProfile(_: FormState, formData: FormData): Pro
         hourly_rate_cents: Math.round(d.hourly_rate * 100),
         service_radius_miles: d.service_radius_miles,
         warranty_days: d.warranty_days,
+        warranty_covers: d.warranty_covers,
+        estimate_fee_cents: estimateFeeCents,
         location: `SRID=4326;POINT(${point.lng} ${point.lat})`,
         city: /^\d/.test(city ?? "") ? null : city,
         has_tools: true,
@@ -75,6 +88,12 @@ export async function saveMechanicProfile(_: FormState, formData: FormData): Pro
     supabase.from("profiles").update({ phone: d.phone }).eq("id", viewer.id),
   ]);
   if (error || pErr) return { error: "Couldn't save your profile. Please try again." };
+  // Estimate visits are listed (and searchable) like a service while the mechanic offers them.
+  const { data: estimateService } = await supabase.from("services").select("id").eq("is_estimate_visit", true).maybeSingle();
+  if (estimateService) {
+    if (estimateFeeCents === null) await supabase.from("mechanic_services").delete().eq("mechanic_id", viewer.id).eq("service_id", estimateService.id);
+    else await supabase.from("mechanic_services").upsert({ mechanic_id: viewer.id, service_id: estimateService.id }, { onConflict: "mechanic_id,service_id", ignoreDuplicates: true });
+  }
   revalidatePath("/mechanic", "layout");
   return { ok: true, message: "Profile saved." };
 }
@@ -86,7 +105,8 @@ export async function saveServices(_: FormState, formData: FormData): Promise<Fo
     .map((v) => Number(v))
     .filter((n) => Number.isInteger(n) && n > 0);
   const supabase = await createClient();
-  const { data: current } = await supabase.from("mechanic_services").select("service_id").eq("mechanic_id", viewer.id);
+  // The estimate visit is managed from the profile form, not this list.
+  const { data: current } = await supabase.from("mechanic_services").select("service_id, services!inner(is_estimate_visit)").eq("mechanic_id", viewer.id).eq("services.is_estimate_visit", false);
   const have = new Set((current ?? []).map((r) => r.service_id));
   const want = new Set(ids);
   const toAdd = [...want].filter((id) => !have.has(id));
@@ -116,8 +136,6 @@ export async function submitApplication(_: FormState, formData: FormData): Promi
     .update({
       onboarding_submitted_at: m.onboarding_submitted_at ?? new Date().toISOString(),
       agreed_terms_at: new Date().toISOString(),
-      // Lock in the onboarding fee amount at application time (unless already collecting or waived).
-      ...(m.onboarding_fee_collected_cents === 0 && m.onboarding_fee_total_cents > 0 ? { onboarding_fee_total_cents: onboardingFeeTotalCents() } : {}),
     })
     .eq("id", viewer.id);
   await admin.from("audit_log").insert({ actor_id: viewer.id, action: "mechanic.application_submitted", entity: "mechanic", entity_id: viewer.id });
@@ -126,11 +144,43 @@ export async function submitApplication(_: FormState, formData: FormData): Promi
   revalidatePath("/mechanic", "layout");
   const messages: Record<typeof check, string> = {
     started: `Application submitted. Check ${viewer.email} for an email from Checkr to complete your background check.`,
-    waiting: "Application submitted.",
+    waiting: "Application submitted. We'll review your profile soon.",
     "not-configured": "Application submitted. We'll email you the background check link shortly.",
     failed: "Application submitted. We couldn't start your background check automatically — we'll email you the link.",
   };
   return { ok: true, message: messages[check] };
+}
+
+/** Optional background check: pay the fee up front through Stripe Checkout; Checkr starts once it's paid. */
+export async function startCheckFeeCheckout() {
+  const viewer = await requireRole(["mechanic"], "/mechanic/onboarding");
+  if (!stripeConfigured()) redirect("/mechanic/onboarding?check=not-configured#check");
+  const admin = createAdminClient();
+  const { data: m } = await admin.from("mechanics").select("check_fee_payment_intent_id, check_status").eq("id", viewer.id).single();
+  if (m?.check_fee_payment_intent_id || m?.check_status === "clear") redirect("/mechanic/onboarding#check");
+  const metadata = { kind: "check_fee", mechanic_id: viewer.id };
+  const session = await getStripe().checkout.sessions.create({
+    mode: "payment",
+    customer_email: viewer.email ?? undefined,
+    line_items: [
+      {
+        quantity: 1,
+        price_data: {
+          currency: "usd",
+          unit_amount: onboardingFeeTotalCents(),
+          product_data: {
+            name: "WrenchNow background check",
+            description: `Refunded ${money(onboardingFeePerJobCents(), { whole: true })} per completed job until it's all back.`,
+          },
+        },
+      },
+    ],
+    metadata,
+    payment_intent_data: { metadata, description: "WrenchNow background check fee (refundable per completed job)" },
+    success_url: `${siteUrl()}/mechanic/onboarding?check=paid&session_id={CHECKOUT_SESSION_ID}#check`,
+    cancel_url: `${siteUrl()}/mechanic/onboarding?check=cancelled#check`,
+  });
+  redirect(session.url!);
 }
 
 export async function startStripeOnboarding() {
@@ -187,15 +237,16 @@ export async function mechanicTransition(_: FormState, formData: FormData): Prom
   const id = z.uuid().parse(formData.get("id"));
   const to = z.enum(["accepted", "en_route", "in_progress", "completed", "cancelled", "customer_no_show"]).parse(formData.get("to"));
   let laborCents: number | undefined;
-  if (to === "completed") {
+  if (to === "completed" && formData.has("labor")) {
     const labor = Number(String(formData.get("labor") ?? "").replace(/[$,\s]/g, "") || "0");
     if (!Number.isFinite(labor) || labor < 0) return { error: "Enter the labor charge in dollars." };
     laborCents = Math.round(labor * 100);
   }
   const reason = String(formData.get("reason") ?? "").slice(0, 500) || undefined;
   const arrivalCode = String(formData.get("arrival_code") ?? "").slice(0, 8) || undefined;
+  const estimateNotes = String(formData.get("estimate_notes") ?? "").slice(0, 4000) || undefined;
   try {
-    await transitionBooking(id, { id: viewer.id, role: "mechanic" }, to, { laborCents, reason, arrivalCode });
+    await transitionBooking(id, { id: viewer.id, role: "mechanic" }, to, { laborCents, reason, arrivalCode, estimateNotes });
   } catch (e) {
     if (e instanceof BookingError) return { error: e.message };
     console.error(e);

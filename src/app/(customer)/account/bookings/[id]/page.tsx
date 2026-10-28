@@ -18,7 +18,7 @@ import { customerNoShowFeeCents, issueReportDays, partsHandlingBps, salesTaxOnHa
 import { receiptLinks, syncTopup } from "@/lib/parts";
 import { partsChargeCents, partsHandlingCents } from "@/lib/parts-math";
 import { formatRate, partsSalesTaxCents } from "@/lib/sales-tax";
-import { dateTime, money, timeOnly, warrantyLabel } from "@/lib/format";
+import { dateTime, money, timeOnly, warrantySummary } from "@/lib/format";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { mechanicNames } from "@/lib/public-data";
 import { createClient } from "@/lib/supabase/server";
@@ -178,6 +178,20 @@ export default async function BookingDetailPage({ params, searchParams }: PagePr
         </Card>
       )}
 
+      {b.is_estimate_visit && b.estimate_notes && (
+        <Card className="mb-6 border-ore/30">
+          <h2 className="text-2xl font-bold uppercase">📋 Your estimate</h2>
+          <p className="mt-1 text-sm text-muted">Written by your mechanic after looking at the car.</p>
+          <p className="mt-4 whitespace-pre-line text-cream">{b.estimate_notes}</p>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <ButtonLink href={`/mechanics/${b.mechanic_id}?vehicle=${b.vehicle_id ?? ""}`}>Book the repair with this mechanic</ButtonLink>
+            <ButtonLink href="/search" variant="subtle">
+              Compare other mechanics
+            </ButtonLink>
+          </div>
+        </Card>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
         <Card>
           <h2 className="mb-4 text-2xl font-bold uppercase">Details</h2>
@@ -186,7 +200,11 @@ export default async function BookingDetailPage({ params, searchParams }: PagePr
             {b.car_location && <Detail label="Car is" value={`${{ driveway: "In the driveway", street: "On the street", garage: "In a garage", parking_lot: "In a parking lot" }[b.car_location] ?? b.car_location}${b.car_covered ? " (covered)" : ""}`} />}
             <Detail label="Where" value={b.address} />
             <Detail label="When" value={dateTime(b.scheduled_start)} />
-            <Detail label="Rate" value={`${money(b.hourly_rate_cents)}/hr`} />
+            {b.is_estimate_visit ? (
+              <Detail label="Visit" value={`In-person estimate · ${(b.estimate_fee_cents ?? 0) === 0 ? "free" : money(b.estimate_fee_cents)}`} />
+            ) : (
+              <Detail label="Rate" value={`${money(b.hourly_rate_cents)}/hr`} />
+            )}
             {b.problem_description && (
               <div className="sm:col-span-2">
                 <Detail label="What's going on" value={b.problem_description} />
@@ -219,7 +237,7 @@ export default async function BookingDetailPage({ params, searchParams }: PagePr
             {b.status === "completed" && warranty !== null && warranty > 0 && (
               <Detail
                 label="Mechanic's warranty"
-                value={`${warrantyLabel(warranty)}${b.completed_at ? ` through ${dateTime(windowEndsAt(b.completed_at, warranty).toISOString())}` : ""}, offered by your mechanic (not WrenchNow)`}
+                value={`${warrantySummary(warranty, b.warranty_covers)}${b.completed_at ? ` through ${dateTime(windowEndsAt(b.completed_at, warranty).toISOString())}` : ""}, offered by your mechanic (not WrenchNow)`}
               />
             )}
             {b.refunded_cents > 0 && <Detail label="Refunded" value={money(b.refunded_cents)} />}

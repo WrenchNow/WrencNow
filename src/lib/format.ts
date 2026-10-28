@@ -63,3 +63,17 @@ export function warrantyLabel(days: number): string {
   return `${days}-day warranty`;
 }
 
+export type WarrantyCovers = "labor" | "parts" | "both";
+export const WARRANTY_COVERS: { value: WarrantyCovers; label: string }[] = [
+  { value: "labor", label: "Labor only" },
+  { value: "parts", label: "Parts only" },
+  { value: "both", label: "Labor and parts" },
+];
+
+/** "90-day warranty on labor and parts" — the mechanic's own warranty, in plain words. */
+export function warrantySummary(days: number, covers: string | null | undefined): string {
+  if (days <= 0) return "No warranty";
+  const what = covers === "parts" ? "parts" : covers === "both" ? "labor and parts" : "labor";
+  return `${warrantyLabel(days)} on ${what}`;
+}
+

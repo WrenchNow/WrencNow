@@ -79,6 +79,7 @@ const bookingSchema = z.object({
   carLocation: z.enum(["driveway", "street", "garage", "parking_lot"], { error: "Tell us where the car is parked" }),
   carCovered: z.boolean().default(false),
   billToBusiness: z.boolean().default(false),
+  unverifiedAck: z.boolean().default(false),
 });
 
 export type CreateBookingResult = { error?: string; bookingId?: string; clientSecret?: string };
@@ -109,6 +110,7 @@ export async function createBookingAction(input: z.input<typeof bookingSchema>):
       carLocation: d.carLocation,
       carCovered: d.carCovered,
       billToBusiness: d.billToBusiness,
+      unverifiedAck: d.unverifiedAck,
     });
   } catch (e) {
     if (e instanceof BookingError) return { error: e.message };
@@ -229,11 +231,17 @@ export async function estimateAction(mechanicId: string, serviceSlug: string, ve
   const { estimateMaxCents, estimateMinCents } = await import("@/lib/fees");
   const admin = createAdminClient();
   const [{ data: m }, { data: svc }, { data: v }] = await Promise.all([
-    admin.from("mechanics").select("hourly_rate_cents").eq("id", z.uuid().parse(mechanicId)).single(),
-    admin.from("services").select("id, est_minutes_min, est_minutes_max").eq("slug", serviceSlug).single(),
+    admin.from("mechanics").select("hourly_rate_cents, estimate_fee_cents").eq("id", z.uuid().parse(mechanicId)).single(),
+    admin.from("services").select("id, est_minutes_min, est_minutes_max, is_estimate_visit").eq("slug", serviceSlug).single(),
     admin.from("vehicles").select("owner_id, make, model").eq("id", z.uuid().parse(vehicleId)).single(),
   ]);
   if (!m?.hourly_rate_cents || !svc || !v || v.owner_id !== viewer.id) return null;
+  if (svc.is_estimate_visit) {
+    // Flat fee, no parts. A free visit only holds the no-show fee.
+    const fee = m.estimate_fee_cents ?? 0;
+    const { customerNoShowFeeCents } = await import("@/lib/env");
+    return { laborMin: fee, laborMax: fee, partsCost: 0, partsCharge: 0, basis: "none", sample: 0, partsTax: 0, taxLabel: "", total: fee > 0 ? fee : customerNoShowFeeCents() };
+  }
   const parts = await partsEstimateFor(mechanicId, svc.id, v.make, v.model);
   const partsCharge = partsChargeCents(parts.cents, partsHandlingBps());
   const tax = await lookupTax(String(address).slice(0, 300), null, null);

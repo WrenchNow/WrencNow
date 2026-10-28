@@ -4,8 +4,8 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { checkIn, saveTypicalPartsPrices, mechanicTransition, saveMechanicProfile, savePhotoUrl, saveServices, submitApplication, submitInsurance, type FormState } from "@/app/(mechanic)/mechanic/actions";
 import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/feedback";
-import { Checkbox, Field, Input, Select, Textarea } from "@/components/ui/form";
-import { WARRANTY_OPTIONS, warrantyLabel } from "@/lib/format";
+import { Checkbox, Field, Input, RequiredLegend, RequiredMark, Select, Textarea } from "@/components/ui/form";
+import { WARRANTY_COVERS, WARRANTY_OPTIONS, warrantyLabel, type WarrantyCovers } from "@/lib/format";
 import { createClient } from "@/lib/supabase/client";
 import { CONTACT_EMAIL, CONTACT_MAILTO } from "@/lib/contact";
 
@@ -26,32 +26,38 @@ export type ProfileDefaults = {
   base_location: string;
   service_radius_miles: number;
   warranty_days: number;
+  warranty_covers: WarrantyCovers;
+  /** null = no estimate visits; 0 = free. In dollars. */
+  estimate_fee: number | null;
   has_tools: boolean;
   has_transport: boolean;
 };
 
 export function MechanicProfileForm({ d }: { d: ProfileDefaults }) {
   const [state, action, pending] = useActionState(saveMechanicProfile, {});
+  const [warrantyDays, setWarrantyDays] = useState(String(d.warranty_days));
+  const [estimateMode, setEstimateMode] = useState(d.estimate_fee === null ? "none" : d.estimate_fee === 0 ? "free" : "paid");
   return (
     <form action={action} className="grid gap-4 sm:grid-cols-2">
-      <div className="sm:col-span-2">
+      <div className="flex flex-col gap-3 sm:col-span-2">
         <StateNotice state={state} />
+        <RequiredLegend />
       </div>
-      <Field label="Name customers see" htmlFor="display_name">
+      <Field label="Name customers see" htmlFor="display_name" required>
         <Input id="display_name" name="display_name" defaultValue={d.display_name} required maxLength={80} />
       </Field>
-      <Field label="Phone" htmlFor="phone" hint="Shared with customers only for active jobs.">
+      <Field label="Phone" htmlFor="phone" hint="Shared with customers only for active jobs." required>
         <Input id="phone" name="phone" type="tel" defaultValue={d.phone} required autoComplete="tel" />
       </Field>
       <div className="sm:col-span-2">
-        <Field label="About you" htmlFor="bio" hint="Your experience, what you're best at, and how you work.">
+        <Field label="About you" htmlFor="bio" hint="Your experience, what you're best at, and how you work. At least 20 characters." required>
           <Textarea id="bio" name="bio" defaultValue={d.bio} required minLength={20} maxLength={2000} rows={5} />
         </Field>
       </div>
-      <Field label="Years of professional experience" htmlFor="years_experience">
+      <Field label="Years of professional experience" htmlFor="years_experience" required>
         <Input id="years_experience" name="years_experience" type="number" min={0} max={60} defaultValue={d.years_experience ?? ""} required />
       </Field>
-      <Field label="Hourly rate (USD)" htmlFor="hourly_rate" hint="What customers pay per hour of work.">
+      <Field label="Hourly rate (USD)" htmlFor="hourly_rate" hint="What customers pay per hour of work. Minimum $20." required>
         <Input id="hourly_rate" name="hourly_rate" type="number" min={20} max={500} step="1" defaultValue={d.hourly_rate ?? ""} required />
       </Field>
       <Field label="Certifications (comma separated)" htmlFor="certifications" hint="e.g. ASE A5 Brakes, Toyota factory trained">
@@ -60,24 +66,58 @@ export function MechanicProfileForm({ d }: { d: ProfileDefaults }) {
       <Field label="Specialties (comma separated)" htmlFor="specialties" hint="e.g. Subaru, diesel, European">
         <Input id="specialties" name="specialties" defaultValue={d.specialties.join(", ")} />
       </Field>
-      <Field label="Base location (ZIP or address)" htmlFor="base_location" hint="Used to match you with nearby customers. Never shown publicly.">
+      <Field label="Base location (ZIP or address)" htmlFor="base_location" hint="Used to match you with nearby customers. Never shown publicly." required>
         <Input id="base_location" name="base_location" defaultValue={d.base_location} required />
       </Field>
-      <Field label="How far will you travel? (miles)" htmlFor="service_radius_miles">
+      <Field label="How far will you travel? (miles)" htmlFor="service_radius_miles" required>
         <Input id="service_radius_miles" name="service_radius_miles" type="number" min={1} max={100} defaultValue={d.service_radius_miles} required />
       </Field>
-      <Field label="Your warranty on your work (optional)" htmlFor="warranty_days" hint="Optional. Your own warranty, shown on your profile and receipts. WrenchNow doesn't provide one.">
-        <Select id="warranty_days" name="warranty_days" defaultValue={String(d.warranty_days)}>
-          {WARRANTY_OPTIONS.map((w) => (
-            <option key={w} value={w}>
-              {warrantyLabel(w)}
-            </option>
-          ))}
-        </Select>
-      </Field>
+      <fieldset className="grid gap-4 rounded-[var(--radius-control)] border border-line p-4 sm:col-span-2 sm:grid-cols-2">
+        <legend className="px-1 text-sm font-semibold text-cream">Your warranty (optional)</legend>
+        <p className="text-xs text-muted sm:col-span-2">
+          Your own promise on your work, shown on your profile, booking and receipt. WrenchNow doesn&apos;t provide a warranty. If you offer one and don&apos;t honor it,
+          WrenchNow may refund the customer and take it out of your next payout.
+        </p>
+        <Field label="How long" htmlFor="warranty_days">
+          <Select id="warranty_days" name="warranty_days" value={warrantyDays} onChange={(e) => setWarrantyDays(e.target.value)}>
+            {WARRANTY_OPTIONS.map((w) => (
+              <option key={w} value={w}>
+                {warrantyLabel(w)}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="What it covers" htmlFor="warranty_covers">
+          <Select id="warranty_covers" name="warranty_covers" defaultValue={d.warranty_covers} disabled={warrantyDays === "0"}>
+            {WARRANTY_COVERS.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      </fieldset>
+      <fieldset className="grid gap-4 rounded-[var(--radius-control)] border border-line p-4 sm:col-span-2 sm:grid-cols-2">
+        <legend className="px-1 text-sm font-semibold text-cream">In-person estimate visits (optional)</legend>
+        <p className="text-xs text-muted sm:col-span-2">
+          Customers who aren&apos;t sure what&apos;s wrong can book you to come look and write an estimate. You set the fee, or offer it free. No repair work on the visit.
+        </p>
+        <Field label="Estimate visits" htmlFor="estimate_mode">
+          <Select id="estimate_mode" name="estimate_mode" value={estimateMode} onChange={(e) => setEstimateMode(e.target.value)}>
+            <option value="none">Don&apos;t offer</option>
+            <option value="free">Free estimates</option>
+            <option value="paid">Charge a fee</option>
+          </Select>
+        </Field>
+        {estimateMode === "paid" && (
+          <Field label="Estimate fee (USD)" htmlFor="estimate_fee" hint="Charged when you complete the visit." required>
+            <Input id="estimate_fee" name="estimate_fee" type="number" min={1} max={500} step="1" defaultValue={d.estimate_fee && d.estimate_fee > 0 ? d.estimate_fee : ""} required />
+          </Field>
+        )}
+      </fieldset>
       <div className="flex flex-col gap-3 sm:col-span-2">
-        <Checkbox id="has_tools" name="has_tools" defaultChecked={d.has_tools} label="I have my own professional tools for mobile repairs" />
-        <Checkbox id="has_transport" name="has_transport" defaultChecked={d.has_transport} label="I have reliable transportation to reach customers" />
+        <Checkbox id="has_tools" name="has_tools" required defaultChecked={d.has_tools} label={<>I have my own professional tools for mobile repairs<RequiredMark /></>} />
+        <Checkbox id="has_transport" name="has_transport" required defaultChecked={d.has_transport} label={<>I have reliable transportation to reach customers<RequiredMark /></>} />
       </div>
       <div className="sm:col-span-2">
         <Button type="submit" disabled={pending}>
@@ -110,7 +150,9 @@ export function ServicesForm({ services, selected, tierRank }: { services: { id:
           );
         })}
       </div>
-      <p className="text-xs text-muted">Greyed-out services unlock if WrenchNow moves you to a higher tier after reviewing your experience.</p>
+      <p className="text-xs text-muted">
+        Greyed-out services unlock after WrenchNow reviews your experience, successful first repairs, and customer reviews.
+      </p>
       <Button type="submit" disabled={pending} className="self-start">
         {pending ? "Saving…" : "Save services"}
       </Button>
@@ -126,6 +168,7 @@ export function SubmitApplicationForm({ submitted }: { submitted: boolean }) {
       <Checkbox
         id="agree"
         name="agree"
+        required
         defaultChecked={submitted}
         label={
           <>
@@ -134,6 +177,7 @@ export function SubmitApplicationForm({ submitted }: { submitted: boolean }) {
               Mechanic Agreement
             </a>
             . I&apos;m an independent contractor and I&apos;ll carry my own liability insurance.
+            <RequiredMark />
           </>
         }
       />
@@ -201,6 +245,7 @@ export function JobActions({
   partsReceiptCents = 0,
   handlingBps = 0,
   partsPending = false,
+  estimateVisit = null,
 }: {
   id: string;
   status: string;
@@ -212,6 +257,7 @@ export function JobActions({
   partsReceiptCents?: number;
   handlingBps?: number;
   partsPending?: boolean;
+  estimateVisit?: { feeCents: number } | null;
 }) {
   const [state, action, pending] = useActionState(mechanicTransition, {});
   const [confirmDecline, setConfirmDecline] = useState(false);
@@ -278,7 +324,7 @@ export function JobActions({
         <form action={action} className="flex flex-col gap-2 sm:flex-row sm:items-end">
           {hidden}
           <input type="hidden" name="to" value="in_progress" />
-          <Field label="Customer's 4-digit arrival code" htmlFor={`code-${id}`} hint="Ask the customer for the code in their app. It proves you're there.">
+          <Field label="Customer's 4-digit arrival code" htmlFor={`code-${id}`} hint="Ask the customer for the code in their app. It proves you're there." required>
             <Input id={`code-${id}`} name="arrival_code" inputMode="numeric" pattern="[0-9]{4}" maxLength={4} autoComplete="one-time-code" required className="w-32 text-center text-lg tracking-[0.4em]" />
           </Field>
           <Button type="submit" disabled={pending}>
@@ -286,7 +332,8 @@ export function JobActions({
           </Button>
         </form>
       )}
-      {status === "in_progress" && (
+      {status === "in_progress" && estimateVisit && <CompleteEstimateForm id={id} hidden={hidden} action={action} pending={pending} feeCents={estimateVisit.feeCents} />}
+      {status === "in_progress" && !estimateVisit && (
         <CompleteJobForm
           hidden={hidden}
           action={action}
@@ -339,16 +386,19 @@ export function InsuranceForm({ userId, defaults }: { userId: string; defaults: 
       <div className="sm:col-span-2">
         <StateNotice state={state} />
       </div>
-      <Field label="Insurance company" htmlFor="provider">
+      <div className="sm:col-span-2">
+        <RequiredLegend />
+      </div>
+      <Field label="Insurance company" htmlFor="provider" required>
         <Input id="provider" name="provider" defaultValue={defaults.provider} required maxLength={120} />
       </Field>
-      <Field label="Policy number" htmlFor="policy_number">
+      <Field label="Policy number" htmlFor="policy_number" required>
         <Input id="policy_number" name="policy_number" defaultValue={defaults.policy} required maxLength={80} />
       </Field>
-      <Field label="Policy expiration date" htmlFor="expires_on">
+      <Field label="Policy expiration date" htmlFor="expires_on" required>
         <Input id="expires_on" name="expires_on" type="date" required />
       </Field>
-      <Field label="Certificate of insurance" htmlFor="certificate" hint="PDF or photo, under 10 MB. Only WrenchNow staff can see it.">
+      <Field label="Certificate of insurance" htmlFor="certificate" hint="PDF or photo, under 10 MB. Only WrenchNow staff can see it." required>
         <Input id="certificate" name="certificate" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" required className="py-2" />
       </Field>
       <div className="sm:col-span-2">
@@ -491,6 +541,38 @@ function CompleteJobForm({
   );
 }
 
+function CompleteEstimateForm({
+  id,
+  hidden,
+  action,
+  pending,
+  feeCents,
+}: {
+  id: string;
+  hidden: React.ReactNode;
+  action: (fd: FormData) => void;
+  pending: boolean;
+  feeCents: number;
+}) {
+  return (
+    <form action={action} className="flex flex-col gap-3">
+      {hidden}
+      <input type="hidden" name="to" value="completed" />
+      <Field
+        label="Your estimate for the customer"
+        htmlFor={`estimate-${id}`}
+        hint="What's wrong, what it needs, and roughly what labor and parts will cost. The customer sees this in the app and can book the repair with you."
+        required
+      >
+        <Textarea id={`estimate-${id}`} name="estimate_notes" required minLength={10} maxLength={4000} rows={5} placeholder="Front pads at 2mm and rotors scored. Pads + rotors, about 2 hrs labor plus roughly $180 in parts." />
+      </Field>
+      <Button type="submit" disabled={pending} className="self-start">
+        {pending ? "Saving…" : feeCents > 0 ? `Send estimate & charge $${(feeCents / 100).toFixed(2)}` : "Send estimate (free visit)"}
+      </Button>
+    </form>
+  );
+}
+
 export function TypicalPartsForm({ services }: { services: { id: number; name: string; icon: string; typical_parts_cents: number | null }[] }) {
   const [state, action, pending] = useActionState(saveTypicalPartsPrices, {});
   if (services.length === 0) return <p className="text-sm text-muted">Pick your services first.</p>;
@@ -498,8 +580,8 @@ export function TypicalPartsForm({ services }: { services: { id: number; name: s
     <form action={action} className="flex flex-col gap-3">
       <StateNotice state={state} />
       <p className="text-sm text-ink">
-        What parts usually cost you for each job. Customers see it as a rough parts estimate when they book. You still send an itemized quote and receipts for each job,
-        and once there are enough real receipts, WrenchNow&apos;s data replaces these numbers.
+        Optional — leave any of these blank. Parts prices vary a lot by vehicle, so you always send an itemized parts quote for each job anyway. If you fill one in,
+        customers see it as a rough parts guess when they book; once there are enough real receipts, WrenchNow&apos;s data replaces it.
       </p>
       <div className="grid gap-2 sm:grid-cols-2">
         {services.map((s) => (
