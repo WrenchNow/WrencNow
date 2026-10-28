@@ -29,6 +29,10 @@ Auth setup steps (email sender, Google sign-in, confirm email) are in **`docs/AU
 8. **Make yourself admin** — sign up, then run `npm run make-admin -- you@email.com` (or ask Claude to do it).
 9. **Lawyer review** of the Terms, Privacy Policy and Mechanic Agreement (the background-check clause changed).
 10. **Delete the `claude/pantry-pal-setup` branch** once Pantry Pal is safe in its own repo.
+11. **Turn on leaked-password protection** (Supabase's security advisor flagged it):
+    https://supabase.com/dashboard/project/ddbodmffhsjmaftuhbbj/auth/providers → Email → "Prevent use of leaked
+    passwords".
+12. **Paste the new email templates** (`docs/AUTH_SETUP.md` §2d) — they make reset links work across devices.
 
 ## Decisions in effect (Oct 28)
 
