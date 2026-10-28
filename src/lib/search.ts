@@ -15,5 +15,11 @@ export async function searchMechanics(lat: number, lng: number, serviceSlug: str
     ...r,
     rating_avg: r.rating_avg === null ? null : Number(r.rating_avg),
   }));
-  return sortMechanics(rows, sort);
+  // Badge status comes from a separate public function (the search RPC predates optional checks).
+  const { data: extras } = await supabase.rpc("mechanic_public_extras", { ids: rows.map((r) => r.id) });
+  const checked = new Map((extras ?? []).map((x) => [x.id, Boolean(x.background_checked)]));
+  return sortMechanics(
+    rows.map((r) => ({ ...r, background_checked: checked.get(r.id) ?? false })),
+    sort,
+  );
 }

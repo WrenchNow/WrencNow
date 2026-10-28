@@ -8,13 +8,13 @@ import { VehicleForm } from "@/components/account/forms";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Notice } from "@/components/ui/feedback";
-import { Checkbox, Field, Input, Textarea } from "@/components/ui/form";
+import { Checkbox, Field, Input, RequiredMark, Textarea } from "@/components/ui/form";
 import { estimateMaxCents, estimateMinCents } from "@/lib/fees";
 import { money } from "@/lib/format";
 import { buildSlots, type Busy } from "@/lib/slots";
 import { PaymentStep } from "./payment-step";
 
-type ServiceOpt = { slug: string; name: string; icon: string; min: number; max: number; needsLift?: boolean };
+type ServiceOpt = { slug: string; name: string; icon: string; min: number; max: number; needsLift?: boolean; estimateVisit?: boolean };
 type CarLocation = "driveway" | "street" | "garage" | "parking_lot";
 const CAR_LOCATIONS: { value: CarLocation; label: string }[] = [
   { value: "driveway", label: "Driveway" },
@@ -40,16 +40,20 @@ export function BookingWizard({
   vehicles,
   busy,
   initialService,
+  initialProblem = "",
+  initialVehicle = "",
   publishableKey,
   initialPhone,
   noShowFeeLabel,
   businessName,
 }: {
-  mechanic: { id: string; name: string; rateCents: number };
+  mechanic: { id: string; name: string; rateCents: number; verified: boolean; estimateFeeCents: number | null };
   services: ServiceOpt[];
   vehicles: VehicleOpt[];
   busy: Busy[];
   initialService: string;
+  initialProblem?: string;
+  initialVehicle?: string;
   publishableKey: string | null;
   initialPhone: string;
   noShowFeeLabel: string;
@@ -58,9 +62,10 @@ export function BookingWizard({
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [serviceSlug, setServiceSlug] = useState(services.some((s) => s.slug === initialService) ? initialService : "");
-  const [problem, setProblem] = useState("");
+  const [problem, setProblem] = useState(initialProblem);
   const [urgency, setUrgency] = useState<Urgency>("flexible");
-  const [vehicleId, setVehicleId] = useState(vehicles.length === 1 ? vehicles[0]!.id : "");
+  const [vehicleId, setVehicleId] = useState(vehicles.some((v) => v.id === initialVehicle) ? initialVehicle : vehicles.length === 1 ? vehicles[0]!.id : "");
+  const [unverifiedAck, setUnverifiedAck] = useState(false);
   const [addingVehicle, setAddingVehicle] = useState(vehicles.length === 0);
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState(initialPhone);
@@ -81,8 +86,10 @@ export function BookingWizard({
   const days = useMemo(() => (service ? buildSlots(new Date(), service.max, busy) : []), [service, busy]);
   const vehicle = vehicles.find((v) => v.id === vehicleId);
   const slotLabel = start ? new Intl.DateTimeFormat("en-US", { timeZone: "America/Denver", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(start)) : "";
-  const laborMinLocal = service && mechanic.rateCents ? estimateMinCents(mechanic.rateCents, service.min) : 0;
-  const laborMaxLocal = service && mechanic.rateCents ? estimateMaxCents(mechanic.rateCents, service.max) : 0;
+  const estimateVisit = Boolean(service?.estimateVisit);
+  const estimateFee = mechanic.estimateFeeCents ?? 0;
+  const laborMinLocal = estimateVisit ? estimateFee : service && mechanic.rateCents ? estimateMinCents(mechanic.rateCents, service.min) : 0;
+  const laborMaxLocal = estimateVisit ? estimateFee : service && mechanic.rateCents ? estimateMaxCents(mechanic.rateCents, service.max) : 0;
   // Exact numbers (incl. the parts estimate for this car) come from the server at the review step.
   const [quote, setQuote] = useState<{ laborMin: number; laborMax: number; partsCharge: number; partsTax: number; taxLabel: string; basis: string; total: number } | null>(null);
   useEffect(() => {
@@ -114,7 +121,8 @@ export function BookingWizard({
 
   function submit() {
     setError(null);
-    if (!estimateApproved) return setError("Please approve the estimate.");
+    if (!estimateApproved) return setError(estimateVisit ? "Please confirm the estimate visit terms." : "Please approve the estimate.");
+    if (!mechanic.verified && !unverifiedAck) return setError("Please confirm you understand this mechanic isn't background checked.");
     if (!terms) return setError("Please accept the service terms.");
     startTransition(async () => {
       const res = await createBookingAction({
@@ -132,6 +140,7 @@ export function BookingWizard({
         carLocation: carLocation as CarLocation, // required at step 1; the server validates it too
         carCovered: carCovered || carLocation === "garage",
         billToBusiness: Boolean(businessName) && billToBusiness,
+        unverifiedAck: !mechanic.verified && unverifiedAck,
         odometer: odometer.trim() ? Number(odometer.replace(/[,\s]/g, "")) : null,
       });
       if (res.error || !res.clientSecret || !res.bookingId) {
@@ -157,7 +166,10 @@ export function BookingWizard({
         {step === 0 && (
           <div className="flex flex-col gap-5">
             <fieldset>
-              <legend className="text-lg font-bold text-cream">What does your car need?</legend>
+              <legend className="text-lg font-bold text-cream">
+                What does your car need?
+                <RequiredMark />
+              </legend>
               <div className="mt-3 grid gap-2">
                 {services.map((s) => (
                   <label key={s.slug} className="cursor-pointer">
@@ -170,19 +182,32 @@ export function BookingWizard({
                         {s.name}
                       </span>
                       <span className="text-sm text-muted">
-                        {money(estimateMinCents(mechanic.rateCents, s.min), { whole: true })}–{money(estimateMaxCents(mechanic.rateCents, s.max), { whole: true })}
+                        {s.estimateVisit
+                          ? estimateFee === 0
+                            ? "Free"
+                            : money(estimateFee, { whole: true })
+                          : `${money(estimateMinCents(mechanic.rateCents, s.min), { whole: true })}–${money(estimateMaxCents(mechanic.rateCents, s.max), { whole: true })}`}
                       </span>
                     </span>
                   </label>
                 ))}
               </div>
+              {estimateVisit && (
+                <p className="mt-3 rounded-[var(--radius-control)] border border-ore/30 bg-ore-dim px-3 py-2 text-sm text-ink">
+                  {mechanic.name} comes out, looks at the car, and writes you an estimate in the app. No repair work on this visit — you can book the repair afterwards.
+                </p>
+              )}
               {service?.needsLift && (
                 <p className="mt-3 rounded-[var(--radius-control)] border border-warn/30 bg-warn-dim px-3 py-2 text-sm text-warn">
                   This job sometimes needs a lift. Your mechanic will confirm it can be done where your car is before starting.
                 </p>
               )}
             </fieldset>
-            <Field label="Describe the problem (optional — plain English is fine)" htmlFor="problem">
+            <Field
+              label={estimateVisit ? "What's going on with the car? (plain English is fine)" : "Describe the problem (optional — plain English is fine)"}
+              htmlFor="problem"
+              hint="Your mechanic reads this before they come out."
+            >
               <Textarea id="problem" value={problem} onChange={(e) => setProblem(e.target.value)} maxLength={2000} placeholder="Squeals when I brake, started last week…" />
             </Field>
             <fieldset>
@@ -207,7 +232,11 @@ export function BookingWizard({
         {step === 1 && (
           <div className="flex flex-col gap-5">
             <fieldset>
-              <legend className="text-lg font-bold text-cream">Which car?</legend>
+              <legend className="text-lg font-bold text-cream">
+                Which car?
+                <RequiredMark />
+              </legend>
+              {vehicles.length > 0 && <p className="mt-1 text-xs text-muted">Pick one from My Garage, or add it — it&apos;s saved for next time.</p>}
               {vehicles.length > 0 && (
                 <div className="mt-3 grid gap-2">
                   {vehicles.map((v) => (
@@ -239,11 +268,14 @@ export function BookingWizard({
             <Field label="Current mileage (optional)" htmlFor="odometer" hint="Helps your mechanic and keeps your service history complete.">
               <Input id="odometer" inputMode="numeric" value={odometer} onChange={(e) => setOdometer(e.target.value)} maxLength={9} placeholder="e.g. 84,500" />
             </Field>
-            <Field label="Where will the car be?" htmlFor="address" hint="Street address, plus any notes like “level 2 of the garage”.">
+            <Field label="Where will the car be?" htmlFor="address" hint="Street address, plus any notes like “level 2 of the garage”." required>
               <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} autoComplete="street-address" maxLength={300} placeholder="1234 Main St, Denver, CO 80205" />
             </Field>
             <fieldset>
-              <legend className="text-sm font-semibold text-cream">Where is the car parked?</legend>
+              <legend className="text-sm font-semibold text-cream">
+                Where is the car parked?
+                <RequiredMark />
+              </legend>
               <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {CAR_LOCATIONS.map((l) => (
                   <label key={l.value} className="cursor-pointer">
@@ -269,7 +301,7 @@ export function BookingWizard({
             {businessName && (
               <Checkbox id="bill_to_business" checked={billToBusiness} onChange={(e) => setBillToBusiness(e.target.checked)} label={`This job is for ${businessName} (shows on your monthly business statement)`} />
             )}
-            <Field label="Your phone number" htmlFor="phone" hint="Your mechanic calls or texts this when they arrive.">
+            <Field label="Your phone number" htmlFor="phone" hint="Your mechanic calls or texts this when they arrive." required>
               <Input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" maxLength={32} placeholder="(303) 555-0100" />
             </Field>
           </div>
@@ -322,25 +354,46 @@ export function BookingWizard({
               <Summary label="Vehicle" value={vehicle?.label ?? ""} />
               <Summary label="Where" value={address} />
               <Summary label="When" value={slotLabel} />
-              <Summary label="Estimate" value={`${money(estMin, { whole: true })}–${money(estMax, { whole: true })}`} />
-              <Summary label="Labor" value={`${money(quote?.laborMin ?? laborMinLocal, { whole: true })}–${money(quote?.laborMax ?? laborMaxLocal, { whole: true })}`} />
-              <Summary
-                label="Parts"
-                value={
-                  quote && quote.partsCharge > 0
-                    ? `about ${money(quote.partsCharge, { whole: true })} + ${money(quote.partsTax, { whole: true })} tax (${quote.basis === "mechanic" ? "mechanic's usual price" : `based on ${quote.basis}`})`
-                    : "Quoted in the app before purchase"
-                }
-              />
+              {estimateVisit ? (
+                <Summary label="Estimate visit" value={estimateFee === 0 ? "Free" : `${money(estimateFee)} flat fee`} />
+              ) : (
+                <>
+                  <Summary label="Estimate" value={`${money(estMin, { whole: true })}–${money(estMax, { whole: true })}`} />
+                  <Summary label="Labor" value={`${money(quote?.laborMin ?? laborMinLocal, { whole: true })}–${money(quote?.laborMax ?? laborMaxLocal, { whole: true })}`} />
+                  <Summary
+                    label="Parts"
+                    value={
+                      quote && quote.partsCharge > 0
+                        ? `about ${money(quote.partsCharge, { whole: true })} + ${money(quote.partsTax, { whole: true })} tax (${quote.basis === "mechanic" ? "mechanic's usual price" : `based on ${quote.basis}`})`
+                        : "Quoted in the app before purchase"
+                    }
+                  />
+                </>
+              )}
             </dl>
             <div className="rounded-[var(--radius-control)] border border-line bg-raised p-4 text-sm text-ink">
               <p className="font-semibold text-cream">How payment works</p>
               <ul className="mt-2 list-disc space-y-1 pl-5">
-                <li>We place a hold of {money(estMax)} on your card now. You aren&apos;t charged yet.</li>
-                <li>When the job is done, you&apos;re charged the final amount — never more than {money(estMax)}. The rest of the hold is released.</li>
-                <li>
-                  Parts are billed at the receipt price plus a small handling charge and Colorado sales tax for where the job is
-                  {quote?.taxLabel ? ` (${quote.taxLabel})` : ""}. Labor isn&apos;t taxed. Before buying, your mechanic sends an itemized parts list for you to approve in the app, and you&apos;ll see every receipt.</li>
+                {estimateVisit ? (
+                  estimateFee === 0 ? (
+                    <li>
+                      The visit is free. We place a {money(estMax)} hold on your card only in case you&apos;re not there when your mechanic arrives — it&apos;s released
+                      as soon as the visit is done.
+                    </li>
+                  ) : (
+                    <li>We place a hold of {money(estMax)} on your card now and charge it when the visit is done. Parts and repairs aren&apos;t included.</li>
+                  )
+                ) : (
+                  <>
+                    <li>We place a hold of {money(estMax)} on your card now. You aren&apos;t charged yet.</li>
+                    <li>When the job is done, you&apos;re charged the final amount — never more than {money(estMax)}. The rest of the hold is released.</li>
+                    <li>
+                      Parts are billed at the receipt price plus a small handling charge and Colorado sales tax for where the job is
+                      {quote?.taxLabel ? ` (${quote.taxLabel})` : ""}. Labor isn&apos;t taxed. Before buying, your mechanic sends an itemized parts list for you to approve in
+                      the app, and you&apos;ll see every receipt.
+                    </li>
+                  </>
+                )}
                 <li>Cancel free any time before your mechanic heads out and the full hold is released.</li>
                 <li>
                   Something wrong afterwards? Report it from your booking and we&apos;ll help sort it out —{" "}
@@ -370,18 +423,42 @@ export function BookingWizard({
                   checked={estimateApproved}
                   onChange={(e) => setEstimateApproved(e.target.checked)}
                   label={
-                    <>
-                      <strong className="text-cream">I approve this estimate</strong> of {money(estMin, { whole: true })}–{money(estMax, { whole: true })} for {service.name}. I
-                      won&apos;t be charged more than {money(estMax)} without approving a new estimate.
-                    </>
+                    estimateVisit ? (
+                      <>
+                        <strong className="text-cream">I&apos;m booking an in-person estimate</strong>
+                        {estimateFee === 0 ? " (free)" : ` for ${money(estimateFee)}`}. No repair work is done on this visit.
+                      </>
+                    ) : (
+                      <>
+                        <strong className="text-cream">I approve this estimate</strong> of {money(estMin, { whole: true })}–{money(estMax, { whole: true })} for {service.name}. I
+                        won&apos;t be charged more than {money(estMax)} without approving a new estimate.
+                      </>
+                    )
                   }
                 />
+                {!mechanic.verified && (
+                  <div className="rounded-[var(--radius-control)] border border-warn/30 bg-warn-dim p-3">
+                    <Checkbox
+                      id="unverified-ack"
+                      checked={unverifiedAck}
+                      onChange={(e) => setUnverifiedAck(e.target.checked)}
+                      label={
+                        <>
+                          <strong className="text-cream">{mechanic.name} is not background checked.</strong> I understand WrenchNow hasn&apos;t run a criminal or driving
+                          record check on this mechanic, and I still want to book them.
+                        </>
+                      }
+                    />
+                  </div>
+                )}
+                {!estimateVisit && (
                 <Checkbox
                   id="old-parts"
                   checked={returnOldParts}
                   onChange={(e) => setReturnOldParts(e.target.checked)}
                   label="Give me my old parts back (the mechanic will leave the replaced parts with you)"
                 />
+                )}
                 <Checkbox
                   id="terms"
                   checked={terms}

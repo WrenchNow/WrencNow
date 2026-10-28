@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 const PROTECTIONS = [
   { title: "Never charged more than your estimate", body: "Your card is only charged the final amount when the job is done, and the app won't let it go over the estimate you approved." },
   { title: "Refunds and disputes", body: "If something goes wrong, we can step in, review the job, and refund you. We can't do that for money you sent outside the app." },
-  { title: "A vetted mechanic, on the record", body: "Every job paid through WrenchNow is tied to a background-checked, insured mechanic and a record of what was booked." },
+  { title: "A vetted mechanic, on the record", body: "Every job paid through WrenchNow is tied to an approved, insured mechanic — with their background check status shown up front — and a record of what was booked." },
   { title: "Honest reviews", body: "Only jobs paid through WrenchNow can be reviewed, so ratings reflect real, verified work." },
 ];
 

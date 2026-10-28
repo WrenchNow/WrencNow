@@ -75,42 +75,6 @@ export type Database = {
           },
         ];
       };
-      booking_photos: {
-        Row: {
-          booking_id: string;
-          created_at: string;
-          id: string;
-          kind: string;
-          mechanic_id: string;
-          path: string;
-        };
-        ComputedFields: never;
-        Insert: {
-          booking_id: string;
-          created_at?: string;
-          id?: string;
-          kind: string;
-          mechanic_id: string;
-          path: string;
-        };
-        Update: {
-          booking_id?: string;
-          created_at?: string;
-          id?: string;
-          kind?: string;
-          mechanic_id?: string;
-          path?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "booking_photos_booking_id_fkey";
-            columns: ["booking_id"];
-            isOneToOne: false;
-            referencedRelation: "bookings";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       booking_parts: {
         Row: {
           booking_id: string;
@@ -175,73 +139,84 @@ export type Database = {
           },
         ];
       };
-      business_accounts: {
+      booking_photos: {
         Row: {
-          billing_email: string | null;
-          company_name: string;
+          booking_id: string;
           created_at: string;
-          owner_id: string;
-          updated_at: string;
+          id: string;
+          kind: string;
+          mechanic_id: string;
+          path: string;
         };
         ComputedFields: never;
         Insert: {
-          billing_email?: string | null;
-          company_name: string;
+          booking_id: string;
           created_at?: string;
-          owner_id: string;
-          updated_at?: string;
+          id?: string;
+          kind: string;
+          mechanic_id: string;
+          path: string;
         };
         Update: {
-          billing_email?: string | null;
-          company_name?: string;
+          booking_id?: string;
           created_at?: string;
-          owner_id?: string;
-          updated_at?: string;
+          id?: string;
+          kind?: string;
+          mechanic_id?: string;
+          path?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "booking_photos_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "booking_photos_mechanic_id_fkey";
+            columns: ["mechanic_id"];
+            isOneToOne: false;
+            referencedRelation: "mechanics";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       bookings: {
         Row: {
-          warranty_days: number | null;
-          tax_zip: string | null;
-          tax_county: string | null;
-          tax_place: string | null;
-          tax_rate_mpct: number;
-          tax_components: Json;
-          tax_source: string | null;
-          tax_review_note: string | null;
-          tax_reviewed_at: string | null;
-          sales_tax_cents: number;
-          sales_tax_refunded_cents: number;
-          business_name: string | null;
-          car_covered: boolean;
-          car_location: string | null;
-          odometer: number | null;
           accepted_at: string | null;
           address: string;
           admin_override: boolean;
           arrived_at: string | null;
           arrived_distance_m: number | null;
           arrived_location: unknown;
+          business_name: string | null;
           cancel_reason: string | null;
           cancelled_at: string | null;
           cancelled_by: string | null;
+          car_covered: boolean;
+          car_location: string | null;
           completed_at: string | null;
           created_at: string;
           currency: string;
           customer_id: string;
           customer_no_show_fee_cents: number | null;
+          deduction_cents: number;
           en_route_at: string | null;
           estimate_approved_at: string | null;
+          estimate_fee_cents: number | null;
+          estimate_notes: string | null;
           estimated_max_cents: number;
           final_amount_cents: number | null;
           hold_cents: number | null;
           hourly_rate_cents: number;
           id: string;
+          is_estimate_visit: boolean;
           labor_cents: number | null;
           labor_max_cents: number | null;
           location: unknown;
           mechanic_id: string;
+          odometer: number | null;
           onboarding_fee_cents: number;
           parts_approved_at: string | null;
           parts_approved_cents: number | null;
@@ -256,63 +231,69 @@ export type Database = {
           processing_until: string | null;
           refunded_cents: number;
           return_old_parts: boolean;
+          sales_tax_cents: number;
+          sales_tax_refunded_cents: number;
           scheduled_end: string;
           scheduled_start: string;
           service_id: number;
           started_at: string | null;
           status: Database["public"]["Enums"]["booking_status"];
           stripe_payment_intent_id: string | null;
+          tax_components: NonNullable<Json>;
+          tax_county: string | null;
+          tax_place: string | null;
+          tax_rate_mpct: number;
+          tax_review_note: string | null;
+          tax_reviewed_at: string | null;
+          tax_source: string | null;
+          tax_zip: string | null;
           topup_authorized_cents: number;
           topup_payment_intent_id: string | null;
+          unverified_ack_at: string | null;
           updated_at: string;
           urgency: Database["public"]["Enums"]["urgency"];
           vehicle_desc: string;
           vehicle_id: string | null;
           vehicle_make: string | null;
           vehicle_model: string | null;
+          warranty_covers: string | null;
+          warranty_days: number | null;
         };
         ComputedFields: never;
         Insert: {
-          warranty_days?: number | null;
-          tax_zip?: string | null;
-          tax_county?: string | null;
-          tax_place?: string | null;
-          tax_rate_mpct?: number;
-          tax_components?: Json;
-          tax_source?: string | null;
-          tax_review_note?: string | null;
-          tax_reviewed_at?: string | null;
-          sales_tax_cents?: number;
-          sales_tax_refunded_cents?: number;
-          business_name?: string | null;
-          car_covered?: boolean;
-          car_location?: string | null;
-          odometer?: number | null;
           accepted_at?: string | null;
           address: string;
           admin_override?: boolean;
           arrived_at?: string | null;
           arrived_distance_m?: number | null;
           arrived_location?: unknown;
+          business_name?: string | null;
           cancel_reason?: string | null;
           cancelled_at?: string | null;
           cancelled_by?: string | null;
+          car_covered?: boolean;
+          car_location?: string | null;
           completed_at?: string | null;
           created_at?: string;
           currency?: string;
           customer_id: string;
           customer_no_show_fee_cents?: number | null;
+          deduction_cents?: number;
           en_route_at?: string | null;
           estimate_approved_at?: string | null;
+          estimate_fee_cents?: number | null;
+          estimate_notes?: string | null;
           estimated_max_cents: number;
           final_amount_cents?: number | null;
           hold_cents?: number | null;
           hourly_rate_cents: number;
           id?: string;
+          is_estimate_visit?: boolean;
           labor_cents?: number | null;
           labor_max_cents?: number | null;
           location?: unknown;
           mechanic_id: string;
+          odometer?: number | null;
           onboarding_fee_cents?: number;
           parts_approved_at?: string | null;
           parts_approved_cents?: number | null;
@@ -327,62 +308,68 @@ export type Database = {
           processing_until?: string | null;
           refunded_cents?: number;
           return_old_parts?: boolean;
+          sales_tax_cents?: number;
+          sales_tax_refunded_cents?: number;
           scheduled_end: string;
           scheduled_start: string;
           service_id: number;
           started_at?: string | null;
           status?: Database["public"]["Enums"]["booking_status"];
           stripe_payment_intent_id?: string | null;
+          tax_components?: NonNullable<Json>;
+          tax_county?: string | null;
+          tax_place?: string | null;
+          tax_rate_mpct?: number;
+          tax_review_note?: string | null;
+          tax_reviewed_at?: string | null;
+          tax_source?: string | null;
+          tax_zip?: string | null;
           topup_authorized_cents?: number;
           topup_payment_intent_id?: string | null;
+          unverified_ack_at?: string | null;
           updated_at?: string;
           urgency?: Database["public"]["Enums"]["urgency"];
           vehicle_desc: string;
           vehicle_id?: string | null;
           vehicle_make?: string | null;
           vehicle_model?: string | null;
+          warranty_covers?: string | null;
+          warranty_days?: number | null;
         };
         Update: {
-          warranty_days?: number | null;
-          tax_zip?: string | null;
-          tax_county?: string | null;
-          tax_place?: string | null;
-          tax_rate_mpct?: number;
-          tax_components?: Json;
-          tax_source?: string | null;
-          tax_review_note?: string | null;
-          tax_reviewed_at?: string | null;
-          sales_tax_cents?: number;
-          sales_tax_refunded_cents?: number;
-          business_name?: string | null;
-          car_covered?: boolean;
-          car_location?: string | null;
-          odometer?: number | null;
           accepted_at?: string | null;
           address?: string;
           admin_override?: boolean;
           arrived_at?: string | null;
           arrived_distance_m?: number | null;
           arrived_location?: unknown;
+          business_name?: string | null;
           cancel_reason?: string | null;
           cancelled_at?: string | null;
           cancelled_by?: string | null;
+          car_covered?: boolean;
+          car_location?: string | null;
           completed_at?: string | null;
           created_at?: string;
           currency?: string;
           customer_id?: string;
           customer_no_show_fee_cents?: number | null;
+          deduction_cents?: number;
           en_route_at?: string | null;
           estimate_approved_at?: string | null;
+          estimate_fee_cents?: number | null;
+          estimate_notes?: string | null;
           estimated_max_cents?: number;
           final_amount_cents?: number | null;
           hold_cents?: number | null;
           hourly_rate_cents?: number;
           id?: string;
+          is_estimate_visit?: boolean;
           labor_cents?: number | null;
           labor_max_cents?: number | null;
           location?: unknown;
           mechanic_id?: string;
+          odometer?: number | null;
           onboarding_fee_cents?: number;
           parts_approved_at?: string | null;
           parts_approved_cents?: number | null;
@@ -397,20 +384,33 @@ export type Database = {
           processing_until?: string | null;
           refunded_cents?: number;
           return_old_parts?: boolean;
+          sales_tax_cents?: number;
+          sales_tax_refunded_cents?: number;
           scheduled_end?: string;
           scheduled_start?: string;
           service_id?: number;
           started_at?: string | null;
           status?: Database["public"]["Enums"]["booking_status"];
           stripe_payment_intent_id?: string | null;
+          tax_components?: NonNullable<Json>;
+          tax_county?: string | null;
+          tax_place?: string | null;
+          tax_rate_mpct?: number;
+          tax_review_note?: string | null;
+          tax_reviewed_at?: string | null;
+          tax_source?: string | null;
+          tax_zip?: string | null;
           topup_authorized_cents?: number;
           topup_payment_intent_id?: string | null;
+          unverified_ack_at?: string | null;
           updated_at?: string;
           urgency?: Database["public"]["Enums"]["urgency"];
           vehicle_desc?: string;
           vehicle_id?: string | null;
           vehicle_make?: string | null;
           vehicle_model?: string | null;
+          warranty_covers?: string | null;
+          warranty_days?: number | null;
         };
         Relationships: [
           {
@@ -446,6 +446,175 @@ export type Database = {
             columns: ["vehicle_id"];
             isOneToOne: false;
             referencedRelation: "vehicles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      business_accounts: {
+        Row: {
+          billing_email: string | null;
+          company_name: string;
+          created_at: string;
+          owner_id: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          billing_email?: string | null;
+          company_name: string;
+          created_at?: string;
+          owner_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          billing_email?: string | null;
+          company_name?: string;
+          created_at?: string;
+          owner_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "business_accounts_owner_id_fkey";
+            columns: ["owner_id"];
+            isOneToOne: true;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      check_fee_refunds: {
+        Row: {
+          amount_cents: number;
+          booking_id: string;
+          created_at: string;
+          mechanic_id: string;
+          stripe_refund_id: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          amount_cents: number;
+          booking_id: string;
+          created_at?: string;
+          mechanic_id: string;
+          stripe_refund_id?: string | null;
+        };
+        Update: {
+          amount_cents?: number;
+          booking_id?: string;
+          created_at?: string;
+          mechanic_id?: string;
+          stripe_refund_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "check_fee_refunds_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: true;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "check_fee_refunds_mechanic_id_fkey";
+            columns: ["mechanic_id"];
+            isOneToOne: false;
+            referencedRelation: "mechanics";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      deduction_recoveries: {
+        Row: {
+          amount_cents: number;
+          booking_id: string;
+          created_at: string;
+          deduction_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          amount_cents: number;
+          booking_id: string;
+          created_at?: string;
+          deduction_id: string;
+        };
+        Update: {
+          amount_cents?: number;
+          booking_id?: string;
+          created_at?: string;
+          deduction_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "deduction_recoveries_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "deduction_recoveries_deduction_id_fkey";
+            columns: ["deduction_id"];
+            isOneToOne: false;
+            referencedRelation: "mechanic_deductions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      job_issues: {
+        Row: {
+          booking_id: string;
+          created_at: string;
+          customer_id: string;
+          description: string;
+          id: string;
+          mechanic_id: string;
+          resolution: string | null;
+          status: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          booking_id: string;
+          created_at?: string;
+          customer_id: string;
+          description: string;
+          id?: string;
+          mechanic_id: string;
+          resolution?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          booking_id?: string;
+          created_at?: string;
+          customer_id?: string;
+          description?: string;
+          id?: string;
+          mechanic_id?: string;
+          resolution?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "job_issues_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "job_issues_customer_id_fkey";
+            columns: ["customer_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "job_issues_mechanic_id_fkey";
+            columns: ["mechanic_id"];
+            isOneToOne: false;
+            referencedRelation: "mechanics";
             referencedColumns: ["id"];
           },
         ];
@@ -499,6 +668,75 @@ export type Database = {
           },
         ];
       };
+      mechanic_deductions: {
+        Row: {
+          amount_cents: number;
+          booking_id: string | null;
+          created_at: string;
+          created_by: string | null;
+          id: string;
+          issue_id: string | null;
+          mechanic_id: string;
+          reason: string;
+          recovered_cents: number;
+          stripe_refund_id: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          amount_cents: number;
+          booking_id?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          issue_id?: string | null;
+          mechanic_id: string;
+          reason: string;
+          recovered_cents?: number;
+          stripe_refund_id?: string | null;
+        };
+        Update: {
+          amount_cents?: number;
+          booking_id?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          issue_id?: string | null;
+          mechanic_id?: string;
+          reason?: string;
+          recovered_cents?: number;
+          stripe_refund_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "mechanic_deductions_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "mechanic_deductions_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "mechanic_deductions_issue_id_fkey";
+            columns: ["issue_id"];
+            isOneToOne: false;
+            referencedRelation: "job_issues";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "mechanic_deductions_mechanic_id_fkey";
+            columns: ["mechanic_id"];
+            isOneToOne: false;
+            referencedRelation: "mechanics";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       mechanic_services: {
         Row: {
           mechanic_id: string;
@@ -538,6 +776,10 @@ export type Database = {
           agreed_terms_at: string | null;
           bio: string | null;
           certifications: string[];
+          check_fee_paid_at: string | null;
+          check_fee_paid_cents: number;
+          check_fee_payment_intent_id: string | null;
+          check_fee_refunded_cents: number;
           check_status: Database["public"]["Enums"]["check_status"];
           checkr_candidate_id: string | null;
           checkr_invitation_id: string | null;
@@ -546,11 +788,13 @@ export type Database = {
           completed_jobs: number;
           created_at: string;
           display_name: string | null;
+          estimate_fee_cents: number | null;
           featured_until: string | null;
           has_tools: boolean;
           has_transport: boolean;
           hourly_rate_cents: number | null;
           id: string;
+          insurance_auto_check: Json | null;
           insurance_doc_path: string | null;
           insurance_expires_on: string | null;
           insurance_pending_expires_on: string | null;
@@ -579,6 +823,7 @@ export type Database = {
           stripe_payouts_enabled: boolean;
           stripe_subscription_id: string | null;
           updated_at: string;
+          warranty_covers: string;
           warranty_days: number;
           years_experience: number | null;
         };
@@ -587,6 +832,10 @@ export type Database = {
           agreed_terms_at?: string | null;
           bio?: string | null;
           certifications?: string[];
+          check_fee_paid_at?: string | null;
+          check_fee_paid_cents?: number;
+          check_fee_payment_intent_id?: string | null;
+          check_fee_refunded_cents?: number;
           check_status?: Database["public"]["Enums"]["check_status"];
           checkr_candidate_id?: string | null;
           checkr_invitation_id?: string | null;
@@ -595,11 +844,13 @@ export type Database = {
           completed_jobs?: number;
           created_at?: string;
           display_name?: string | null;
+          estimate_fee_cents?: number | null;
           featured_until?: string | null;
           has_tools?: boolean;
           has_transport?: boolean;
           hourly_rate_cents?: number | null;
           id: string;
+          insurance_auto_check?: Json | null;
           insurance_doc_path?: string | null;
           insurance_expires_on?: string | null;
           insurance_pending_expires_on?: string | null;
@@ -628,6 +879,7 @@ export type Database = {
           stripe_payouts_enabled?: boolean;
           stripe_subscription_id?: string | null;
           updated_at?: string;
+          warranty_covers?: string;
           warranty_days?: number;
           years_experience?: number | null;
         };
@@ -635,6 +887,10 @@ export type Database = {
           agreed_terms_at?: string | null;
           bio?: string | null;
           certifications?: string[];
+          check_fee_paid_at?: string | null;
+          check_fee_paid_cents?: number;
+          check_fee_payment_intent_id?: string | null;
+          check_fee_refunded_cents?: number;
           check_status?: Database["public"]["Enums"]["check_status"];
           checkr_candidate_id?: string | null;
           checkr_invitation_id?: string | null;
@@ -643,11 +899,13 @@ export type Database = {
           completed_jobs?: number;
           created_at?: string;
           display_name?: string | null;
+          estimate_fee_cents?: number | null;
           featured_until?: string | null;
           has_tools?: boolean;
           has_transport?: boolean;
           hourly_rate_cents?: number | null;
           id?: string;
+          insurance_auto_check?: Json | null;
           insurance_doc_path?: string | null;
           insurance_expires_on?: string | null;
           insurance_pending_expires_on?: string | null;
@@ -676,6 +934,7 @@ export type Database = {
           stripe_payouts_enabled?: boolean;
           stripe_subscription_id?: string | null;
           updated_at?: string;
+          warranty_covers?: string;
           warranty_days?: number;
           years_experience?: number | null;
         };
@@ -894,7 +1153,22 @@ export type Database = {
           query?: string;
           retailer?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "parts_link_clicks_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "parts_link_clicks_mechanic_id_fkey";
+            columns: ["mechanic_id"];
+            isOneToOne: false;
+            referencedRelation: "mechanics";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       payment_reports: {
         Row: {
@@ -1041,41 +1315,44 @@ export type Database = {
       };
       services: {
         Row: {
-          needs_lift: boolean;
           active: boolean;
           description: string;
           est_minutes_max: number;
           est_minutes_min: number;
           icon: string;
           id: number;
+          is_estimate_visit: boolean;
           name: string;
+          needs_lift: boolean;
           required_tier: Database["public"]["Enums"]["skill_tier"];
           slug: string;
           sort: number;
         };
         ComputedFields: never;
         Insert: {
-          needs_lift?: boolean;
           active?: boolean;
           description: string;
           est_minutes_max: number;
           est_minutes_min: number;
           icon?: string;
           id?: number;
+          is_estimate_visit?: boolean;
           name: string;
+          needs_lift?: boolean;
           required_tier: Database["public"]["Enums"]["skill_tier"];
           slug: string;
           sort?: number;
         };
         Update: {
-          needs_lift?: boolean;
           active?: boolean;
           description?: string;
           est_minutes_max?: number;
           est_minutes_min?: number;
           icon?: string;
           id?: number;
+          is_estimate_visit?: boolean;
           name?: string;
+          needs_lift?: boolean;
           required_tier?: Database["public"]["Enums"]["skill_tier"];
           slug?: string;
           sort?: number;
@@ -1102,13 +1379,13 @@ export type Database = {
           created_at?: string;
           id?: string;
           make: string;
-          model: string;
           mileage?: number | null;
           mileage_updated_at?: string | null;
+          model: string;
           nickname?: string | null;
+          owner_id: string;
           reminders_opt_in?: boolean;
           reminders_opt_in_at?: string | null;
-          owner_id: string;
           trim?: string | null;
           year: number;
         };
@@ -1116,13 +1393,13 @@ export type Database = {
           created_at?: string;
           id?: string;
           make?: string;
-          model?: string;
           mileage?: number | null;
           mileage_updated_at?: string | null;
+          model?: string;
           nickname?: string | null;
+          owner_id?: string;
           reminders_opt_in?: boolean;
           reminders_opt_in_at?: string | null;
-          owner_id?: string;
           trim?: string | null;
           year?: number;
         };
@@ -1132,65 +1409,6 @@ export type Database = {
             columns: ["owner_id"];
             isOneToOne: false;
             referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      job_issues: {
-        Row: {
-          booking_id: string;
-          created_at: string;
-          customer_id: string;
-          description: string;
-          id: string;
-          mechanic_id: string;
-          resolution: string | null;
-          status: string;
-          updated_at: string;
-        };
-        ComputedFields: never;
-        Insert: {
-          booking_id: string;
-          created_at?: string;
-          customer_id: string;
-          description: string;
-          id?: string;
-          mechanic_id: string;
-          resolution?: string | null;
-          status?: string;
-          updated_at?: string;
-        };
-        Update: {
-          booking_id?: string;
-          created_at?: string;
-          customer_id?: string;
-          description?: string;
-          id?: string;
-          mechanic_id?: string;
-          resolution?: string | null;
-          status?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "job_issues_booking_id_fkey";
-            columns: ["booking_id"];
-            isOneToOne: false;
-            referencedRelation: "bookings";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "job_issues_customer_id_fkey";
-            columns: ["customer_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "job_issues_mechanic_id_fkey";
-            columns: ["mechanic_id"];
-            isOneToOne: false;
-            referencedRelation: "mechanics";
             referencedColumns: ["id"];
           },
         ];
@@ -1223,19 +1441,10 @@ export type Database = {
     };
     Functions: {
       choose_role: { Args: { r: Database["public"]["Enums"]["user_role"] }; Returns: undefined };
-      claim_onboarding_fee: {
-        Args: {
-          p_booking_id: string;
-          p_final_cents: number;
-          p_per_job_cents: number;
-          p_platform_fee_cents: number;
-        };
-        Returns: number;
-      };
-      distance_to_booking_m: {
-        Args: { p_booking_id: string; p_lat: number; p_lng: number };
-        Returns: number;
-      };
+      claim_check_fee_refund: { Args: { p_booking_id: string; p_max_jobs: number; p_per_job_cents: number }; Returns: number };
+      claim_deductions: { Args: { p_available_cents: number; p_booking_id: string }; Returns: number };
+      claim_onboarding_fee: { Args: { p_booking_id: string; p_final_cents: number; p_per_job_cents: number; p_platform_fee_cents: number }; Returns: number };
+      distance_to_booking_m: { Args: { p_booking_id: string; p_lat: number; p_lng: number }; Returns: number };
       get_public_mechanic: {
         Args: { mechanic_id: string };
         Returns: {
@@ -1269,8 +1478,21 @@ export type Database = {
         }[];
       };
       mechanic_is_live: { Args: { mid: string }; Returns: boolean };
+      mechanic_public_extras: {
+        Args: { ids: string[] };
+        Returns: {
+          background_checked: boolean;
+          estimate_fee_cents: number;
+          id: string;
+          warranty_covers: string;
+          warranty_days: number;
+        }[];
+      };
       mechanic_warranty_days: { Args: { mid: string }; Returns: number };
       refresh_mechanic_stats: { Args: { mid: string }; Returns: undefined };
+      release_check_fee_refund: { Args: { p_booking_id: string }; Returns: undefined };
+      release_deductions: { Args: { p_booking_id: string }; Returns: undefined };
+      release_deductions_partial: { Args: { p_booking_id: string; p_cents: number }; Returns: number };
       release_onboarding_fee: { Args: { p_booking_id: string }; Returns: number };
       search_mechanics: {
         Args: { lat: number; lng: number; max_results?: number; service_slug?: string };
@@ -1303,36 +1525,13 @@ export type Database = {
       };
     };
     Enums: {
-      booking_status:
-        | "requested"
-        | "accepted"
-        | "en_route"
-        | "in_progress"
-        | "completed"
-        | "cancelled"
-        | "no_show"
-        | "customer_no_show";
-      check_status:
-        | "not_started"
-        | "invited"
-        | "pending"
-        | "clear"
-        | "consider"
-        | "suspended"
-        | "canceled";
+      booking_status: "requested" | "accepted" | "en_route" | "in_progress" | "completed" | "cancelled" | "no_show" | "customer_no_show";
+      check_status: "not_started" | "invited" | "pending" | "clear" | "consider" | "suspended" | "canceled";
       insurance_status: "none" | "submitted" | "verified" | "rejected";
       ledger_type: "charge" | "platform_fee" | "refund" | "dispute" | "subscription";
       mechanic_status: "pending" | "approved" | "paused" | "rejected" | "suspended";
       part_status: "quoted" | "approved" | "declined" | "purchased" | "removed";
-      payment_status:
-        | "unpaid"
-        | "authorized"
-        | "captured"
-        | "canceled"
-        | "refunded"
-        | "partially_refunded"
-        | "disputed"
-        | "failed";
+      payment_status: "unpaid" | "authorized" | "captured" | "canceled" | "refunded" | "partially_refunded" | "disputed" | "failed";
       skill_tier: "basic" | "certified" | "master";
       urgency: "flexible" | "soon" | "today" | "stranded";
       user_role: "customer" | "mechanic" | "admin";
@@ -1348,15 +1547,13 @@ type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">;
 type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">];
 
 export type Tables<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] & DefaultSchema["Views"]) | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals;
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
   ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
       DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
@@ -1373,14 +1570,12 @@ export type Tables<
     : never;
 
 export type TablesInsert<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I;
@@ -1396,14 +1591,12 @@ export type TablesInsert<
     : never;
 
 export type TablesUpdate<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U;
@@ -1419,14 +1612,12 @@ export type TablesUpdate<
     : never;
 
 export type Enums<
-  DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
+  DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"] | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaEnumNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
   ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
@@ -1434,14 +1625,12 @@ export type Enums<
     : never;
 
 export type CompositeTypes<
-  PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+  PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"] | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never) = never,
+    : never = never,
 > = PublicCompositeTypeNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
   ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
@@ -1451,39 +1640,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      booking_status: [
-        "requested",
-        "accepted",
-        "en_route",
-        "in_progress",
-        "completed",
-        "cancelled",
-        "no_show",
-        "customer_no_show",
-      ],
-      check_status: [
-        "not_started",
-        "invited",
-        "pending",
-        "clear",
-        "consider",
-        "suspended",
-        "canceled",
-      ],
+      booking_status: ["requested", "accepted", "en_route", "in_progress", "completed", "cancelled", "no_show", "customer_no_show"],
+      check_status: ["not_started", "invited", "pending", "clear", "consider", "suspended", "canceled"],
       insurance_status: ["none", "submitted", "verified", "rejected"],
       ledger_type: ["charge", "platform_fee", "refund", "dispute", "subscription"],
       mechanic_status: ["pending", "approved", "paused", "rejected", "suspended"],
       part_status: ["quoted", "approved", "declined", "purchased", "removed"],
-      payment_status: [
-        "unpaid",
-        "authorized",
-        "captured",
-        "canceled",
-        "refunded",
-        "partially_refunded",
-        "disputed",
-        "failed",
-      ],
+      payment_status: ["unpaid", "authorized", "captured", "canceled", "refunded", "partially_refunded", "disputed", "failed"],
       skill_tier: ["basic", "certified", "master"],
       urgency: ["flexible", "soon", "today", "stranded"],
       user_role: ["customer", "mechanic", "admin"],

@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { JobIssueForm, OpenRequestActions, ResolveReportForm } from "@/components/admin-forms";
+import { JobIssueForm, OpenRequestActions, ResolveReportForm, WarrantyRefundForm } from "@/components/admin-forms";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/layout";
-import { dateTime } from "@/lib/format";
+import { dateTime, money, warrantySummary } from "@/lib/format";
+import { withinDays } from "@/lib/warranty";
 import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { PARTS_RETAILERS } from "@/lib/parts-retailers";
@@ -35,7 +36,7 @@ export default async function AdminPage() {
     admin.from("open_requests").select("*").eq("status", "open").order("created_at", { ascending: false }).limit(100),
     admin
       .from("job_issues")
-      .select("*, mechanics(display_name), profiles!job_issues_customer_id_fkey(full_name, phone), bookings(completed_at, services(name))")
+      .select("*, mechanics(display_name), profiles!job_issues_customer_id_fkey(full_name, phone), bookings(completed_at, warranty_days, warranty_covers, final_amount_cents, refunded_cents, services(name))")
       .in("status", ["open", "mechanic_contacted"])
       .order("created_at")
       .limit(100),
@@ -135,9 +136,23 @@ export default async function AdminPage() {
                   </>
                 )}
               </p>
+              {c.bookings && (c.bookings.warranty_days ?? 0) > 0 && (
+                <p className="mt-1 text-xs text-info">
+                  Mechanic&apos;s warranty: {warrantySummary(c.bookings.warranty_days ?? 0, c.bookings.warranty_covers)}
+                  {c.bookings.completed_at ? ` · ${withinDays(c.bookings.completed_at, c.bookings.warranty_days ?? 0) ? "still covered" : "expired"}` : ""}
+                </p>
+              )}
               <div className="mt-2">
                 <JobIssueForm id={c.id} />
               </div>
+              {c.bookings && (c.bookings.warranty_days ?? 0) > 0 && (c.bookings.final_amount_cents ?? 0) > c.bookings.refunded_cents && (
+                <details className="mt-3 rounded-[var(--radius-control)] border border-line-strong bg-raised p-3">
+                  <summary className="cursor-pointer text-xs font-semibold text-cream">Mechanic didn&apos;t honor their warranty → refund the customer</summary>
+                  <div className="mt-3">
+                    <WarrantyRefundForm id={c.id} maxLabel={money((c.bookings.final_amount_cents ?? 0) - c.bookings.refunded_cents)} />
+                  </div>
+                </details>
+              )}
             </li>
           ))}
         </ul>

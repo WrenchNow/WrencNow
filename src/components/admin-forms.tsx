@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
-import { adminCancelBooking, markTaxReviewed, refundBooking, resolvePaymentReport, reviewInsurance, updateJobIssue, setOpenRequestStatus, reviewMechanic, waiveOnboardingFee, type FormState } from "@/app/(admin)/admin/actions";
+import { useActionState, useState } from "react";
+import { adminCancelBooking, markTaxReviewed, refundBooking, resolvePaymentReport, reviewInsurance, updateJobIssue, setOpenRequestStatus, reviewMechanic, waiveOnboardingFee, warrantyRefund, type FormState } from "@/app/(admin)/admin/actions";
 import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/feedback";
-import { Input, Select } from "@/components/ui/form";
+import { Checkbox, Input, Select } from "@/components/ui/form";
+import { APPROVAL_CHECKLIST } from "@/lib/approval-checklist";
 
 function Msg({ s }: { s: FormState }) {
   if (s.error) return <Notice tone="danger">{s.error}</Notice>;
@@ -14,6 +15,8 @@ function Msg({ s }: { s: FormState }) {
 
 export function ReviewMechanicForm({ id, status, tier }: { id: string; status: string; tier: string }) {
   const [s, action, pending] = useActionState(reviewMechanic, {});
+  const [next, setNext] = useState(status);
+  const approving = next === "approved" && status !== "approved";
   return (
     <form action={action} className="flex flex-col gap-2">
       <Msg s={s} />
@@ -21,7 +24,7 @@ export function ReviewMechanicForm({ id, status, tier }: { id: string; status: s
       <div className="flex flex-wrap items-end gap-2">
         <label className="text-xs text-muted">
           Status
-          <Select name="status" defaultValue={status} className="mt-1 py-2">
+          <Select name="status" value={next} onChange={(e) => setNext(e.target.value)} className="mt-1 py-2">
             <option value="pending">Pending</option>
             <option value="approved">Approved</option>
             <option value="paused">Paused</option>
@@ -41,6 +44,14 @@ export function ReviewMechanicForm({ id, status, tier }: { id: string; status: s
           Save
         </Button>
       </div>
+      {approving && (
+        <fieldset className="mt-1 flex max-w-sm flex-col gap-2 rounded-[var(--radius-control)] border border-line-strong bg-raised p-3">
+          <legend className="px-1 text-xs font-semibold text-cream">Verify before approving</legend>
+          {APPROVAL_CHECKLIST.map((c) => (
+            <Checkbox key={c.key} id={`${id}-${c.key}`} name={`check_${c.key}`} required label={c.label} />
+          ))}
+        </fieldset>
+      )}
     </form>
   );
 }
@@ -157,6 +168,32 @@ export function JobIssueForm({ id }: { id: string }) {
         </Button>
         <Button type="submit" name="status" value="denied" size="sm" variant="subtle" disabled={pending}>
           Deny
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+export function WarrantyRefundForm({ id, maxLabel }: { id: string; maxLabel: string }) {
+  const [s, action, pending] = useActionState(warrantyRefund, {});
+  return (
+    <form action={action} className="flex flex-col gap-2">
+      <Msg s={s} />
+      <input type="hidden" name="id" value={id} />
+      <p className="text-xs text-muted">
+        WrenchNow refunds the customer now, and the same amount comes out of this mechanic&apos;s next payout(s). The report is marked resolved and both sides are told.
+      </p>
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="text-xs text-muted">
+          Refund amount (up to {maxLabel})
+          <Input name="amount" type="number" min={0.01} step="0.01" required className="mt-1 w-36 py-2" />
+        </label>
+        <label className="min-w-48 flex-1 text-xs text-muted">
+          Note to customer and mechanic
+          <Input name="note" required minLength={3} maxLength={500} placeholder="Brake noise returned within the 90-day labor warranty" className="mt-1 py-2" />
+        </label>
+        <Button type="submit" size="sm" variant="danger" disabled={pending}>
+          {pending ? "Refunding…" : "Refund & deduct"}
         </Button>
       </div>
     </form>

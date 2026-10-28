@@ -20,6 +20,8 @@ export type MechanicCardData = {
   featured: boolean;
   online: boolean;
   distance_miles?: number;
+  /** Passed WrenchNow's optional background check. */
+  background_checked?: boolean;
 };
 
 export function Avatar({ name, url, size = 56 }: { name: string | null; url: string | null; size?: number }) {
@@ -31,8 +33,11 @@ export function Avatar({ name, url, size = 56 }: { name: string | null; url: str
   );
 }
 
-export function MechanicCard({ m, service }: { m: MechanicCardData; service?: string }) {
-  const href = service ? `/mechanics/${m.id}?service=${encodeURIComponent(service)}` : `/mechanics/${m.id}`;
+/** `carry` holds extra query params (the customer's problem description, chosen car) passed through to booking. */
+export function MechanicCard({ m, service, carry }: { m: MechanicCardData; service?: string; carry?: Record<string, string> }) {
+  const q = new URLSearchParams(carry);
+  if (service) q.set("service", service);
+  const href = `/mechanics/${m.id}${q.size ? `?${q.toString()}` : ""}`;
   return (
     <li className={`relative rounded-[var(--radius-card)] border bg-surface p-5 transition hover:border-ore/60 ${m.featured ? "border-warn/40" : "border-line"}`}>
       <div className="flex gap-4">
@@ -45,6 +50,8 @@ export function MechanicCard({ m, service }: { m: MechanicCardData; service?: st
               </Link>
             </h3>
             {m.featured && <Badge tone="warn">Sponsored</Badge>}
+            {m.background_checked === true && <Badge tone="ok">✓ Background checked</Badge>}
+            {m.background_checked === false && <Badge tone="neutral">Not background checked</Badge>}
           </div>
           <p className="mt-0.5 text-sm text-muted">
             {TIER_LABEL[m.skill_tier]} mechanic

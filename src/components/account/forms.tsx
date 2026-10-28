@@ -20,7 +20,7 @@ export function ProfileForm({ fullName, phone, email }: { fullName: string; phon
       <Field label="Email" htmlFor="email" hint="Contact support to change your email.">
         <Input id="email" value={email} disabled readOnly />
       </Field>
-      <Field label="Full name" htmlFor="full_name">
+      <Field label="Full name" htmlFor="full_name" required>
         <Input id="full_name" name="full_name" defaultValue={fullName} required autoComplete="name" />
       </Field>
       <Field label="Phone" htmlFor="phone" hint="Shared with your mechanic for an active booking.">
@@ -44,13 +44,13 @@ export function VehicleForm({ onDone }: { onDone?: () => void }) {
       <div className="sm:col-span-2">
         <StateNotice state={state} />
       </div>
-      <Field label="Year" htmlFor="year">
+      <Field label="Year" htmlFor="year" required>
         <Input id="year" name="year" type="number" inputMode="numeric" min={1950} max={new Date().getFullYear() + 1} required placeholder="2018" />
       </Field>
-      <Field label="Make" htmlFor="make">
+      <Field label="Make" htmlFor="make" required>
         <Input id="make" name="make" required placeholder="Toyota" autoComplete="off" />
       </Field>
-      <Field label="Model" htmlFor="model">
+      <Field label="Model" htmlFor="model" required>
         <Input id="model" name="model" required placeholder="Camry" autoComplete="off" />
       </Field>
       <Field label="Trim (optional)" htmlFor="trim">
@@ -185,7 +185,7 @@ export function ProblemReportForm({ bookingId }: { bookingId: string }) {
     <form action={action} className="flex flex-col gap-3">
       <StateNotice state={state} />
       <input type="hidden" name="bookingId" value={bookingId} />
-      <Field label="What's wrong?" htmlFor="issue_description" hint="e.g. the squeal came back after a week, or a light is back on.">
+      <Field label="What's wrong?" htmlFor="issue_description" hint="e.g. the squeal came back after a week, or a light is back on." required>
         <Textarea id="issue_description" name="description" rows={3} required minLength={10} maxLength={2000} />
       </Field>
       <Button type="submit" variant="subtle" disabled={pending} className="self-start">
@@ -223,7 +223,7 @@ export function BusinessForm({ companyName, billingEmail }: { companyName: strin
   return (
     <form action={action} className="flex flex-col gap-4">
       <StateNotice state={state} />
-      <Field label="Company name" htmlFor="company_name">
+      <Field label="Company name" htmlFor="company_name" required>
         <Input id="company_name" name="company_name" defaultValue={companyName} required minLength={2} maxLength={120} autoComplete="organization" />
       </Field>
       <Field label="Billing email (optional)" htmlFor="billing_email" hint="Shown on your monthly statements.">

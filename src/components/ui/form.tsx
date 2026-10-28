@@ -8,18 +8,22 @@ export function Field({
   htmlFor,
   hint,
   error,
+  required,
   children,
 }: {
   label: string;
   htmlFor: string;
   hint?: string;
   error?: string;
+  /** Shows a required marker (the control itself should also carry `required`). */
+  required?: boolean;
   children: ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
       <label htmlFor={htmlFor} className="text-sm font-medium text-cream">
         {label}
+        {required && <RequiredMark />}
       </label>
       {children}
       {hint && !error && <p className="text-xs text-muted">{hint}</p>}
@@ -29,6 +33,30 @@ export function Field({
         </p>
       )}
     </div>
+  );
+}
+
+/** Asterisk for required fields; screen readers hear "required". */
+export function RequiredMark() {
+  return (
+    <>
+      <span aria-hidden className="ml-0.5 text-ore">
+        *
+      </span>
+      <span className="sr-only"> (required)</span>
+    </>
+  );
+}
+
+/** Legend shown at the top of forms that mark required fields. */
+export function RequiredLegend() {
+  return (
+    <p className="text-xs text-muted">
+      <span aria-hidden className="text-ore">
+        *
+      </span>{" "}
+      Required
+    </p>
   );
 }
 

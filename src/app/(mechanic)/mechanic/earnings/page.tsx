@@ -4,8 +4,8 @@ import { Card } from "@/components/ui/card";
 import { EmptyState, Notice } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/layout";
 import { requireRole } from "@/lib/auth";
-import { mechanicNetCents, onboardingJobsRemaining } from "@/lib/fees";
-import { onboardingFeePerJobCents } from "@/lib/env";
+import { mechanicNetCents } from "@/lib/fees";
+import { checkFeeRefundJobs, onboardingFeePerJobCents } from "@/lib/env";
 import { dateTime, monthKey, money } from "@/lib/format";
 import { getMyMechanic } from "@/lib/mechanic";
 import { createClient } from "@/lib/supabase/server";
@@ -16,24 +16,30 @@ export const metadata: Metadata = { title: "Earnings" };
 export default async function EarningsPage() {
   const viewer = await requireRole(["mechanic"], "/mechanic/earnings");
   const supabase = await createClient();
-  const [m, { data: jobs }] = await Promise.all([
+  const [m, { data: jobs }, { data: deductions }] = await Promise.all([
     getMyMechanic(viewer.id),
     supabase
       .from("bookings")
-      .select("id, completed_at, final_amount_cents, platform_fee_cents, processing_fee_cents, onboarding_fee_cents, sales_tax_cents, refunded_cents, services(name)")
+      .select("id, completed_at, final_amount_cents, platform_fee_cents, processing_fee_cents, onboarding_fee_cents, deduction_cents, sales_tax_cents, refunded_cents, services(name)")
       .eq("mechanic_id", viewer.id)
       .eq("status", "completed")
       .order("completed_at", { ascending: false })
       .limit(200),
+    supabase.from("mechanic_deductions").select("id, booking_id, reason, amount_cents, recovered_cents, created_at").eq("mechanic_id", viewer.id).order("created_at", { ascending: false }).limit(20),
   ]);
 
+  // Warranty refunds WrenchNow paid itself don't reduce that job here; they show as a deduction on a later job instead.
+  const { data: platformRefunds } = await supabase.from("mechanic_deductions").select("booking_id, amount_cents").eq("mechanic_id", viewer.id).not("booking_id", "is", null);
+  const platformRefunded = new Map<string, number>();
+  for (const d of platformRefunds ?? []) platformRefunded.set(d.booking_id!, (platformRefunded.get(d.booking_id!) ?? 0) + d.amount_cents);
   const rows = (jobs ?? []).map((j) => {
     const gross = j.final_amount_cents ?? 0;
     const fee = (j.platform_fee_cents ?? 0) + (j.processing_fee_cents ?? 0);
     // Sales tax on parts goes to the state (via WrenchNow), never to the mechanic.
     const tax = j.sales_tax_cents ?? 0;
     const onboarding = j.onboarding_fee_cents ?? 0;
-    return { ...j, gross, fee, tax, onboarding, net: mechanicNetCents(gross, fee + tax + onboarding, j.refunded_cents ?? 0) };
+    const deduction = j.deduction_cents ?? 0;
+    return { ...j, gross, fee, tax, onboarding, deduction, net: mechanicNetCents(gross, fee + tax + onboarding + deduction, Math.max((j.refunded_cents ?? 0) - (platformRefunded.get(j.id) ?? 0), 0)) };
   });
   const sum = (list: typeof rows) => list.reduce((a, r) => a + r.net, 0);
   const month = monthKey(new Date());
@@ -63,12 +69,27 @@ export default async function EarningsPage() {
         <span className="text-muted">(for your bookkeeping and taxes)</span>
       </p>
 
-      {m && m.onboarding_fee_total_cents > 0 && (
+      {m && m.check_fee_paid_cents > 0 && (
         <div className="mb-6">
-          <Notice tone="info" title="Background check fee">
-            {m.onboarding_fee_collected_cents >= m.onboarding_fee_total_cents
-              ? `Paid off — all ${money(m.onboarding_fee_total_cents, { whole: true })} covered. Thanks!`
-              : `${money(m.onboarding_fee_collected_cents)} of ${money(m.onboarding_fee_total_cents)} covered. ${money(onboardingFeePerJobCents(), { whole: true })} comes out of each job until it's paid off — about ${onboardingJobsRemaining(m.onboarding_fee_total_cents, m.onboarding_fee_collected_cents, onboardingFeePerJobCents())} more job(s).`}
+          <Notice tone="info" title="Background check fee refunds">
+            {m.check_fee_refunded_cents >= m.check_fee_paid_cents
+              ? `All ${money(m.check_fee_paid_cents, { whole: true })} refunded to your card. Thanks for getting verified!`
+              : `${money(m.check_fee_refunded_cents)} of ${money(m.check_fee_paid_cents)} refunded so far. ${money(onboardingFeePerJobCents(), { whole: true })} goes back to the card you paid with after each completed job (first ${checkFeeRefundJobs()} jobs).`}
+          </Notice>
+        </div>
+      )}
+      {deductions && deductions.some((d) => d.recovered_cents < d.amount_cents) && (
+        <div className="mb-6">
+          <Notice tone="warn" title="Deductions from upcoming payouts">
+            <ul className="mt-1 space-y-1">
+              {deductions
+                .filter((d) => d.recovered_cents < d.amount_cents)
+                .map((d) => (
+                  <li key={d.id}>
+                    {money(d.amount_cents - d.recovered_cents)} still to come out of your next job{d.recovered_cents > 0 ? "s" : ""}: {d.reason}
+                  </li>
+                ))}
+            </ul>
           </Notice>
         </div>
       )}
@@ -109,6 +130,7 @@ export default async function EarningsPage() {
                     −{money(r.fee)}
                     {r.tax > 0 && <span className="block text-xs">−{money(r.tax)} sales tax</span>}
                     {r.onboarding > 0 && <span className="block text-xs">−{money(r.onboarding)} check fee</span>}
+                    {r.deduction > 0 && <span className="block text-xs">−{money(r.deduction)} deduction</span>}
                   </td>
                   <td className="px-4 py-3 text-right font-semibold text-cream">{money(r.net)}</td>
                 </tr>

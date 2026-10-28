@@ -21,7 +21,7 @@ const BELIEFS = [
   },
   {
     title: "Trust is earned, then checked",
-    body: "Every mechanic passes a background check and gives us current proof of insurance. A 4-digit code confirms the right person showed up.",
+    body: "Every mechanic is reviewed and gives us current proof of insurance, and you can see who’s background checked before you book. A 4-digit code confirms the right person showed up.",
   },
   {
     title: "Good mechanics deserve a better deal",

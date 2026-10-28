@@ -160,7 +160,7 @@ export default async function MechanicDashboardPage({ searchParams }: PageProps<
             </Card>
 
             <Card className={featured ? "border-warn/40" : ""}>
-              <h2 className="text-xl font-bold uppercase">Sponsored placement</h2>
+              <h2 className="text-xl font-bold uppercase">Top priority placement</h2>
               {featured ? (
                 <>
                   <p className="mt-2 text-sm text-ink">Active through {dateTime(m.featured_until!)}. You show in the Sponsored row for matching searches.</p>
@@ -172,14 +172,15 @@ export default async function MechanicDashboardPage({ searchParams }: PageProps<
                 </>
               ) : (
                 <>
+                  <p className="mt-2 text-lg font-semibold text-cream">Be the first mechanic customers see.</p>
                   <ul className="mt-3 space-y-1.5 text-sm text-ink">
-                    <li>✓ Shown in the labeled Sponsored row above matching searches (up to 3)</li>
-                    <li>✓ Boost in search results</li>
-                    <li>✓ Cancel anytime</li>
+                    <li>✓ Top placement in your area — shown above the regular results for searches you match</li>
+                    <li>✓ More eyes on your profile, more booking requests</li>
+                    <li>✓ {money(featuredPriceCents(), { whole: true })}/month, cancel anytime</li>
                   </ul>
-                  <p className="mt-3 text-xs text-muted">Regular results are still ranked by reviews and reliability — sponsorship gets you seen, it doesn&apos;t change your rank.</p>
+                  <p className="mt-3 text-xs text-muted">Shown in a row labeled “Sponsored” (up to 3 mechanics per search), so customers know it&apos;s a paid spot.</p>
                   <form action={startFeatured} className="mt-4">
-                    <Button type="submit">Get sponsored — {money(featuredPriceCents(), { whole: true })}/mo</Button>
+                    <Button type="submit">Get top placement — {money(featuredPriceCents(), { whole: true })}/mo</Button>
                   </form>
                 </>
               )}

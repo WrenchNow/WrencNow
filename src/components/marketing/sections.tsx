@@ -23,7 +23,7 @@ export const STEPS = [
 export const TRUST = [
   {
     title: "Vetted before they arrive",
-    body: "Every mechanic passes a background check and a review of their experience before they can take a job.",
+    body: "Every mechanic is reviewed and insured before they can take a job. Look for the “Background checked” badge — you always see it before you book.",
   },
   {
     title: "Reviews you can trust",

@@ -13,7 +13,8 @@ import {
   type Actor,
   type BookingStatus,
 } from "@/lib/booking-status";
-import { customerNoShowFeeCents, onboardingFeePerJobCents, partsHandlingBps, platformFeeBps, processingFeeBps, processingFeeFixedCents, salesTaxOnHandling } from "@/lib/env";
+import { refundCheckFeeInstallment } from "@/lib/check-fee";
+import { customerNoShowFeeCents, partsHandlingBps, platformFeeBps, processingFeeBps, processingFeeFixedCents, salesTaxOnHandling } from "@/lib/env";
 import { partsEstimateFor } from "@/lib/parts";
 import { partsSalesTaxCents } from "@/lib/sales-tax";
 import { lookupTax } from "@/lib/tax-lookup";
@@ -111,6 +112,8 @@ export type CreateBookingInput = {
   carLocation?: "driveway" | "street" | "garage" | "parking_lot" | null;
   carCovered?: boolean;
   billToBusiness?: boolean;
+  /** The customer confirmed they're booking a mechanic who isn't background checked. */
+  unverifiedAck?: boolean;
 };
 
 /**
@@ -122,7 +125,11 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
   const admin = createAdminClient();
   const now = new Date();
   const [{ data: mechanic }, { data: service }, { data: vehicle }] = await Promise.all([
-    admin.from("mechanics").select("id, is_live, insurance_expires_on, hourly_rate_cents, stripe_account_id, display_name, warranty_days").eq("id", input.mechanicId).maybeSingle(),
+    admin
+      .from("mechanics")
+      .select("id, is_live, insurance_expires_on, hourly_rate_cents, stripe_account_id, display_name, warranty_days, warranty_covers, check_status, estimate_fee_cents")
+      .eq("id", input.mechanicId)
+      .maybeSingle(),
     admin.from("services").select("*").eq("slug", input.serviceSlug).eq("active", true).maybeSingle(),
     admin.from("vehicles").select("id, owner_id, year, make, model, trim, mileage").eq("id", input.vehicleId).maybeSingle(),
   ]);
@@ -135,6 +142,10 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
 
   const { data: offers } = await admin.from("mechanic_services").select("service_id").eq("mechanic_id", mechanic.id).eq("service_id", service.id).maybeSingle();
   if (!offers) throw new BookingError("This mechanic doesn't offer that service.");
+  const estimateVisit = service.is_estimate_visit;
+  if (estimateVisit && mechanic.estimate_fee_cents === null) throw new BookingError("This mechanic doesn't offer estimate visits.");
+  const verified = mechanic.check_status === "clear";
+  if (!verified && !input.unverifiedAck) throw new BookingError("Please confirm you understand this mechanic isn't background checked.");
 
   await releaseStaleUnpaid(mechanic.id);
 
@@ -149,13 +160,19 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
 
   const start = new Date(input.start);
   const end = new Date(start.getTime() + service.est_minutes_max * 60_000);
-  const laborMax = estimateMaxCents(mechanic.hourly_rate_cents, service.est_minutes_max);
+  // An estimate visit is a flat fee (no parts). A free one holds only the customer no-show fee, released when the visit is done.
+  const estimateFee = estimateVisit ? (mechanic.estimate_fee_cents ?? 0) : null;
+  const laborMax = estimateVisit ? estimateFee! : estimateMaxCents(mechanic.hourly_rate_cents, service.est_minutes_max);
   // Parts estimate (cost) from real receipts for similar jobs, else the mechanic's typical price; handling added on top.
-  const partsEst = await partsEstimateFor(mechanic.id, service.id, vehicle.make, vehicle.model);
+  const partsEst = estimateVisit ? { cents: 0 } : await partsEstimateFor(mechanic.id, service.id, vehicle.make, vehicle.model);
   // Colorado sales tax on parts, at the rate where the job is (labor isn't taxed). Included in the hold.
   const tax = await lookupTax(input.address, lat, lng);
   const estHandling = partsHandlingCents(partsEst.cents, partsHandlingBps());
-  const estimate = laborMax + partsChargeCents(partsEst.cents, partsHandlingBps()) + partsSalesTaxCents(partsEst.cents, estHandling, tax.mpct, salesTaxOnHandling());
+  const estimate = estimateVisit
+    ? estimateFee! > 0
+      ? estimateFee!
+      : customerNoShowFeeCents()
+    : laborMax + partsChargeCents(partsEst.cents, partsHandlingBps()) + partsSalesTaxCents(partsEst.cents, estHandling, tax.mpct, salesTaxOnHandling());
   const deductions = feesFor(estimate);
   const fee = deductions.platform;
   const vehicleDesc = [vehicle.year, vehicle.make, vehicle.model, vehicle.trim].filter(Boolean).join(" ");
@@ -192,7 +209,11 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
       car_location: input.carLocation ?? null,
       car_covered: input.carCovered ?? false,
       business_name: businessName,
-      warranty_days: mechanic.warranty_days, // the mechanic's own warranty as offered at booking
+      warranty_days: estimateVisit ? 0 : mechanic.warranty_days, // the mechanic's own warranty as offered at booking
+      warranty_covers: estimateVisit || mechanic.warranty_days === 0 ? null : mechanic.warranty_covers,
+      is_estimate_visit: estimateVisit,
+      estimate_fee_cents: estimateFee,
+      unverified_ack_at: verified ? null : new Date().toISOString(),
       tax_zip: tax.zip,
       tax_county: tax.county,
       tax_place: tax.place,
@@ -206,6 +227,7 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
   if (error || !booking) {
     if (error?.message.includes("bookings_no_overlap")) throw new BookingError("That time was just taken. Please pick another slot.");
     if (error?.message.includes("tier")) throw new BookingError("This mechanic isn't qualified for that service.");
+    if (error?.message.includes("acknowledge")) throw new BookingError("Please confirm you understand this mechanic isn't background checked.");
     throw new BookingError("We couldn't create that booking. Please try again.");
   }
   // Odometer at booking keeps the garage's mileage current (only ever moves forward).
@@ -246,7 +268,7 @@ function feesFor(totalCents: number) {
   return mechanicDeductionsCents(totalCents, platformFeeBps(), processingFeeBps(), processingFeeFixedCents());
 }
 
-export type TransitionOptions = { finalAmountCents?: number; laborCents?: number; reason?: string; arrivalCode?: string };
+export type TransitionOptions = { finalAmountCents?: number; laborCents?: number; reason?: string; arrivalCode?: string; estimateNotes?: string };
 
 function insuranceCurrent(expiresOn: string | null): boolean {
   return Boolean(expiresOn && expiresOn >= new Date().toISOString().slice(0, 10));
@@ -393,6 +415,21 @@ async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor
       break;
     }
     case "completed": {
+      // Estimate visit: the mechanic leaves a written estimate; the flat fee is charged, or a free visit's hold is released.
+      if (b.is_estimate_visit) {
+        const notes = opts.estimateNotes?.trim() ?? "";
+        if (notes.length < 10) throw new BookingError("Write the estimate for the customer (what it needs and roughly what it costs).");
+        update.estimate_notes = notes.slice(0, 4000);
+        if ((b.estimate_fee_cents ?? 0) === 0) {
+          if (b.stripe_payment_intent_id && b.payment_status === "authorized") {
+            const pi = await stripe.paymentIntents.retrieve(b.stripe_payment_intent_id);
+            if (pi.status === "requires_capture") await stripe.paymentIntents.cancel(b.stripe_payment_intent_id, { cancellation_reason: "requested_by_customer" });
+          }
+          update.payment_status = "canceled";
+          break;
+        }
+        opts = { ...opts, laborCents: b.estimate_fee_cents ?? 0 };
+      }
       // Labor is entered by the mechanic; parts come from uploaded receipts (+ disclosed handling).
       const labor = opts.laborCents;
       if (labor === undefined || !Number.isInteger(labor) || labor < 0) throw new BookingError("Enter the labor charge.");
@@ -419,23 +456,22 @@ async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor
       const main = await stripe.paymentIntents.retrieve(b.stripe_payment_intent_id);
       const topup = b.topup_payment_intent_id ? await stripe.paymentIntents.retrieve(b.topup_payment_intent_id) : null;
       let captured = final;
-      let onboarding = 0;
+      let deduction = 0;
       if (main.status === "requires_capture") {
-        // Onboarding fee installment comes out of the mechanic's share, on top of the platform and processing fees.
-        const { data: claimed } = await admin.rpc("claim_onboarding_fee", {
+        // Money refunded to a customer on this mechanic's behalf (e.g. an unhonored warranty) comes out of their
+        // labor share — never out of the parts money they already spent.
+        const { data: claimed } = await admin.rpc("claim_deductions", {
           p_booking_id: b.id,
-          p_per_job_cents: onboardingFeePerJobCents(),
-          p_final_cents: final,
-          p_platform_fee_cents: fees.platform + fees.processing + salesTax,
+          p_available_cents: Math.max(labor + handling - fees.platform - fees.processing, 0),
         });
-        onboarding = claimed ?? 0;
+        deduction = claimed ?? 0;
         const topupAuth = topup?.status === "requires_capture" ? topup.amount_capturable : 0;
-        const plan = planCapture(final, main.amount_capturable, topupAuth, fees.platform + fees.processing + onboarding + salesTax);
+        const plan = planCapture(final, main.amount_capturable, topupAuth, fees.platform + fees.processing + deduction + salesTax);
         try {
           await stripe.paymentIntents.capture(
             main.id,
             { amount_to_capture: plan.mainCapture, application_fee_amount: plan.mainFee },
-            { idempotencyKey: `capture-${b.id}-${final}-${onboarding}` },
+            { idempotencyKey: `capture-${b.id}-${final}-${deduction}` },
           );
           if (topup && topup.status === "requires_capture") {
             if (plan.topupCapture > 0) {
@@ -449,14 +485,14 @@ async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor
             }
           }
         } catch (e) {
-          if (onboarding) await admin.rpc("release_onboarding_fee", { p_booking_id: b.id });
+          if (deduction) await admin.rpc("release_deductions", { p_booking_id: b.id });
           throw e;
         }
       } else if (main.status === "succeeded") {
         // A previous attempt captured but failed to save — record what Stripe actually took.
         captured = main.amount_received + (topup?.status === "succeeded" ? topup.amount_received : 0);
-        const { data: row } = await admin.from("onboarding_fee_charges").select("amount_cents").eq("booking_id", b.id).maybeSingle();
-        onboarding = row?.amount_cents ?? 0;
+        const { data: rows } = await admin.from("deduction_recoveries").select("amount_cents").eq("booking_id", b.id);
+        deduction = (rows ?? []).reduce((sum, r) => sum + r.amount_cents, 0);
       } else {
         throw new BookingError("The customer's payment can't be captured. Contact support.");
       }
@@ -467,7 +503,7 @@ async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor
       update.final_amount_cents = captured;
       update.platform_fee_cents = fees.platform;
       update.processing_fee_cents = fees.processing;
-      update.onboarding_fee_cents = onboarding;
+      update.deduction_cents = deduction;
       update.payment_status = "captured";
       break;
     }
@@ -486,6 +522,8 @@ async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor
     await admin.from("no_shows").insert({ booking_id: b.id, mechanic_id: b.mechanic_id, reported_by: actor.id, reason: opts.reason?.slice(0, 1000) ?? null });
   }
   if (to !== "requested") after(() => notifyBooking(b.id, to as BookingEvent));
+  // Verified mechanics get part of their background check fee back on each completed job.
+  if (to === "completed") after(() => refundCheckFeeInstallment(b.id));
   await audit(actor.id, `booking.${to}`, b.id, { from: b.status, ...(opts.finalAmountCents ? { final: opts.finalAmountCents } : {}) });
   return updated;
 }

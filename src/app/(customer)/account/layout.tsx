@@ -5,7 +5,7 @@ import { requireRole } from "@/lib/auth";
 const TABS = [
   { href: "/account", label: "Overview" },
   { href: "/account/bookings", label: "Bookings" },
-  { href: "/account/garage", label: "Garage" },
+  { href: "/account/garage", label: "My Garage" },
   { href: "/account/business", label: "Business" },
 ];
 

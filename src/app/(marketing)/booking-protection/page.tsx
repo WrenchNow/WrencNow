@@ -6,7 +6,7 @@ import { CONTACT_EMAIL, CONTACT_MAILTO } from "@/lib/contact";
 
 export const metadata: Metadata = {
   title: "Booking protection",
-  description: "Never charged above the estimate you approve, payment held until the job is done, verified arrival, and background-checked, insured mechanics.",
+  description: "Never charged above the estimate you approve, payment held until the job is done, verified arrival, and approved, insured mechanics.",
   alternates: { canonical: "/booking-protection" },
 };
 
@@ -25,7 +25,7 @@ const PROTECTIONS = [
   },
   {
     title: "Vetted and insured mechanics",
-    body: "Every mechanic passes a background check and gives us current proof of insurance before they can take jobs.",
+    body: "Every mechanic is reviewed by WrenchNow and gives us current proof of insurance before they can take jobs. Mechanics who pass our background check show a “Background checked” badge — if one hasn’t, you’re told before you book.",
   },
 ];
 

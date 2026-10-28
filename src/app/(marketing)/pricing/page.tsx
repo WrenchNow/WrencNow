@@ -43,13 +43,17 @@ export default async function PricingPage() {
         </Card>
         <Card>
           <h2 className="text-xl font-bold uppercase">For mechanics</h2>
-          <p className="mt-2 text-sm text-ink">Nothing to pay up front. On each completed job, WrenchNow keeps a {fee} platform fee, card processing ({processingLabel()}) comes out, plus {money(onboardingFeePerJobCents(), { whole: true })} a job toward your{" "}
-            {money(onboardingFeeTotalCents(), { whole: true })} background check until it&apos;s covered. Card processing and payouts run through Stripe.</p>
+          <p className="mt-2 text-sm text-ink">
+            No monthly fee to be listed. On each completed job, WrenchNow keeps a {fee} platform fee and card processing ({processingLabel()}) comes out — the rest is
+            yours, paid out through Stripe. The background check is optional: {money(onboardingFeeTotalCents(), { whole: true })} up front, refunded{" "}
+            {money(onboardingFeePerJobCents(), { whole: true })} per completed job until it&apos;s all back.
+          </p>
         </Card>
         <Card>
-          <h2 className="text-xl font-bold uppercase">Sponsored placement</h2>
+          <h2 className="text-xl font-bold uppercase">Top priority placement</h2>
           <p className="mt-2 text-sm text-ink">
-            Optional {money(featuredPriceCents(), { whole: true })}/month to appear in the labeled “Sponsored” row above search results (up to 3, only when you match the search). Regular results are still ranked by reviews and reliability. Cancel anytime.
+            For mechanics: {money(featuredPriceCents(), { whole: true })}/month to be the first mechanic customers see — top placement in your area, more booking requests.
+            Shown in the labeled “Sponsored” row above matching searches. Optional; cancel anytime.
           </p>
         </Card>
       </div>

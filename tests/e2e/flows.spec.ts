@@ -28,7 +28,8 @@ test("customer signup → account → garage", async ({ page }) => {
   await page.goto("/signup");
   await page.getByLabel("Your name").fill("E2E Customer");
   await page.getByLabel("Email address").fill(email);
-  await page.getByLabel("Password").fill("e2e-password-123");
+  await page.getByLabel(/^Password/).fill("e2e-password-123");
+  await page.getByLabel(/^Confirm password/).fill("e2e-password-123");
   await page.getByLabel(/I agree to the/).check();
   await page.getByRole("button", { name: "Create my account" }).click();
   await expect(page).toHaveURL(/\/account$/);
@@ -47,7 +48,8 @@ test("mechanic signup lands on setup with the go-live checklist", async ({ page 
   await page.goto("/signup?role=mechanic");
   await page.getByLabel("Your name").fill("E2E Mechanic");
   await page.getByLabel("Email address").fill(email);
-  await page.getByLabel("Password").fill("e2e-password-123");
+  await page.getByLabel(/^Password/).fill("e2e-password-123");
+  await page.getByLabel(/^Confirm password/).fill("e2e-password-123");
   await page.getByLabel(/I agree to the/).check();
   await page.getByRole("button", { name: /Create account & start application/ }).click();
   await expect(page).toHaveURL(/\/mechanic\/dashboard/);
@@ -103,7 +105,7 @@ test("mechanic sees the live dashboard and online toggle works", async ({ page }
 test("admin sees pending applications", async ({ page }) => {
   await login(page, USERS.admin);
   await page.goto("/admin/mechanics?filter=review");
-  await expect(page.getByText("Test Mechanic Pending")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Test Mechanic Pending" })).toBeVisible();
   await page.goto("/admin/bookings");
   await expect(page.getByRole("heading", { name: "Bookings", exact: true })).toBeVisible();
 });
@@ -116,7 +118,7 @@ test("non-admins can't open admin pages", async ({ page }) => {
 
 test("no mechanics nearby → customer can send a request to be matched by hand", async ({ page }) => {
   await page.goto("/search?loc=40.7128,-74.0060"); // far outside the Denver test data
-  await expect(page.getByText("No mechanics here yet")).toBeVisible();
+  await expect(page.getByText("We'll find you someone")).toBeVisible();
   await page.waitForLoadState("networkidle");
   await page.getByLabel("Your name").fill("E2E Requester");
   await page.getByLabel("Email").fill(`e2e.req.${Date.now()}@example.test`);
@@ -132,5 +134,5 @@ test("mechanic can download earnings as CSV; others are redirected", async ({ pa
   await expect(page.getByRole("link", { name: "Download all jobs as CSV" })).toBeVisible();
   const res = await page.request.get("/mechanic/earnings/csv");
   expect(res.headers()["content-type"]).toContain("text/csv");
-  expect((await res.text()).split("\n")[0]).toBe("date,booking,service,charged,refunded,platform_fee,card_processing,onboarding_fee,your_payout");
+  expect((await res.text()).split("\n")[0]).toBe("date,booking,service,charged,refunded,platform_fee,card_processing,onboarding_fee,deductions,sales_tax_collected,your_payout");
 });

@@ -41,7 +41,8 @@ export default async function AdminMechanicsPage({ searchParams }: PageProps<"/a
   return (
     <>
       <PageHeader eyebrow="Admin" title="Mechanics">
-        Background check results come straight from Checkr. Approve and assign a tier once the check is clear.
+        Background checks are optional (mechanics who pay get the badge). Results come straight from Checkr. Before approving, open the photo and work through
+        the verification checklist.
       </PageHeader>
       <div className="mb-6 flex gap-2">
         {FILTERS.map((f) => (
@@ -55,8 +56,21 @@ export default async function AdminMechanicsPage({ searchParams }: PageProps<"/a
           {mechanics.map((m) => (
             <li key={m.id} className="rounded-[var(--radius-card)] border border-line bg-surface p-5">
               <div className="flex flex-col gap-3 lg:flex-row lg:justify-between">
+                <div className="flex min-w-0 gap-4">
+                  {m.photo_url ? (
+                    <a href={m.photo_url} target="_blank" rel="noopener noreferrer" className="shrink-0" title="Open full-size photo">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={m.photo_url} alt={`Profile photo of ${m.display_name ?? "applicant"}`} className="h-20 w-20 rounded-[var(--radius-control)] object-cover" />
+                    </a>
+                  ) : (
+                    <span className="flex h-20 w-20 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-raised text-center text-xs text-muted">No photo</span>
+                  )}
                 <div className="min-w-0">
                   <h3 className="text-xl font-bold uppercase">{m.display_name ?? m.profiles?.full_name ?? "Unnamed"}</h3>
+                  <p className="text-sm text-muted">
+                    Legal name: {m.profiles?.full_name ?? "—"} · phone {m.profiles?.phone ?? "—"} · tools {m.has_tools ? "✓" : "✗"} · transport {m.has_transport ? "✓" : "✗"} · radius{" "}
+                    {m.service_radius_miles} mi
+                  </p>
                   <p className="text-sm text-muted">
                     {m.city ?? "No location"} · {m.years_experience ?? "?"} yrs · {money(m.hourly_rate_cents, { whole: true })}/hr · applied {m.onboarding_submitted_at ? shortDate(m.onboarding_submitted_at) : "—"}
                   </p>
@@ -68,8 +82,10 @@ export default async function AdminMechanicsPage({ searchParams }: PageProps<"/a
                       Insurance: {m.insurance_status}
                       {m.insurance_expires_on ? ` · exp ${m.insurance_expires_on}` : ""}
                     </Badge>
-                    <Badge tone={m.onboarding_fee_collected_cents >= m.onboarding_fee_total_cents ? "ok" : "neutral"}>
-                      Check fee: {money(m.onboarding_fee_collected_cents, { whole: true })}/{money(m.onboarding_fee_total_cents, { whole: true })}
+                    <Badge tone={m.check_fee_paid_cents > 0 ? "ok" : "neutral"}>
+                      {m.check_fee_paid_cents > 0
+                        ? `Check fee paid ${money(m.check_fee_paid_cents, { whole: true })} · ${money(m.check_fee_refunded_cents, { whole: true })} refunded`
+                        : "No background check (optional)"}
                     </Badge>
                     {m.is_live && <Badge tone="ok">● Live</Badge>}
                   </div>
@@ -86,6 +102,15 @@ export default async function AdminMechanicsPage({ searchParams }: PageProps<"/a
                       ) : (
                         <p className="mt-1 text-muted">Certificate file unavailable.</p>
                       )}
+                      {Array.isArray((m.insurance_auto_check as { checks?: unknown } | null)?.checks) && (
+                        <ul className="mt-2 space-y-0.5 text-xs">
+                          {((m.insurance_auto_check as { checks: { key: string; ok: boolean; note: string }[] }).checks).map((c) => (
+                            <li key={c.key} className={c.ok ? "text-ok" : "text-warn"}>
+                              {c.ok ? "✓" : "✗"} {c.note}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                       <div className="mt-3">
                         <InsuranceReviewForm id={m.id} pendingExpiry={m.insurance_pending_expires_on} />
                       </div>
@@ -93,6 +118,7 @@ export default async function AdminMechanicsPage({ searchParams }: PageProps<"/a
                   )}
                   {m.certifications.length > 0 && <p className="mt-2 text-sm text-ink">Certs: {m.certifications.join(", ")}</p>}
                   {m.bio && <p className="mt-2 line-clamp-3 max-w-2xl text-sm text-ink">{m.bio}</p>}
+                </div>
                 </div>
                 <div className="flex shrink-0 flex-col gap-3">
                   <ReviewMechanicForm id={m.id} status={m.status} tier={m.skill_tier} />

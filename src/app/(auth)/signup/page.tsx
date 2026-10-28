@@ -6,6 +6,7 @@ import { SignupForm } from "@/components/auth/signup-form";
 import { Card } from "@/components/ui/card";
 import { Container } from "@/components/ui/layout";
 import { getViewer, homeFor, safeNext } from "@/lib/auth";
+import { googleAuthEnabled } from "@/lib/env";
 
 export const metadata: Metadata = { title: "Sign up" };
 
@@ -22,10 +23,14 @@ export default async function SignupPage({ searchParams }: PageProps<"/signup">)
         <h1 className="text-4xl font-extrabold uppercase">{role === "mechanic" ? "Join as a mechanic" : "Create account"}</h1>
         <p className="mt-1 text-sm text-muted">{role === "mechanic" ? "Free to apply. Takes about 5 minutes." : "Free to join. No card needed until you book."}</p>
         <div className="mt-6 flex flex-col gap-4">
-          <GoogleButton next={next} />
-          <div className="flex items-center gap-3 text-xs text-muted">
-            <span className="h-px flex-1 bg-line-strong" /> or <span className="h-px flex-1 bg-line-strong" />
-          </div>
+          {googleAuthEnabled() && (
+            <>
+              <GoogleButton next={next} />
+              <div className="flex items-center gap-3 text-xs text-muted">
+                <span className="h-px flex-1 bg-line-strong" /> or <span className="h-px flex-1 bg-line-strong" />
+              </div>
+            </>
+          )}
           <SignupForm next={next} defaultRole={role} />
         </div>
         <p className="mt-6 text-center text-sm text-muted">

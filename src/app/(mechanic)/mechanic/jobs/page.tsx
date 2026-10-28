@@ -115,6 +115,14 @@ export default async function MechanicJobsPage() {
                       </dd>
                     </div>
                   )}
+                  {j.is_estimate_visit && (
+                    <div className="sm:col-span-3">
+                      <dd className="rounded-[var(--radius-control)] border border-ore/30 bg-ore-dim px-3 py-2 text-cream">
+                        📋 Estimate visit ({(j.estimate_fee_cents ?? 0) === 0 ? "free" : `${money(j.estimate_fee_cents)} fee`}): look at the car and write the customer an estimate. No repair
+                        work on this visit.
+                      </dd>
+                    </div>
+                  )}
                   {j.problem_description && (
                     <div className="sm:col-span-3">
                       <dt className="text-xs tracking-wider text-muted uppercase">Customer says</dt>
@@ -142,7 +150,7 @@ export default async function MechanicJobsPage() {
                     </div>
                   )}
                 </dl>
-                {j.status !== "requested" && (
+                {j.status !== "requested" && !j.is_estimate_visit && (
                   <div className="mt-5">
                     <PartsPanel
                       bookingId={j.id}
@@ -171,6 +179,7 @@ export default async function MechanicJobsPage() {
                     partsReceiptCents={(partsBy.get(j.id) ?? []).filter((p) => p.status === "purchased").reduce((sum, p) => sum + (p.receipt_cents ?? 0), 0)}
                     handlingBps={handlingBps}
                     partsPending={(partsBy.get(j.id) ?? []).some((p) => p.status === "approved" || p.status === "quoted")}
+                    estimateVisit={j.is_estimate_visit ? { feeCents: j.estimate_fee_cents ?? 0 } : null}
                   />
                 </div>
               </li>

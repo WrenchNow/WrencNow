@@ -28,10 +28,10 @@ export function OpenRequestForm({ location, service, defaults }: { location: str
         <label htmlFor="company">Company</label>
         <input id="company" name="company" tabIndex={-1} autoComplete="off" />
       </div>
-      <Field label="Your name" htmlFor="req-name">
+      <Field label="Your name" htmlFor="req-name" required>
         <Input id="req-name" name="name" required defaultValue={defaults.name} autoComplete="name" />
       </Field>
-      <Field label="Email" htmlFor="req-email">
+      <Field label="Email" htmlFor="req-email" required>
         <Input id="req-email" name="email" type="email" required defaultValue={defaults.email} autoComplete="email" />
       </Field>
       <Field label="Phone (optional)" htmlFor="req-phone">
