@@ -39,13 +39,13 @@ export default async function PricingPage() {
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <h2 className="text-xl font-bold uppercase">For customers</h2>
-          <p className="mt-2 text-sm text-ink">No booking fees and no membership. You pay the mechanic&apos;s rate for the work, through the app.</p>
+          <p className="mt-2 text-sm text-ink">No membership. You pay the mechanic&apos;s rate for the work, plus a {processingLabel()} service fee that covers card processing — shown before you book.</p>
         </Card>
         <Card>
           <h2 className="text-xl font-bold uppercase">For mechanics</h2>
           <p className="mt-2 text-sm text-ink">
-            No monthly fee to be listed. On each completed job, WrenchNow keeps a {fee} platform fee and card processing ({processingLabel()}) comes out — the rest is
-            yours, paid out through Stripe. The background check is optional: {money(onboardingFeeTotalCents(), { whole: true })} up front, refunded{" "}
+            No monthly fee to be listed. On each completed job, WrenchNow keeps a {fee} platform fee on labor — that&apos;s it. Customers pay card processing,
+            so the rest is yours, paid out through Stripe. The background check is optional: {money(onboardingFeeTotalCents(), { whole: true })} up front, refunded{" "}
             {money(onboardingFeePerJobCents(), { whole: true })} per completed job until it&apos;s all back.
           </p>
         </Card>

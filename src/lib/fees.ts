@@ -59,3 +59,24 @@ export function mechanicDeductionsCents(totalCents: number, platformBps: number,
   return { platform, processing };
 }
 
+
+export type ServiceFeeRate = { bps: number; fixedCents: number };
+
+/**
+ * Customer service fee that covers card processing, added on top of the job (never taken from the mechanic).
+ * Applies to every payment method — it's a platform fee, not a card surcharge. 0 on a $0 subtotal.
+ */
+export function serviceFeeCents(subtotalCents: number, rate: ServiceFeeRate | null): number {
+  if (!rate || subtotalCents <= 0) return 0;
+  return Math.round((subtotalCents * rate.bps) / 10000) + rate.fixedCents;
+}
+
+/** Subtotal plus the customer service fee. */
+export function withServiceFee(subtotalCents: number, rate: ServiceFeeRate | null): number {
+  return subtotalCents + serviceFeeCents(subtotalCents, rate);
+}
+
+/** The service fee rate snapshotted on a booking (null on bookings made before customers paid processing). */
+export function bookingServiceRate(b: { service_fee_bps: number | null; service_fee_fixed_cents: number | null }): ServiceFeeRate | null {
+  return b.service_fee_bps === null ? null : { bps: b.service_fee_bps, fixedCents: b.service_fee_fixed_cents ?? 0 };
+}

@@ -9,7 +9,8 @@ import { PageHeader } from "@/components/ui/layout";
 import { requireRole } from "@/lib/auth";
 import { customerNoShowAt } from "@/lib/booking-status";
 import { customerNoShowFeeCents, partsHandlingBps, platformFeeBps, processingFeeBps, processingFeeFixedCents } from "@/lib/env";
-import { mechanicDeductionsCents } from "@/lib/fees";
+import { bookingServiceRate, mechanicDeductionsCents, platformFeeCents } from "@/lib/fees";
+import { partsChargeCents } from "@/lib/parts-math";
 import { dateTime, money } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import { MAX_PHOTOS_PER_KIND, photosFor } from "@/lib/job-photos";
@@ -34,10 +35,16 @@ export default async function MechanicJobsPage() {
   const active = all.filter((j) => ["requested", "accepted", "en_route", "in_progress"].includes(j.status) && j.payment_status === "authorized");
   const past = all.filter((j) => !active.includes(j)).reverse();
   const bps = platformFeeBps();
-  // Mechanic's share before any onboarding installment: total minus platform fee and card processing.
-  const shareOf = (cents: number) => {
-    const d = mechanicDeductionsCents(cents, bps, processingFeeBps(), processingFeeFixedCents());
-    return cents - d.platform - d.processing;
+  // Mechanic's share of the approved max. Newer bookings: the customer pays card processing as a service fee,
+  // so the mechanic keeps everything except the platform fee on labor (and sales tax, which goes to the state).
+  const shareOf = (j: (typeof all)[number]) => {
+    const rate = bookingServiceRate(j);
+    if (!rate) {
+      const d = mechanicDeductionsCents(j.estimated_max_cents, bps, processingFeeBps(), processingFeeFixedCents());
+      return j.estimated_max_cents - d.platform - d.processing;
+    }
+    const labor = j.labor_max_cents ?? 0;
+    return labor - platformFeeCents(labor, bps) + partsChargeCents(j.parts_estimate_cents, partsHandlingBps());
   };
 
   const { data: partRows } = active.length
@@ -96,7 +103,7 @@ export default async function MechanicJobsPage() {
                   <div>
                     <dt className="text-xs tracking-wider text-muted uppercase">Approved max · your share</dt>
                     <dd className="text-cream">
-                      {money(j.estimated_max_cents)} · {money(shareOf(j.estimated_max_cents))}
+                      {money(j.estimated_max_cents)} · {money(shareOf(j))}
                     </dd>
                   </div>
                   {j.car_location && (
@@ -178,6 +185,7 @@ export default async function MechanicJobsPage() {
                     laborMax={j.labor_max_cents ?? j.estimated_max_cents}
                     partsReceiptCents={(partsBy.get(j.id) ?? []).filter((p) => p.status === "purchased").reduce((sum, p) => sum + (p.receipt_cents ?? 0), 0)}
                     handlingBps={handlingBps}
+                    serviceRate={bookingServiceRate(j)}
                     partsPending={(partsBy.get(j.id) ?? []).some((p) => p.status === "approved" || p.status === "quoted")}
                     estimateVisit={j.is_estimate_visit ? { feeCents: j.estimate_fee_cents ?? 0 } : null}
                   />

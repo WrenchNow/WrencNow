@@ -99,3 +99,21 @@ describe("card processing pass-through", () => {
     expect(10_000 - d.platform - d.processing).toBe(9_125);
   });
 });
+
+describe("customer service fee (card processing paid by the customer)", () => {
+  const rate = { bps: 320, fixedCents: 55 };
+  it("adds 3.2% + 55¢ on top of the job, and nothing on $0 or for older bookings", async () => {
+    const { serviceFeeCents, withServiceFee, bookingServiceRate } = await import("@/lib/fees");
+    expect(serviceFeeCents(10_000, rate)).toBe(375);
+    expect(withServiceFee(5000, rate)).toBe(5215);
+    expect(serviceFeeCents(0, rate)).toBe(0);
+    expect(serviceFeeCents(10_000, null)).toBe(0);
+    expect(bookingServiceRate({ service_fee_bps: null, service_fee_fixed_cents: null })).toBeNull();
+    expect(bookingServiceRate({ service_fee_bps: 320, service_fee_fixed_cents: 55 })).toEqual(rate);
+  });
+
+  it("never lets a smaller final amount exceed the hold (fee grows with the subtotal)", async () => {
+    const { withServiceFee } = await import("@/lib/fees");
+    for (const [final, max] of [[4999, 5000], [1, 90_000], [12_345, 12_346]]) expect(withServiceFee(final, rate)).toBeLessThanOrEqual(withServiceFee(max, rate));
+  });
+});
