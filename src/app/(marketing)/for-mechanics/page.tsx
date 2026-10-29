@@ -5,9 +5,9 @@ import { ButtonLink } from "@/components/ui/button";
 import { Container } from "@/components/ui/layout";
 import { MECHANIC_FAQ } from "@/content/faq";
 import { COMPARISON_SOURCES, shopTechShareCents, SHOP_LABOR_RATE_CENTS, TECH_MEDIAN_WAGE_CENTS } from "@/content/shop-comparison";
-import { checkFeeRefundJobs, featuredPriceCents, onboardingFeePerJobCents, onboardingFeeTotalCents, platformFeeBps, processingFeeBps, processingFeeFixedCents } from "@/lib/env";
+import { checkFeeRefundJobs, featuredPriceCents, onboardingFeePerJobCents, onboardingFeeTotalCents, platformFeeBps } from "@/lib/env";
 import { processingLabel } from "@/lib/fee-copy";
-import { mechanicDeductionsCents } from "@/lib/fees";
+import { platformFeeCents } from "@/lib/fees";
 import { money } from "@/lib/format";
 import { SKILL_TIERS, TIER_DESCRIPTION, TIER_LABEL } from "@/lib/tiers";
 
@@ -20,8 +20,8 @@ const EXAMPLE_JOB_CENTS = 10000;
 
 export default function ForMechanicsPage() {
   const bps = platformFeeBps();
-  const fees = mechanicDeductionsCents(EXAMPLE_JOB_CENTS, bps, processingFeeBps(), processingFeeFixedCents());
-  const keep = EXAMPLE_JOB_CENTS - fees.platform - fees.processing;
+  const platform = platformFeeCents(EXAMPLE_JOB_CENTS, bps);
+  const keep = EXAMPLE_JOB_CENTS - platform;
   const shopShare = shopTechShareCents(EXAMPLE_JOB_CENTS);
   const sponsored = money(featuredPriceCents(), { whole: true });
 
@@ -95,14 +95,15 @@ export default function ForMechanicsPage() {
             <dt>Customer pays for labor</dt>
             <dd className="text-right text-cream">{money(EXAMPLE_JOB_CENTS)}</dd>
             <dt>WrenchNow platform fee ({bps / 100}%)</dt>
-            <dd className="text-right">−{money(fees.platform)}</dd>
-            <dt>Card processing ({processingLabel()})</dt>
-            <dd className="text-right">−{money(fees.processing)}</dd>
+            <dd className="text-right">−{money(platform)}</dd>
+            <dt>Card processing</dt>
+            <dd className="text-right">paid by the customer</dd>
             <dt className="font-semibold text-cream">You keep</dt>
             <dd className="text-right font-semibold text-cream">{money(keep)}</dd>
           </dl>
           <ul className="mt-3 space-y-1 text-xs text-muted">
             <li>No monthly fee and no sign-up fee to be listed.</li>
+            <li>Card processing ({processingLabel()}) is paid by the customer as a service fee — it never comes out of your pay.</li>
             <li>Parts are paid back at your receipt price plus a small handling charge that goes to you.</li>
             <li>
               Optional background check: {money(onboardingFeeTotalCents(), { whole: true })} up front, refunded {money(onboardingFeePerJobCents(), { whole: true })} per

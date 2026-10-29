@@ -225,10 +225,10 @@ export async function estimateAction(mechanicId: string, serviceSlug: string, ve
   const { createAdminClient } = await import("@/lib/supabase/admin");
   const { partsEstimateFor } = await import("@/lib/parts");
   const { partsChargeCents, partsHandlingCents } = await import("@/lib/parts-math");
-  const { partsHandlingBps, salesTaxOnHandling } = await import("@/lib/env");
+  const { partsHandlingBps, processingFeeBps, processingFeeFixedCents, salesTaxOnHandling } = await import("@/lib/env");
   const { partsSalesTaxCents, formatRate } = await import("@/lib/sales-tax");
   const { lookupTax } = await import("@/lib/tax-lookup");
-  const { estimateMaxCents, estimateMinCents } = await import("@/lib/fees");
+  const { estimateMaxCents, estimateMinCents, serviceFeeCents } = await import("@/lib/fees");
   const admin = createAdminClient();
   const [{ data: m }, { data: svc }, { data: v }] = await Promise.all([
     admin.from("mechanics").select("hourly_rate_cents, estimate_fee_cents").eq("id", z.uuid().parse(mechanicId)).single(),
@@ -239,8 +239,11 @@ export async function estimateAction(mechanicId: string, serviceSlug: string, ve
   if (svc.is_estimate_visit) {
     // Flat fee, no parts. A free visit only holds the no-show fee.
     const fee = m.estimate_fee_cents ?? 0;
-    const { customerNoShowFeeCents } = await import("@/lib/env");
-    return { laborMin: fee, laborMax: fee, partsCost: 0, partsCharge: 0, basis: "none", sample: 0, partsTax: 0, taxLabel: "", total: fee > 0 ? fee : customerNoShowFeeCents() };
+    const { customerNoShowFeeCents, processingFeeBps, processingFeeFixedCents } = await import("@/lib/env");
+    const { serviceFeeCents } = await import("@/lib/fees");
+    const sub = fee > 0 ? fee : customerNoShowFeeCents();
+    const serviceFee = serviceFeeCents(sub, { bps: processingFeeBps(), fixedCents: processingFeeFixedCents() });
+    return { laborMin: fee, laborMax: fee, partsCost: 0, partsCharge: 0, basis: "none", sample: 0, partsTax: 0, taxLabel: "", serviceFee, total: sub + serviceFee };
   }
   const parts = await partsEstimateFor(mechanicId, svc.id, v.make, v.model);
   const partsCharge = partsChargeCents(parts.cents, partsHandlingBps());
@@ -255,7 +258,14 @@ export async function estimateAction(mechanicId: string, serviceSlug: string, ve
     sample: parts.sample,
     partsTax,
     taxLabel: `${formatRate(tax.mpct)}${tax.place ? ` (${tax.place})` : tax.county ? ` (${tax.county})` : ""}`,
-    total: estimateMaxCents(m.hourly_rate_cents, svc.est_minutes_max) + partsCharge + partsTax,
+    // The customer pays card processing as a service fee on top (shown as its own line).
+    serviceFee: serviceFeeCents(estimateMaxCents(m.hourly_rate_cents, svc.est_minutes_max) + partsCharge + partsTax, { bps: processingFeeBps(), fixedCents: processingFeeFixedCents() }),
+    serviceFeeMin: serviceFeeCents(estimateMinCents(m.hourly_rate_cents, svc.est_minutes_min) + partsCharge + partsTax, { bps: processingFeeBps(), fixedCents: processingFeeFixedCents() }),
+    total:
+      estimateMaxCents(m.hourly_rate_cents, svc.est_minutes_max) +
+      partsCharge +
+      partsTax +
+      serviceFeeCents(estimateMaxCents(m.hourly_rate_cents, svc.est_minutes_max) + partsCharge + partsTax, { bps: processingFeeBps(), fixedCents: processingFeeFixedCents() }),
   };
 }
 

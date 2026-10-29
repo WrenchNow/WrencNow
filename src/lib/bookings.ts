@@ -20,7 +20,7 @@ import { partsSalesTaxCents } from "@/lib/sales-tax";
 import { lookupTax } from "@/lib/tax-lookup";
 import { jobFees, partsChargeCents, partsHandlingCents, planCapture } from "@/lib/parts-math";
 import { geocode } from "@/lib/geocode";
-import { estimateMaxCents, mechanicDeductionsCents } from "@/lib/fees";
+import { bookingServiceRate, estimateMaxCents, mechanicDeductionsCents, platformFeeCents, serviceFeeCents, withServiceFee, type ServiceFeeRate } from "@/lib/fees";
 import { isOfferedSlot } from "@/lib/slots";
 import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -168,13 +168,15 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
   // Colorado sales tax on parts, at the rate where the job is (labor isn't taxed). Included in the hold.
   const tax = await lookupTax(input.address, lat, lng);
   const estHandling = partsHandlingCents(partsEst.cents, partsHandlingBps());
-  const estimate = estimateVisit
+  const subtotal = estimateVisit
     ? estimateFee! > 0
       ? estimateFee!
       : customerNoShowFeeCents()
     : laborMax + partsChargeCents(partsEst.cents, partsHandlingBps()) + partsSalesTaxCents(partsEst.cents, estHandling, tax.mpct, salesTaxOnHandling());
-  const deductions = feesFor(estimate);
-  const fee = deductions.platform;
+  // The customer pays card processing as a service fee on top; the rate is snapshotted on the booking.
+  const rate = currentServiceRate();
+  const estimate = withServiceFee(subtotal, rate);
+  const fee = platformFeeCents(laborMax, platformFeeBps());
   const vehicleDesc = [vehicle.year, vehicle.make, vehicle.model, vehicle.trim].filter(Boolean).join(" ");
   const businessName = input.billToBusiness
     ? ((await admin.from("business_accounts").select("company_name").eq("owner_id", input.customerId).maybeSingle()).data?.company_name ?? null)
@@ -202,6 +204,8 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
       vehicle_make: vehicle.make,
       vehicle_model: vehicle.model,
       platform_fee_cents: fee,
+      service_fee_bps: rate.bps,
+      service_fee_fixed_cents: rate.fixedCents,
       // Colorado Motor Vehicle Repair Act: record the customer's consent to the written estimate.
       estimate_approved_at: new Date().toISOString(),
       return_old_parts: input.returnOldParts,
@@ -243,7 +247,7 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
         currency: "usd",
         capture_method: "manual",
         automatic_payment_methods: { enabled: true },
-        application_fee_amount: deductions.platform + deductions.processing, // recomputed on the final amount at capture
+        application_fee_amount: fee + (estimate - subtotal), // platform fee + service fee; recomputed on the final amount at capture
         transfer_data: { destination: mechanic.stripe_account_id },
         description: `WrenchNow: ${service.name} with ${mechanic.display_name ?? "mechanic"}`,
         metadata: { booking_id: booking.id, customer_id: input.customerId, mechanic_id: mechanic.id },
@@ -263,9 +267,14 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
   }
 }
 
-/** Platform fee + card processing pass-through on a charge, both taken from the mechanic's share. */
+/** Platform fee + card processing pass-through on a charge, both taken from the mechanic's share (bookings made before Oct 29 2026). */
 function feesFor(totalCents: number) {
   return mechanicDeductionsCents(totalCents, platformFeeBps(), processingFeeBps(), processingFeeFixedCents());
+}
+
+/** The customer service fee rate for new bookings: card processing, from PROCESSING_FEE_BPS / PROCESSING_FEE_CENTS. */
+function currentServiceRate(): ServiceFeeRate {
+  return { bps: processingFeeBps(), fixedCents: processingFeeFixedCents() };
 }
 
 export type TransitionOptions = { finalAmountCents?: number; laborCents?: number; reason?: string; arrivalCode?: string; estimateNotes?: string };
@@ -393,13 +402,17 @@ async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor
         throw new BookingError(`Give the customer ${mins} more minute${mins === 1 ? "" : "s"} to respond.`);
       }
       if (!b.stripe_payment_intent_id || b.payment_status !== "authorized") throw new BookingError("There's no card hold to charge the no-show fee to.");
-      const fee = Math.min(customerNoShowFeeCents(), b.estimated_max_cents);
+      const rate = bookingServiceRate(b);
+      // New bookings: the customer also pays the service fee on the no-show fee. Older ones: processing comes from the mechanic's share.
+      const noShowBase = Math.min(customerNoShowFeeCents(), b.estimated_max_cents);
+      const fee = rate ? Math.min(withServiceFee(noShowBase, rate), b.estimated_max_cents) : noShowBase;
+      const noShowFees = rate ? { platform: platformFeeCents(noShowBase, platformFeeBps()), processing: fee - noShowBase } : feesFor(fee);
       const pi = await stripe.paymentIntents.retrieve(b.stripe_payment_intent_id);
       let charged = fee;
       if (pi.status === "requires_capture") {
         await stripe.paymentIntents.capture(
           b.stripe_payment_intent_id,
-          { amount_to_capture: fee, application_fee_amount: feesFor(fee).platform + feesFor(fee).processing },
+          { amount_to_capture: fee, application_fee_amount: noShowFees.platform + noShowFees.processing },
           { idempotencyKey: `customer-no-show-${b.id}` },
         );
       } else if (pi.status === "succeeded") {
@@ -407,10 +420,10 @@ async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor
       } else {
         throw new BookingError("The customer's card hold is no longer available. Contact support.");
       }
-      update.customer_no_show_fee_cents = charged;
+      update.customer_no_show_fee_cents = rate ? Math.min(noShowBase, charged) : charged;
       update.final_amount_cents = charged;
-      update.platform_fee_cents = feesFor(charged).platform;
-      update.processing_fee_cents = feesFor(charged).processing;
+      update.platform_fee_cents = noShowFees.platform;
+      update.processing_fee_cents = rate ? charged - noShowBase : feesFor(charged).processing;
       update.payment_status = "captured";
       break;
     }
@@ -444,14 +457,17 @@ async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor
       const handling = partsHandlingCents(partsReceipt, partsHandlingBps());
       // Sales tax on parts is collected for the state and kept by the platform for remittance, never paid out.
       const salesTax = partsSalesTaxCents(partsReceipt, handling, b.tax_rate_mpct, salesTaxOnHandling());
-      const final = labor + partsReceipt + handling + salesTax;
+      const rate = bookingServiceRate(b);
+      const serviceFee = serviceFeeCents(labor + partsReceipt + handling + salesTax, rate);
+      const final = labor + partsReceipt + handling + salesTax + serviceFee;
       if (final <= 0) throw new BookingError("Enter what the job cost.");
       if (final > b.estimated_max_cents) throw new BookingError("The total can't be more than the estimate the customer approved.");
       if (!b.stripe_payment_intent_id || !["authorized", "captured"].includes(b.payment_status)) {
         throw new BookingError("There's no authorized payment to capture.");
       }
 
-      const fees = jobFees(labor, final, platformFeeBps(), processingFeeBps(), processingFeeFixedCents());
+      // New bookings: the customer's service fee covers processing. Older ones: processing comes from the mechanic's share.
+      const fees = rate ? { platform: platformFeeCents(labor, platformFeeBps()), processing: serviceFee } : jobFees(labor, final, platformFeeBps(), processingFeeBps(), processingFeeFixedCents());
       fees.processing = Math.max(0, Math.min(fees.processing, final - fees.platform - salesTax)); // tax always fits inside the fee
       const main = await stripe.paymentIntents.retrieve(b.stripe_payment_intent_id);
       const topup = b.topup_payment_intent_id ? await stripe.paymentIntents.retrieve(b.topup_payment_intent_id) : null;
@@ -462,7 +478,7 @@ async function applyTransition(b: BookingRow, actor: { id: string }, role: Actor
         // labor share — never out of the parts money they already spent.
         const { data: claimed } = await admin.rpc("claim_deductions", {
           p_booking_id: b.id,
-          p_available_cents: Math.max(labor + handling - fees.platform - fees.processing, 0),
+          p_available_cents: Math.max(labor + handling - fees.platform - (rate ? 0 : fees.processing), 0),
         });
         deduction = claimed ?? 0;
         const topupAuth = topup?.status === "requires_capture" ? topup.amount_capturable : 0;

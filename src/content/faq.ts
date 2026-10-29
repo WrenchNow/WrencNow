@@ -1,6 +1,6 @@
-import { checkFeeRefundJobs, onboardingFeePerJobCents, onboardingFeeTotalCents, platformFeeBps, processingFeeBps, processingFeeFixedCents } from "@/lib/env";
+import { checkFeeRefundJobs, onboardingFeePerJobCents, onboardingFeeTotalCents, platformFeeBps } from "@/lib/env";
 import { processingLabel } from "@/lib/fee-copy";
-import { mechanicDeductionsCents } from "@/lib/fees";
+import { platformFeeCents } from "@/lib/fees";
 import { money } from "@/lib/format";
 
 export type Faq = { q: string; a: string };
@@ -8,8 +8,8 @@ export type Faq = { q: string; a: string };
 /** Fees come from env (PLATFORM_FEE_BPS etc.), so this answer is built, never hard-coded. */
 function joinCostAnswer(): string {
   const bps = platformFeeBps();
-  const fees = mechanicDeductionsCents(10000, bps, processingFeeBps(), processingFeeFixedCents());
-  return `No monthly fee to be listed. On each completed job WrenchNow keeps a ${bps / 100}% platform fee and card processing (${processingLabel()}) comes out — on a $100 job you keep ${money(10000 - fees.platform - fees.processing)}. The rest is paid out to your bank through Stripe. The background check is optional: it costs ${money(onboardingFeeTotalCents(), { whole: true })} up front and you get ${money(onboardingFeePerJobCents(), { whole: true })} back on each of your first ${checkFeeRefundJobs()} completed jobs.`;
+  const keep = 10000 - platformFeeCents(10000, bps);
+  return `No monthly fee to be listed. On each completed job WrenchNow keeps a ${bps / 100}% platform fee on your labor — that's it. Customers pay the card processing (${processingLabel()}) as a service fee, so on a $100 job you keep ${money(keep)}. The rest is paid out to your bank through Stripe. The background check is optional: it costs ${money(onboardingFeeTotalCents(), { whole: true })} up front and you get ${money(onboardingFeePerJobCents(), { whole: true })} back on each of your first ${checkFeeRefundJobs()} completed jobs.`;
 }
 
 export const CUSTOMER_FAQ: Faq[] = [

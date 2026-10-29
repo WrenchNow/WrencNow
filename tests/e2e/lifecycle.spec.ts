@@ -64,7 +64,10 @@ test("customer books a mechanic and the card hold is placed", async ({ page }) =
   const b = await booking(bookingId);
   expect(b.car_location).toBe("driveway");
   expect(b.stripe_payment_intent_id).toMatch(/^pi_/);
-  expect(Number(b.platform_fee_cents)).toBe(Math.round((Number(b.estimated_max_cents) * 500) / 10000));
+  // Platform fee is on labor; the customer's service fee (card processing, 3.2% + 55¢) is snapshotted and included in the hold.
+  expect(Number(b.platform_fee_cents)).toBe(Math.round((Number(b.labor_max_cents) * 500) / 10000));
+  expect(b.service_fee_bps).toBe(320);
+  expect(b.service_fee_fixed_cents).toBe(55);
   // Sales tax rate snapshotted from the job address (offline here, so from the Denver ZIP): 9.15%.
   expect(b.tax_rate_mpct).toBe(9150);
   expect(b.tax_source).toBe("zip");
@@ -99,28 +102,30 @@ test("mechanic accepts, heads out, verifies the arrival code, and completes — 
   await job.getByRole("button", { name: "Verify & start job" }).click();
   await expect(job.getByLabel(/^Labor/)).toBeVisible();
 
-  // Complete with $50 labor → capture on Stripe with the 5% platform fee + processing taken from the mechanic's share.
+  // Complete with $50 labor → the customer pays $50 + a $2.15 service fee (3.2% + 55¢); the mechanic keeps $50 − 5%.
   await job.getByLabel(/^Labor/).fill("50");
   await job.getByRole("button", { name: /Complete|Finish|charge/i }).click();
   await waitFor(async () => (await booking(bookingId)).status === "completed", "job completed");
   const b = await booking(bookingId);
   expect(b.payment_status).toBe("captured");
-  expect(b.final_amount_cents).toBe(5000);
+  expect(b.final_amount_cents).toBe(5215);
+  expect(b.processing_fee_cents).toBe(215); // paid by the customer
   expect(b.platform_fee_cents).toBe(250); // 5% of labor
   expect(b.sales_tax_cents).toBe(0); // labor only: no sales tax
   const state = await (await fetch(`${FAKE}/__test/state`)).json();
   const pi = state.payment_intents.find((p: { id: string }) => p.id === b.stripe_payment_intent_id);
   expect(pi.status).toBe("succeeded");
-  expect(pi.amount_received).toBe(5000);
-  // Application fee = platform fee + card processing (+ onboarding installment), all from the mechanic's side.
-  expect(pi.application_fee_amount).toBe(250 + Number(b.processing_fee_cents) + Number(b.onboarding_fee_cents));
+  expect(pi.amount_received).toBe(5215);
+  // Application fee = platform fee + the customer's service fee, so the mechanic's transfer is exactly $47.50.
+  expect(pi.application_fee_amount).toBe(250 + 215);
+  expect(pi.amount_received - pi.application_fee_amount).toBe(4750);
   await waitFor(async () => (await q("select 1 from public.ledger_entries where booking_id = $1 and type = 'charge'", [bookingId])).length > 0, "ledger charge from webhook");
 });
 
 test("customer sees the receipt and leaves a review; admin refunds part of it", async ({ page }) => {
   await asUser(page, USERS.customer, `/account/bookings/${bookingId}`);
   await expect(page.getByText("Paid", { exact: true })).toBeVisible();
-  await expect(page.getByText("$50.00").first()).toBeVisible();
+  await expect(page.getByText("$52.15").first()).toBeVisible();
   await page.locator('label:has(input[name="rating"][value="5"])').click();
   await page.getByLabel(/Tell other drivers/).fill("Lifecycle test review — on time and clear.");
   await page.getByRole("button", { name: /review/i }).click();
@@ -139,7 +144,8 @@ test("customer sees the receipt and leaves a review; admin refunds part of it", 
   await page.getByRole("link", { name: /itemized receipt/ }).click();
   await expect(page.getByRole("cell", { name: "Labor" })).toBeVisible();
   await expect(page.getByRole("row", { name: /Refunded/ })).toContainText("$10.00");
-  await expect(page.getByRole("row", { name: /Net paid/ })).toContainText("$40.00");
+  await expect(page.getByRole("row", { name: /Service fee/ })).toContainText("$2.15");
+  await expect(page.getByRole("row", { name: /Net paid/ })).toContainText("$42.15");
   await expect(page.getByText(/independent contractor/)).toBeVisible();
 });
 

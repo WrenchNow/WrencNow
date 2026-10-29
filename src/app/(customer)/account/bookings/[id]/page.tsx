@@ -8,6 +8,7 @@ import { StatusTimeline } from "@/components/account/status-timeline";
 import { Stars } from "@/components/review-list";
 import { Avatar } from "@/components/search/mechanic-card";
 import { ButtonLink } from "@/components/ui/button";
+import { bookingServiceRate, withServiceFee } from "@/lib/fees";
 import { Card } from "@/components/ui/card";
 import { Notice } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/layout";
@@ -66,7 +67,7 @@ export default async function BookingDetailPage({ params, searchParams }: PagePr
   const boughtCost = parts.filter((p) => p.status === "purchased").reduce((s2, p) => s2 + (p.receipt_cents ?? 0), 0);
   const laborMax = b.labor_max_cents ?? b.estimated_max_cents;
   const quotePartsTax = partsSalesTaxCents(quotedCost + boughtCost, partsHandlingCents(quotedCost + boughtCost, handlingBps), b.tax_rate_mpct, salesTaxOnHandling());
-  const quoteNewMax = laborMax + partsChargeCents(quotedCost + boughtCost, handlingBps) + quotePartsTax;
+  const quoteNewMax = withServiceFee(laborMax + partsChargeCents(quotedCost + boughtCost, handlingBps) + quotePartsTax, bookingServiceRate(b));
   const taxLabel = `${formatRate(b.tax_rate_mpct)}${b.tax_place ? `, ${b.tax_place}` : b.tax_county ? `, ${b.tax_county}` : ""}`;
   // The mechanic's own warranty, if they offer one (WrenchNow offers none).
   const warranty = b.status === "completed" ? (b.warranty_days ?? 0) : null;
@@ -221,7 +222,10 @@ export default async function BookingDetailPage({ params, searchParams }: PagePr
             )}
             {b.estimate_approved_at && <Detail label="Estimate approved" value={dateTime(b.estimate_approved_at)} />}
             {b.customer_no_show_fee_cents ? (
-              <Detail label="No-show fee" value={money(b.customer_no_show_fee_cents)} />
+              <>
+                <Detail label="No-show fee" value={money(b.customer_no_show_fee_cents)} />
+                {b.service_fee_bps !== null && b.processing_fee_cents ? <Detail label="Service fee (card processing)" value={money(b.processing_fee_cents)} /> : null}
+              </>
             ) : (
               b.final_amount_cents && (
                 <>
@@ -229,6 +233,7 @@ export default async function BookingDetailPage({ params, searchParams }: PagePr
                   {b.parts_cents !== null && b.parts_cents > 0 && <Detail label="Parts (at receipt cost)" value={money(b.parts_cents)} />}
                   {b.parts_handling_cents ? <Detail label="Parts handling" value={money(b.parts_handling_cents)} /> : null}
                   {b.sales_tax_cents ? <Detail label={`Sales tax on parts (${taxLabel})`} value={money(b.sales_tax_cents)} /> : null}
+                  {b.service_fee_bps !== null && b.processing_fee_cents ? <Detail label="Service fee (card processing)" value={money(b.processing_fee_cents)} /> : null}
                   <Detail label="Total charged" value={money(b.final_amount_cents)} />
                 </>
               )

@@ -89,7 +89,7 @@
     "heading": "7. Payment Terms",
     "blocks": [
      {
-      "p": "Customers pay for services through the WrenchNow platform. WrenchNow charges a platform fee on each transaction. All payments are processed by Stripe, Inc. and are subject to Stripe's terms and conditions. WrenchNow is not responsible for any errors, delays, or failures in payment processing."
+      "p": "Customers pay for services through the WrenchNow platform. WrenchNow charges a platform fee on each transaction. Customers also pay a service fee of {{PROCESSING_FEE}} of the job total, which covers card processing; it applies to every payment method, is shown before you book and on your receipt, and is refunded in proportion to any refund. All payments are processed by Stripe, Inc. and are subject to Stripe's terms and conditions. WrenchNow is not responsible for any errors, delays, or failures in payment processing."
      },
      {
       "p": "Parts: your estimate includes labor and, where available, a parts estimate. Before buying parts, your Mechanic sends an itemized parts list for your approval in the app; your approval is recorded with the date and time. Parts are billed at the receipt price, never more than the amount you approved, plus a handling charge of {{PARTS_HANDLING}} of the parts cost. You can view each receipt in the app."
@@ -590,7 +590,7 @@
       "p": "WrenchNow charges a platform fee on each completed transaction. The current platform fee is {{PLATFORM_FEE_PERCENT}} of the total job value. This fee is subject to change with 30 days' notice."
      },
      {
-      "p": "Card processing: a card processing fee of {{PROCESSING_FEE}} of each payment is deducted from your share. It covers the card and payout costs that Stripe charges WrenchNow."
+      "p": "Card processing: customers pay a service fee that covers card processing, so it is not deducted from your share. (For jobs booked before October 29, 2026, a card processing fee of {{PROCESSING_FEE}} of each payment was deducted from your share.)"
      },
      {
       "p": "Background check (optional): you may choose to be background checked through WrenchNow's screening partner. If you do, you pay a fee of {{ONBOARDING_TOTAL}} up front, and WrenchNow refunds {{ONBOARDING_PER_JOB}} of it to your original payment method after each of your completed jobs until the full fee has been refunded. Refunds are made only for completed, paid jobs. Mechanics who are not background checked are shown to customers as \"Not background checked\", and customers must acknowledge this before booking. A background check result that WrenchNow or its screening partner considers adverse may prevent you from taking jobs."

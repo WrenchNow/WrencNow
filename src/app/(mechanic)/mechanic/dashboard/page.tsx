@@ -12,7 +12,6 @@ import { featuredPriceCents, platformFeeBps } from "@/lib/env";
 import { dateTime, money } from "@/lib/format";
 import { getMyMechanic, insuranceDaysRemaining, readiness } from "@/lib/mechanic";
 import { createClient } from "@/lib/supabase/server";
-import { processingLabel } from "@/lib/fee-copy";
 import { manageFeatured, setOnline, startFeatured } from "../actions";
 
 export const metadata: Metadata = { title: "Mechanic dashboard" };
@@ -154,7 +153,7 @@ export default async function MechanicDashboardPage({ searchParams }: PageProps<
                 <div>
                   <dt className="text-muted">Fees per job</dt>
                   <dd className="font-display text-2xl font-bold text-cream">{fee}%</dd>
-                  <dd className="text-xs text-muted">+ card processing {processingLabel()}</dd>
+                  <dd className="text-xs text-muted">on labor · customers pay card processing</dd>
                 </div>
               </dl>
             </Card>

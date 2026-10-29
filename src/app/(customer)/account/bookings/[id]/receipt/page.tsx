@@ -91,6 +91,14 @@ export default async function ReceiptPage({ params }: PageProps<"/account/bookin
                 <td className="py-2 text-right text-cream">{money(b.customer_no_show_fee_cents)}</td>
               </tr>
             ) : null}
+            {b.service_fee_bps !== null && b.processing_fee_cents ? (
+              <tr>
+                <td className="py-2 text-cream">
+                  Service fee <span className="text-muted">(card processing)</span>
+                </td>
+                <td className="py-2 text-right text-cream">{money(b.processing_fee_cents)}</td>
+              </tr>
+            ) : null}
           </tbody>
           <tfoot className="border-t border-line-strong">
             <tr>

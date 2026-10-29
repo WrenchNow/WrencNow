@@ -91,7 +91,17 @@ export function BookingWizard({
   const laborMinLocal = estimateVisit ? estimateFee : service && mechanic.rateCents ? estimateMinCents(mechanic.rateCents, service.min) : 0;
   const laborMaxLocal = estimateVisit ? estimateFee : service && mechanic.rateCents ? estimateMaxCents(mechanic.rateCents, service.max) : 0;
   // Exact numbers (incl. the parts estimate for this car) come from the server at the review step.
-  const [quote, setQuote] = useState<{ laborMin: number; laborMax: number; partsCharge: number; partsTax: number; taxLabel: string; basis: string; total: number } | null>(null);
+  const [quote, setQuote] = useState<{
+    laborMin: number;
+    laborMax: number;
+    partsCharge: number;
+    partsTax: number;
+    taxLabel: string;
+    basis: string;
+    serviceFee: number;
+    serviceFeeMin?: number;
+    total: number;
+  } | null>(null);
   useEffect(() => {
     if (step !== 3 || !serviceSlug || !vehicleId) return;
     let live = true;
@@ -100,7 +110,7 @@ export function BookingWizard({
       live = false;
     };
   }, [step, serviceSlug, vehicleId, mechanic.id, address]);
-  const estMin = (quote?.laborMin ?? laborMinLocal) + (quote?.partsCharge ?? 0) + (quote?.partsTax ?? 0);
+  const estMin = (quote?.laborMin ?? laborMinLocal) + (quote?.partsCharge ?? 0) + (quote?.partsTax ?? 0) + (quote?.serviceFeeMin ?? quote?.serviceFee ?? 0);
   const estMax = quote?.total ?? laborMaxLocal;
 
   if (services.length === 0) {
@@ -355,7 +365,7 @@ export function BookingWizard({
               <Summary label="Where" value={address} />
               <Summary label="When" value={slotLabel} />
               {estimateVisit ? (
-                <Summary label="Estimate visit" value={estimateFee === 0 ? "Free" : `${money(estimateFee)} flat fee`} />
+                <Summary label="Estimate visit" value={estimateFee === 0 ? "Free" : `${money(estimateFee)} flat fee + ${money(quote?.serviceFee ?? 0)} service fee`} />
               ) : (
                 <>
                   <Summary label="Estimate" value={`${money(estMin, { whole: true })}–${money(estMax, { whole: true })}`} />
@@ -368,6 +378,7 @@ export function BookingWizard({
                         : "Quoted in the app before purchase"
                     }
                   />
+                  <Summary label="Service fee" value={quote ? `up to ${money(quote.serviceFee)} (card processing)` : "card processing"} />
                 </>
               )}
             </dl>
@@ -386,6 +397,10 @@ export function BookingWizard({
                 ) : (
                   <>
                     <li>We place a hold of {money(estMax)} on your card now. You aren&apos;t charged yet.</li>
+                    <li>
+                      The total includes a small service fee that covers card processing, so your mechanic keeps what they earn. It&apos;s figured on the final
+                      amount, so it shrinks if the job costs less.
+                    </li>
                     <li>When the job is done, you&apos;re charged the final amount — never more than {money(estMax)}. The rest of the hold is released.</li>
                     <li>
                       Parts are billed at the receipt price plus a small handling charge and Colorado sales tax for where the job is

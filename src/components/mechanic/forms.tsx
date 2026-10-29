@@ -5,6 +5,7 @@ import { checkIn, saveTypicalPartsPrices, mechanicTransition, saveMechanicProfil
 import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/feedback";
 import { Checkbox, Field, Input, RequiredLegend, RequiredMark, Select, Textarea } from "@/components/ui/form";
+import { serviceFeeCents } from "@/lib/fees";
 import { WARRANTY_COVERS, WARRANTY_OPTIONS, warrantyLabel, type WarrantyCovers } from "@/lib/format";
 import { createClient } from "@/lib/supabase/client";
 import { CONTACT_EMAIL, CONTACT_MAILTO } from "@/lib/contact";
@@ -246,6 +247,7 @@ export function JobActions({
   handlingBps = 0,
   partsPending = false,
   estimateVisit = null,
+  serviceRate = null,
 }: {
   id: string;
   status: string;
@@ -258,6 +260,8 @@ export function JobActions({
   handlingBps?: number;
   partsPending?: boolean;
   estimateVisit?: { feeCents: number } | null;
+  /** Customer service fee rate snapshotted on the booking (null on older bookings). */
+  serviceRate?: { bps: number; fixedCents: number } | null;
 }) {
   const [state, action, pending] = useActionState(mechanicTransition, {});
   const [confirmDecline, setConfirmDecline] = useState(false);
@@ -343,6 +347,7 @@ export function JobActions({
           partsReceiptCents={partsReceiptCents}
           handlingBps={handlingBps}
           partsPending={partsPending}
+          serviceRate={serviceRate}
           id={id}
         />
       )}
@@ -496,11 +501,13 @@ function CompleteJobForm({
   partsReceiptCents,
   handlingBps,
   partsPending,
+  serviceRate,
 }: {
   id: string;
   hidden: React.ReactNode;
   action: (fd: FormData) => void;
   pending: boolean;
+  serviceRate: { bps: number; fixedCents: number } | null;
   estimateMax: number;
   laborMax: number;
   partsReceiptCents: number;
@@ -510,7 +517,10 @@ function CompleteJobForm({
   const [labor, setLabor] = useState("");
   const laborCents = Math.round(Number(labor || 0) * 100);
   const handling = Math.round((partsReceiptCents * handlingBps) / 10000);
-  const total = laborCents + partsReceiptCents + handling;
+  // Sales tax on parts isn't shown here; the server adds it (and checks the approved max) when charging.
+  const sub = laborCents + partsReceiptCents + handling;
+  const serviceFee = serviceFeeCents(sub, serviceRate);
+  const total = sub + serviceFee;
   const over = laborCents > laborMax || total > estimateMax;
   const usd = (c: number) => `$${(c / 100).toFixed(2)}`;
   return (
@@ -530,6 +540,12 @@ function CompleteJobForm({
         <dd className="text-right text-cream">{usd(partsReceiptCents)}</dd>
         <dt className="text-muted">Parts handling</dt>
         <dd className="text-right text-cream">{usd(handling)}</dd>
+        {serviceRate && (
+          <>
+            <dt className="text-muted">Service fee (customer pays)</dt>
+            <dd className="text-right text-cream">{usd(serviceFee)}</dd>
+          </>
+        )}
         <dt className="font-semibold text-cream">Customer pays</dt>
         <dd className={`text-right font-semibold ${over ? "text-danger" : "text-cream"}`}>{usd(total)}</dd>
       </dl>

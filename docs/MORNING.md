@@ -47,7 +47,9 @@ Auth setup steps (email sender, Google sign-in, confirm email) are in **`docs/AU
 - **Warranties** are the mechanic's own, with length and coverage (labor / parts / both). If one isn't honored,
   Admin → Problem reports can refund the customer and recover it from the mechanic's next payout(s).
 - **Estimate visits:** each mechanic can offer them free, for a fee, or not at all.
-- **Fees:** 5% platform + card processing (3.2% + 55¢); a $100 job pays the mechanic $91.25. Top priority
+- **Fees (Oct 29):** mechanics pay only the 5% platform fee on labor; a $100 job pays the mechanic $95. Customers pay
+  card processing (3.2% + 55¢) as a service fee on every payment — not a card surcharge, which Colorado caps at 2% and
+  bans on debit cards. Bookings made before Oct 29 keep the old split. Top priority
   (sponsored) placement is $29/month.
 
 ## Questions for you

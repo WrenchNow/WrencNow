@@ -5,6 +5,7 @@ import { partsHandlingBps, salesTaxOnHandling } from "@/lib/env";
 import { dateTime, money } from "@/lib/format";
 import { notifyBookingParts } from "@/lib/notify";
 import { partsChargeCents, partsHandlingCents, quoteSubtotalCents, topupNeededCents } from "@/lib/parts-math";
+import { bookingServiceRate, withServiceFee } from "@/lib/fees";
 import { partsSalesTaxCents } from "@/lib/sales-tax";
 import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -68,7 +69,8 @@ export async function quoteSummary(bookingId: string) {
   // Colorado sales tax on the parts, at the rate snapshotted for this job's address.
   const partsTax = partsSalesTaxCents(partsCost, partsHandlingCents(partsCost, partsHandlingBps()), b.tax_rate_mpct, salesTaxOnHandling());
   const laborMax = b.labor_max_cents ?? b.estimated_max_cents;
-  const newMax = laborMax + partsCharge + partsTax;
+  // Plus the customer service fee (card processing) on bookings that carry one.
+  const newMax = withServiceFee(laborMax + partsCharge + partsTax, bookingServiceRate(b));
   const mainAuthorized = b.hold_cents ?? b.estimated_max_cents; // the original card hold
   return { booking: b, quoted, partsCost, partsCharge, partsTax, laborMax, newMax, mainAuthorized };
 }

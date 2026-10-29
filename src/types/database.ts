@@ -235,6 +235,8 @@ export type Database = {
           sales_tax_refunded_cents: number;
           scheduled_end: string;
           scheduled_start: string;
+          service_fee_bps: number | null;
+          service_fee_fixed_cents: number | null;
           service_id: number;
           started_at: string | null;
           status: Database["public"]["Enums"]["booking_status"];
@@ -312,6 +314,8 @@ export type Database = {
           sales_tax_refunded_cents?: number;
           scheduled_end: string;
           scheduled_start: string;
+          service_fee_bps?: number | null;
+          service_fee_fixed_cents?: number | null;
           service_id: number;
           started_at?: string | null;
           status?: Database["public"]["Enums"]["booking_status"];
@@ -388,6 +392,8 @@ export type Database = {
           sales_tax_refunded_cents?: number;
           scheduled_end?: string;
           scheduled_start?: string;
+          service_fee_bps?: number | null;
+          service_fee_fixed_cents?: number | null;
           service_id?: number;
           started_at?: string | null;
           status?: Database["public"]["Enums"]["booking_status"];
