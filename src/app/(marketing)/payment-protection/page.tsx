@@ -11,13 +11,13 @@ export const metadata: Metadata = {
 
 const PROTECTIONS = [
   { title: "Never charged more than your estimate", body: "Your card is only charged the final amount when the job is done, and the app won't let it go over the estimate you approved." },
-  { title: "Refunds and disputes", body: "If something goes wrong, we can step in, review the job, and refund you. We can't do that for money you sent outside the app." },
+  { title: "Help when something goes wrong", body: "Report a problem from your booking and we review it with you and the mechanic. Refunds are decided case by case under our Terms — we can only process them for payments made through WrenchNow." },
   { title: "A vetted mechanic, on the record", body: "Every job paid through WrenchNow is tied to an approved, insured mechanic — with their background check status shown up front — and a record of what was booked." },
   { title: "Honest reviews", body: "Only jobs paid through WrenchNow can be reviewed, so ratings reflect real, verified work." },
 ];
 
 const RED_FLAGS = [
-  "Asking you to pay with cash, Venmo, Zelle, Cash App, PayPal, Apple Pay, or a payment link",
+  "Asking you to pay them directly — cash, Venmo, Zelle, Cash App, PayPal, or their own payment link — instead of through your booking",
   "Offering a discount if you pay them directly",
   "Asking for a deposit or parts money before the job",
   "Suggesting you book them outside the app next time",
@@ -28,7 +28,7 @@ export default function PaymentProtectionPage() {
   return (
     <Container className="max-w-3xl py-12 sm:py-16">
       <PageHeader eyebrow="Payment protection" title="Only pay through WrenchNow">
-        Never pay a mechanic directly. When you pay through the app, you&apos;re protected. When you pay any other way, you&apos;re on your own.
+        Never pay a mechanic directly. Paying through your booking keeps your estimate limit, receipts and our help if something goes wrong. WrenchNow can&apos;t process refunds for payments made outside the platform — though you keep your legal rights and any rights with your bank or card.
       </PageHeader>
 
       <section>

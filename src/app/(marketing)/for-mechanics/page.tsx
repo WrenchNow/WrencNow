@@ -5,7 +5,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { Container } from "@/components/ui/layout";
 import { MECHANIC_FAQ } from "@/content/faq";
 import { COMPARISON_SOURCES, shopTechShareCents, SHOP_LABOR_RATE_CENTS, TECH_MEDIAN_WAGE_CENTS } from "@/content/shop-comparison";
-import { checkFeeRefundJobs, featuredPriceCents, onboardingFeePerJobCents, onboardingFeeTotalCents, platformFeeBps } from "@/lib/env";
+import { checkFeeRefundJobs, featuredPriceCents, onboardingFeePerJobCents, onboardingFeeTotalCents, partsHandlingBps, platformFeeBps } from "@/lib/env";
 import { processingLabel } from "@/lib/fee-copy";
 import { platformFeeCents } from "@/lib/fees";
 import { money } from "@/lib/format";
@@ -33,7 +33,7 @@ export default function ForMechanicsPage() {
     { title: "Reputation that travels with you", body: "Every completed job and verified review lifts your ranking in search, so the best mechanics get the most requests." },
     {
       title: `Top priority placement — ${sponsored}/mo`,
-      body: "Be the first mechanic customers see — top placement in your area, more booking requests. Optional, and cancel anytime.",
+      body: "Be the first mechanic customers see — top placement in your area, more booking requests. Shown in a separate row labeled “Sponsored”; regular results stay ranked by reviews and reliability. Optional, cancel anytime.",
     },
   ];
 
@@ -58,8 +58,8 @@ export default function ForMechanicsPage() {
             <span className="text-ore">Your money.</span>
           </h1>
           <p className="mt-6 max-w-xl text-lg text-ink">
-            WrenchNow is built so mechanics make as much as possible. Keep about {money(keep, { whole: true })} of every {money(EXAMPLE_JOB_CENTS, { whole: true })} you
-            bill — set your own rate, pick your jobs, and let customers come to you.
+            WrenchNow is built so mechanics make as much as possible. Keep {100 - bps / 100}% of your labor charges — set your own rate, pick your jobs, and let
+            customers come to you.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <ButtonLink href="/signup?role=mechanic" size="lg">
@@ -77,7 +77,7 @@ export default function ForMechanicsPage() {
           <div className="rounded-[var(--radius-card)] border-2 border-ore bg-ore-dim p-6">
             <p className="text-sm font-semibold tracking-wider text-ore-bright uppercase">On WrenchNow</p>
             <p className="mt-2 font-display text-6xl font-black text-cream">{money(keep)}</p>
-            <p className="mt-1 text-ink">goes to you</p>
+            <p className="mt-1 text-ink">goes to you, before your own business costs</p>
           </div>
           <div className="rounded-[var(--radius-card)] border border-line bg-surface p-6">
             <p className="text-sm font-semibold tracking-wider text-muted uppercase">At a typical shop</p>
@@ -104,7 +104,7 @@ export default function ForMechanicsPage() {
           <ul className="mt-3 space-y-1 text-xs text-muted">
             <li>No monthly fee and no sign-up fee to be listed.</li>
             <li>Card processing ({processingLabel()}) is paid by the customer as a service fee — it never comes out of your pay.</li>
-            <li>Parts are paid back at your receipt price plus a small handling charge that goes to you.</li>
+            <li>Parts are paid back at your receipt price plus a {partsHandlingBps() / 100}% handling charge that goes to you.</li>
             <li>
               Optional background check: {money(onboardingFeeTotalCents(), { whole: true })} up front, refunded {money(onboardingFeePerJobCents(), { whole: true })} per
               completed job for your first {checkFeeRefundJobs()} jobs.
@@ -120,7 +120,8 @@ export default function ForMechanicsPage() {
                 </a>
               </span>
             ))}
-            . Shop comparison is labor only and a national average; your area may differ.
+            . This compares gross labor revenue, not take-home pay: as an independent mechanic you cover your own travel, tools, insurance, downtime and
+            taxes, which a shop employee doesn&apos;t. National averages; your area may differ.
           </p>
         </details>
       </Section>

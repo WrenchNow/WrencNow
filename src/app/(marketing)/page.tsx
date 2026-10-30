@@ -65,7 +65,7 @@ export default async function HomePage() {
         )}
       </Section>
 
-      <Section eyebrow="No fine print" title="Questions we get a lot" intro="Car repairs feel risky. Here's the honest answer.">
+      <Section eyebrow="Pricing and policies, explained" title="Questions we get a lot" intro="Car repairs feel risky. Here's the honest answer.">
         <FaqList items={CUSTOMER_FAQ.slice(0, 5)} />
       </Section>
 

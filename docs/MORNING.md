@@ -52,6 +52,19 @@ Auth setup steps (email sender, Google sign-in, confirm email) are in **`docs/AU
   bans on debit cards. Bookings made before Oct 29 keep the old split. Top priority
   (sponsored) placement is $29/month.
 
+## Decisions needed before taking real payments (from the Oct 30 outside review)
+1. **Commission basis:** the code charges 5% of **labor only** (pricing and the Mechanic Agreement now both say so).
+   On a $100-labor + $200-parts job that's $5. Keep it, raise it, or charge on the whole job?
+2. **Who bears chargebacks:** today WrenchNow makes the charge and transfers to the mechanic ("destination charges"), so
+   disputes and refunds debit WrenchNow first. The alternative is "direct charges" on each mechanic's Stripe account,
+   with WrenchNow taking its fee — the mechanic is then the seller of record. Worth deciding with your lawyer/CPA.
+   ([Stripe charge types](https://docs.stripe.com/connect/charges))
+3. **Sales tax sign-off:** a Colorado tax professional should approve sample invoices for Denver and neighboring cities.
+4. **Insurance minimum:** $1M per occurrence is "recommended" — make it required (we'd then check limits too)?
+5. **Services to launch with:** consider pausing timing belt, transmission and European repair until mechanics are
+   proven — they're hard to do safely in a driveway.
+6. **Denver garage-repair license:** confirm in writing whether mobile mechanics (and WrenchNow) need one.
+
 ## Questions for you
 - **Sales tax on parts** is collected (built Oct 25) — confirm the setup with a CPA before real jobs.
 - **Checkr package:** Basic (~$30) fits inside the $50 fee; Essential (~$55–60) doesn't.

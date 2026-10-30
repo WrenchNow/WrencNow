@@ -112,6 +112,16 @@ export async function saveServices(_: FormState, formData: FormData): Promise<Fo
   const want = new Set(ids);
   const toAdd = [...want].filter((id) => !have.has(id));
   const toRemove = [...have].filter((id) => !want.has(id));
+  // AC work for pay needs EPA Section 609 certification (federal rule), so it must be on the mechanic's profile.
+  if (toAdd.length) {
+    const [{ data: ac }, { data: me }] = await Promise.all([
+      supabase.from("services").select("id").eq("slug", "ac-heat").maybeSingle(),
+      supabase.from("mechanics").select("certifications").eq("id", viewer.id).single(),
+    ]);
+    if (ac && toAdd.includes(ac.id) && !(me?.certifications ?? []).some((c) => /609/.test(c))) {
+      return { error: "AC service needs EPA Section 609 certification. Add it to your certifications (e.g. “EPA 609”) in your profile first." };
+    }
+  }
   if (toRemove.length) await supabase.from("mechanic_services").delete().eq("mechanic_id", viewer.id).in("service_id", toRemove);
   if (toAdd.length) {
     const { error } = await supabase.from("mechanic_services").insert(toAdd.map((service_id) => ({ mechanic_id: viewer.id, service_id })));

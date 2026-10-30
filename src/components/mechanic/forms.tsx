@@ -147,6 +147,7 @@ export function ServicesForm({ services, selected, tierRank }: { services: { id:
                 {s.name}
               </span>
               {locked && <span className="ml-auto text-xs text-muted">{s.tier} tier</span>}
+              {!locked && s.name.startsWith("AC") && <span className="ml-auto text-xs text-muted">needs EPA 609</span>}
             </label>
           );
         })}

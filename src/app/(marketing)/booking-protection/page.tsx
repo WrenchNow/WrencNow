@@ -47,11 +47,20 @@ export default function BookingProtectionPage() {
 
       <section className="mt-12">
         <h2 className="text-2xl font-bold uppercase">Something wrong after a job?</h2>
+        <p className="mt-2 text-sm text-muted">
+          What&apos;s covered: the four points above, plus our help sorting out problems. What isn&apos;t: WrenchNow doesn&apos;t warranty repairs — refunds are
+          decided case by case, and a mechanic&apos;s own warranty is theirs. Full details on the{" "}
+          <Link href="/support" className="text-ore hover:underline">
+            support page
+          </Link>
+          .
+        </p>
         <ol className="mt-4 list-decimal space-y-2 pl-5 text-ink">
           <li>
             Open the booking in <Link href="/account/bookings" className="text-ore hover:underline">your account</Link> and use{" "}
             <strong className="text-cream">“Report a problem”</strong>.
           </li>
+          <li>If the car feels unsafe to drive, don&apos;t drive it — arrange a tow. Keep photos, old parts and receipts.</li>
           <li>We let your mechanic know and follow up with you within one business day.</li>
           <li>
             We help you and your mechanic work it out. You can always reach us at{" "}

@@ -1,4 +1,4 @@
-import { checkFeeRefundJobs, onboardingFeePerJobCents, onboardingFeeTotalCents, platformFeeBps } from "@/lib/env";
+import { checkFeeRefundJobs, onboardingFeePerJobCents, onboardingFeeTotalCents, partsHandlingBps, platformFeeBps } from "@/lib/env";
 import { processingLabel } from "@/lib/fee-copy";
 import { platformFeeCents } from "@/lib/fees";
 import { money } from "@/lib/format";
@@ -31,7 +31,7 @@ export const CUSTOMER_FAQ: Faq[] = [
   },
   {
     q: "How are parts priced?",
-    a: "Before buying anything, your mechanic sends an itemized parts list for you to approve in the app. You're charged the price on the store receipt (never more than you approved) plus a small, disclosed handling charge, and you can see every receipt. WrenchNow may earn a referral fee from parts stores when mechanics shop through our links; that never changes what you pay.",
+    a: `Before buying anything, your mechanic sends an itemized parts list for you to approve in the app. You're charged the price on the store receipt (never more than you approved) plus a ${partsHandlingBps() / 100}% handling charge, and you can see every receipt. WrenchNow may earn a referral fee from parts stores when mechanics shop through our links; that never changes what you pay.`,
   },
   {
     q: "Can I pay the mechanic directly?",

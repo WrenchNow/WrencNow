@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "FAQ", description: "Answers about bo
 export default function FaqPage() {
   return (
     <Container className="max-w-3xl py-12 sm:py-16">
-      <PageHeader eyebrow="No fine print" title="FAQ" />
+      <PageHeader eyebrow="Pricing and policies, explained" title="FAQ" />
       <h2 className="mb-4 text-2xl font-bold uppercase">For customers</h2>
       <FaqList items={CUSTOMER_FAQ} />
       <h2 className="mt-12 mb-4 text-2xl font-bold uppercase">For mechanics</h2>

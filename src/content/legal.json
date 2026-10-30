@@ -95,13 +95,13 @@
       "p": "Parts: your estimate includes labor and, where available, a parts estimate. Before buying parts, your Mechanic sends an itemized parts list for your approval in the app; your approval is recorded with the date and time. Parts are billed at the receipt price, never more than the amount you approved, plus a handling charge of {{PARTS_HANDLING}} of the parts cost. You can view each receipt in the app."
      },
      {
-      "p": "All sales are final unless WrenchNow determines at its sole discretion that a refund is warranted. Disputes regarding payment must be raised within 30 days of the transaction."
+      "p": "Refunds through WrenchNow are decided case by case under these Terms. Please report payment problems through the app within 30 days of the charge so we can investigate while records are fresh. This doesn't limit any rights you have under law or with your card issuer, and it doesn't apply to a mechanic's own warranty, which runs for the period the mechanic states."
      },
      {
       "p": "Customer no-shows: if your Mechanic checks in at the service address and you do not respond within 15 minutes of the later of the check-in time or the booked start time, the booking may be marked as a customer no-show and a no-show fee of {{CUSTOMER_NO_SHOW_FEE}} (never more than your estimate) will be charged to your payment method instead of the job. You can cancel without charge any time before your Mechanic is on the way."
      },
      {
-      "p": "Never pay a Mechanic outside WrenchNow. Payments made outside the platform are not protected, and WrenchNow cannot refund them."
+      "p": "Never pay a Mechanic outside WrenchNow. WrenchNow cannot process refunds for payments made outside the platform."
      }
     ]
    },
@@ -532,7 +532,7 @@
      },
      {
       "ul": [
-       "General liability insurance (recommended minimum: $1,000,000 per occurrence)",
+       "General liability insurance that covers mobile automotive work, with a certificate WrenchNow can verify (WrenchNow recommends at least $1,000,000 per occurrence)",
        "Garage keeper's liability or on-hook towing insurance if applicable",
        "Workers' compensation insurance if required by your jurisdiction",
        "Any other insurance required by applicable law"
@@ -587,7 +587,7 @@
     "heading": "6. Platform Fee and Payments",
     "blocks": [
      {
-      "p": "WrenchNow charges a platform fee on each completed transaction. The current platform fee is {{PLATFORM_FEE_PERCENT}} of the total job value. This fee is subject to change with 30 days' notice."
+      "p": "WrenchNow charges a platform fee on each completed transaction. The current platform fee is {{PLATFORM_FEE_PERCENT}} of the labor charge on each job. It is not charged on parts, the parts handling charge, sales tax, or the customer service fee. This fee is subject to change with 30 days' notice."
      },
      {
       "p": "Card processing: customers pay a service fee that covers card processing, so it is not deducted from your share. (For jobs booked before October 29, 2026, a card processing fee of {{PROCESSING_FEE}} of each payment was deducted from your share.)"

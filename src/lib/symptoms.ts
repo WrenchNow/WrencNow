@@ -45,7 +45,7 @@ const RULES: Rule[] = [
     ],
     services: ["brakes"],
     safety: "soon",
-    advice: "Grinding or a soft pedal means get it looked at right away and drive as little as possible.",
+    advice: "If braking feels weaker, the pedal sinks or feels soft, or you see a fluid leak, stop driving and arrange an inspection or a tow. Grinding means metal-on-metal — don't wait.",
   },
   {
     id: "check-engine",
