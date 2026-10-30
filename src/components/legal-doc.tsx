@@ -7,7 +7,7 @@ import { Container } from "./ui/layout";
 type Block = { p?: string; ul?: string[] };
 type Doc = { intro: Block[]; sections: { heading: string; blocks: Block[] }[] };
 
-const LAST_UPDATED = "September 13, 2026";
+const LAST_UPDATED = "October 30, 2026";
 
 function feePercent(): string {
   try {

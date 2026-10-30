@@ -46,6 +46,7 @@ export function BookingWizard({
   initialPhone,
   noShowFeeLabel,
   businessName,
+  handlingPct,
 }: {
   mechanic: { id: string; name: string; rateCents: number; verified: boolean; estimateFeeCents: number | null };
   services: ServiceOpt[];
@@ -58,6 +59,7 @@ export function BookingWizard({
   initialPhone: string;
   noShowFeeLabel: string;
   businessName: string | null;
+  handlingPct: number;
 }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -403,7 +405,7 @@ export function BookingWizard({
                     </li>
                     <li>When the job is done, you&apos;re charged the final amount — never more than {money(estMax)}. The rest of the hold is released.</li>
                     <li>
-                      Parts are billed at the receipt price plus a small handling charge and Colorado sales tax for where the job is
+                      Parts are billed at the receipt price plus a {handlingPct}% handling charge and Colorado sales tax for where the job is
                       {quote?.taxLabel ? ` (${quote.taxLabel})` : ""}. Labor isn&apos;t taxed. Before buying, your mechanic sends an itemized parts list for you to approve in
                       the app, and you&apos;ll see every receipt.
                     </li>

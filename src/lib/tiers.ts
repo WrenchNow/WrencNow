@@ -21,6 +21,6 @@ export const TIER_LABEL: Record<SkillTier, string> = {
 
 export const TIER_DESCRIPTION: Record<SkillTier, string> = {
   basic: "Oil changes, batteries, wipers, filters, bulbs, tire rotations, jump starts.",
-  certified: "Adds brakes, diagnostics, AC, tune-ups, electrical, suspension.",
-  master: "Adds timing belts, transmission work, and European vehicles.",
+  certified: "WrenchNow level 2 (not an outside certification). Adds brakes, diagnostics, AC (EPA Section 609 required), tune-ups, electrical, suspension.",
+  master: "WrenchNow level 3 (not an outside \"master\" certification). Adds timing belts, transmission work, and European vehicles — case by case, after checking the job can be done on site.",
 };

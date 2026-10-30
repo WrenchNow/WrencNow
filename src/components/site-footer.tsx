@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Logo } from "./logo";
-import { CONTACT_MAILTO } from "@/lib/contact";
 
 const COLUMNS = [
   {
@@ -29,7 +28,7 @@ const COLUMNS = [
       { href: "/about", label: "About" },
       { href: "/terms", label: "Terms of Service" },
       { href: "/privacy", label: "Privacy Policy" },
-      { href: CONTACT_MAILTO, label: "Contact" },
+      { href: "/support", label: "Support & contact" },
     ],
   },
 ];

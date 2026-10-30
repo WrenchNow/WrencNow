@@ -20,7 +20,7 @@ export default function HowItWorksPage() {
       <Section title="Four steps" className="pt-4 sm:pt-6">
         <Steps />
       </Section>
-      <Section eyebrow="The right mechanic for the job" title="Skill tiers" intro="Every mechanic is assigned a tier after we review their experience and certifications. They can only take jobs their tier covers — enforced by the platform, not the honor system." className="bg-surface/40">
+      <Section eyebrow="The right mechanic for the job" title="Skill tiers" intro="Tiers are WrenchNow approval levels, not outside certifications. Everyone starts at Basic; WrenchNow moves mechanics up after reviewing their experience and certifications, their first completed repairs, and customer reviews. Mechanics can only take jobs their tier covers — enforced by the platform, not the honor system." className="bg-surface/40">
         <div className="grid gap-4 md:grid-cols-3">
           {SKILL_TIERS.map((t) => (
             <div key={t} className="rounded-[var(--radius-card)] border border-line bg-surface p-6">

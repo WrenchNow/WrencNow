@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Container, PageHeader } from "@/components/ui/layout";
-import { featuredPriceCents, onboardingFeePerJobCents, onboardingFeeTotalCents, platformFeeBps } from "@/lib/env";
+import { featuredPriceCents, onboardingFeePerJobCents, onboardingFeeTotalCents, partsHandlingBps, platformFeeBps } from "@/lib/env";
 import { processingLabel } from "@/lib/fee-copy";
 import { money } from "@/lib/format";
 import { getServices } from "@/lib/public-data";
@@ -33,7 +33,7 @@ export default async function PricingPage() {
   return (
     <Container className="py-12 sm:py-16">
       <PageHeader eyebrow="Pricing" title="Know the price before they start">
-        Each mechanic sets their own hourly rate and shows it on their profile. When you book, you see the maximum you could pay — rate × the longest typical time for that job — and you&apos;re never charged more than that.
+        Each mechanic sets their own hourly rate and shows it on their profile. When you book, you see your approved maximum: the labor estimate (rate × the longest typical time for that job), plus any parts estimate with its {partsHandlingBps() / 100}% handling charge and sales tax, plus the card-processing service fee. You&apos;re never charged more than the total you approve — parts added later need your approval first.
       </PageHeader>
 
       <div className="grid gap-4 md:grid-cols-3">
